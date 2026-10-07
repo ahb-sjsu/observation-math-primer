@@ -6,16 +6,18 @@ This is a primer for engineering students. It covers the mathematics used in the
 |---|---|---|---|
 | 0 | ch00 | Preface and map from projects to chapters | all |
 | 1 | ch01 | Linear algebra beyond the first course | everything |
-| 2 | ch02 | Random vectors and Gaussians | Observation Theory, estimation and control |
-| 3 | ch11 | High-dimensional geometry, concentration, hubs and anti-hubs | turboquant-pro, *Data Mining as Observation* |
-| 4 | ch03 | Information theory and rate–distortion | Observation Theory, the rate and leakage paper |
-| 5 | ch04 | Optimization | Observation Theory, Geometric Evaluation Theory |
-| 6 | ch05 | Geometry | the Geometric series, Observation Theory |
-| 7 | ch06 | Observation Theory, the core mathematics | Observation Theory |
-| 8 | ch07 | Quantization and vector search | turboquant-pro |
-| 9 | ch08 | Evaluation and decisions | Geometric Evaluation Theory, geometric economics and ethics |
-| 10 | ch09 | Statistics for registration-first research | DPE, every campaign |
-| 11 | ch10 | Logic and machine-checked proof | DPE, the Lean folders |
+| 2 | ch13 | Spectra under perturbation, and how to compute them (Weyl, Davis–Kahan, principal angles, power method) | Observation Theory blind probes, subspace overlap |
+| 3 | ch02 | Random vectors and Gaussians | Observation Theory, estimation and control |
+| 4 | ch12 | Tail probabilities and concentration inequalities (Markov to Hoeffding, union bound, Clopper–Pearson) | certificates, campaigns, the next chapter |
+| 5 | ch11 | High-dimensional geometry, concentration, hubs and anti-hubs | turboquant-pro, *Data Mining as Observation* |
+| 6 | ch03 | Information theory and rate–distortion | Observation Theory, the rate and leakage paper |
+| 7 | ch04 | Optimization | Observation Theory, Geometric Evaluation Theory |
+| 8 | ch05 | Geometry | the Geometric series, Observation Theory |
+| 9 | ch06 | Observation Theory, the core mathematics | Observation Theory |
+| 10 | ch07 | Quantization and vector search | turboquant-pro |
+| 11 | ch08 | Evaluation and decisions | Geometric Evaluation Theory, geometric economics and ethics |
+| 12 | ch09 | Statistics for registration-first research | DPE, every campaign |
+| 13 | ch10 | Logic and machine-checked proof | DPE, the Lean folders |
 
 The printed chapter number follows the order in `main.tex`. The file key (`chNN` in file names and labels) does not change when chapters are reordered.
 
