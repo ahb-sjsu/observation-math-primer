@@ -1,0 +1,90 @@
+\chapter{Preface}\label{ch00}
+
+\section*{Who this book is for}
+
+This book is for a student who has taken the usual engineering mathematics sequence and wants to read, check, and extend the research in the observation programme. The sequence it assumes is calculus through multivariable functions and Lagrange multipliers, ordinary differential equations, a first course in probability and statistics, and enough linear algebra to multiply matrices and find the eigenvalues of a small one. Nothing beyond that is assumed.
+
+The programme's papers use more than that sequence supplies. They use positive semidefinite matrices and the order they carry, mutual information and the rate a description needs, the conditions an optimum must satisfy, metrics that vary from point to point, quantizers, decision rules, statistical procedures for claims that are registered before they are measured, and proofs that a computer has checked. Each of these is standard in some field, and none of them is in the first-year sequence. This book supplies them, in the order the projects need them, with every definition stated as a numbered equation and every new idea worked through on numbers small enough to check by hand.
+
+\section*{How this book relates to the first-course primers}
+
+Two primers in \emph{Data Mining as Observation} already rebuild the first courses. Primer L rebuilds linear algebra from vectors to the singular value decomposition, and Primer S rebuilds probability and statistics from conditional probability to the bootstrap and the information content of a model. Chapter 0 of that book introduces the read operator and water-filling at an introductory level. This book starts where those stop. A reader whose first courses are more than a year behind should read Primer L and Primer S first. The chapters below point back to them by section when a step depends on them.
+
+\section*{What the projects use, and where to find it}
+
+The programme has four areas. The table lists, for each, the chapters a reader needs and the repository where the work lives. A reader who wants one area only can read its chapters in order and skip the rest.
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{0.29\linewidth}p{0.27\linewidth}p{0.36\linewidth}@{}}
+\toprule
+Area & Chapters & Where the work lives \\
+\midrule
+Observation Theory & \ref{ch01}, \ref{ch02}, \ref{ch03}, \ref{ch04}, \ref{ch05}, \ref{ch06} & \texttt{geometric-observation}, \texttt{observation-theory-campaigns}, the rate and leakage paper (\texttt{paper/tit-rate-leakage}) \\
+The Geometric series and Geometric Evaluation Theory & \ref{ch01}, \ref{ch02}, \ref{ch04}, \ref{ch05}, \ref{ch08} & \texttt{geometric-methods}, \texttt{geometric-evaluation-theory}, \texttt{geometric-economics}, \texttt{geometric-ethics} and the other \texttt{geometric-*} repositories \\
+Vector compression and search & \ref{ch01}, \ref{ch03}, \ref{ch06}, \ref{ch07} & \texttt{turboquant-pro} \\
+Registration-first method & \ref{ch09}, \ref{ch10} & \texttt{discovery-philosophy-engineering}, the \texttt{PROTOCOL.md} and \texttt{claims/} ledgers in each research repository, and the Lean folders \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\Cref{fig:ch00:map} shows the same information as a route map. An arrow from one chapter to another means the second uses the first. A reader who wants one area follows the arrows into that area's coloured chapters and reads only what lies upstream of them.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=0.92,transform shape,
+  ch/.style={block,minimum width=25mm,minimum height=9mm},
+  dep/.style={flow,pgray},
+  node distance=9mm and 6mm]
+  % foundations
+  \node[ch] (c1) {1\enspace Linear algebra};
+  \node[ch,right=of c1] (c2) {2\enspace Random vectors};
+  \node[ch,right=of c2,fill=pgray!22] (c9) {9\enspace Registration\\statistics};
+  \node[ch,right=of c9,fill=pgray!22] (c10) {10\enspace Logic and\\machine proof};
+  % middle layer
+  \node[ch,below=of c1] (c5) {5\enspace Geometry};
+  \node[ch,below=of c2] (c3) {3\enspace Information\\theory};
+  \node[ch,right=of c3] (c4) {4\enspace Optimization};
+  % applications
+  \node[ch,below=of c5,fill=porange!18] (c8) {8\enspace Evaluation and\\decisions};
+  \node[ch,below=of c3,fill=pblue!18] (c6) {6\enspace Observation\\Theory};
+  \node[ch,below=of c4,fill=pgreen!18] (c7) {7\enspace Quantization\\and search};
+  % dependencies
+  \draw[dep] (c1) -- (c5);
+  \draw[dep] (c1) -- (c3);
+  \draw[dep] (c2) -- (c3);
+  \draw[dep] (c1.south east) -- (c4.north west);
+  \draw[dep] (c3) -- (c4);
+  \draw[dep] (c5) -- (c8);
+  \draw[dep] (c4) -- (c8.north east);
+  \draw[dep] (c3) -- (c6);
+  \draw[dep] (c5) -- (c6);
+  \draw[dep] (c4) -- (c6);
+  \draw[dep] (c3) -- (c7);
+  \draw[dep] (c6) -- (c7);
+  \draw[dep] (c9) -- (c10);
+  % legend
+  \node[lbl,below=6mm of c6,align=center] {\textcolor{pblue!70!black}{\rule{3mm}{3mm}} Observation Theory\quad
+    \textcolor{porange}{\rule{3mm}{3mm}} Geometric series and GET\quad
+    \textcolor{pgreen}{\rule{3mm}{3mm}} turboquant-pro\quad
+    \textcolor{pgray}{\rule{3mm}{3mm}} method (chapters 9 and 10)};
+\end{tikzpicture}
+\caption{All three research areas rest on the linear algebra of chapter 1. Arrows point from a chapter to the chapters that use it, and the method chapters 9 and 10 serve every area.}
+\label{fig:ch00:map}
+\end{figure}
+
+\section*{How each chapter is built}
+
+Every section states one point in its heading, introduces the object in words, gives the definition or result as a numbered equation, and works an example with numbers. A section ends with two pointers. \emph{Builds on} names what it needs from earlier chapters or from the first-course primers. \emph{Used in} names the later chapters and the project files where the idea appears. Boxes headed \textbf{In the projects} show exactly where an object appears in the programme's papers and code, with the file path, so that a reader can open the source and see the same symbol in use.
+
+Each chapter ends with exercises in three groups. Warm-up exercises check that a definition has been read correctly. By-hand exercises take a few lines of algebra or arithmetic. Programming exercises take a few lines of Python with \texttt{numpy} or \texttt{sympy} and run in seconds. Answers to selected exercises are in \cref{appB}.
+
+\section*{How the numbers in this book were checked}
+
+Every number in a worked example, an answer, or a figure is recomputed by a script in the \texttt{checks/} folder of the book's repository, one script per chapter, and every script prints a pass or a fail for each number. The book was released only with every check passing. A check confirms arithmetic and algebra. It does not confirm that an example is the right one to teach from, and it does not confirm any claim about the projects, which rests on the project files the chapter points to.
+
+The programme labels each of its claims with a status, and this book uses the labels in the same sense. A claim marked \texttt{[proved]} has a proof. One marked \texttt{[demonstrated]} or \texttt{[replicated]} has been measured once or on independent data. One marked \texttt{[predicted]} passed a prediction that was sealed before the measurement. One marked \texttt{[exploratory]} has not been put at risk, and one marked \texttt{[refuted]} failed its test. \Cref{ch09} explains what each label requires.
+
+\section*{Notation}
+
+The notation is collected in \cref{appA}. Two conventions are used throughout. A vector is a column, so $x\T y$ is a number and $xy\T$ is a matrix. The logarithm $\log$ is natural and measures information in nats, and $\log_2$ measures it in bits. Every quantity of information in the book states its unit.

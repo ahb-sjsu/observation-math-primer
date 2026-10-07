@@ -1,0 +1,398 @@
+\chapter{Logic, and what a machine-checked proof does and does not show}\label{ch10}
+% Standalone build (jobname ch10) only. The other chapters are not in this build,
+% so their chapter labels are given plain numbers here to keep \cref{chNN}
+% resolvable. In main.tex the real labels are used and this block does nothing.
+\makeatletter
+\providecommand\omp@stubchapter[2]{%
+  \@ifundefined{r@#1}{%
+    \global\@namedef{r@#1}{{#2}{}{}{}{}}%
+    \global\@namedef{r@#1@cref}{{[chapter][#2][]#2}{}{}{}{}}}{}}
+\edef\omp@jobA{\jobname}\edef\omp@jobB{\detokenize{ch10}}
+\ifx\omp@jobA\omp@jobB
+  \omp@stubchapter{ch01}{1}\omp@stubchapter{ch02}{2}\omp@stubchapter{ch03}{3}%
+  \omp@stubchapter{ch04}{4}\omp@stubchapter{ch05}{5}\omp@stubchapter{ch06}{6}%
+  \omp@stubchapter{ch07}{7}\omp@stubchapter{ch08}{8}\omp@stubchapter{ch09}{9}%
+\fi
+\let\omp@savedsectionmark\sectionmark
+\renewcommand\sectionmark[1]{}
+\makeatother
+\markboth{\MakeUppercase{\chaptername\ \thechapter.\ Logic and machine-checked proof}}{}
+% Unicode characters used in the Lean listings of this chapter.
+\DeclareUnicodeCharacter{2200}{\ensuremath{\forall}}
+\DeclareUnicodeCharacter{2203}{\ensuremath{\exists}}
+\DeclareUnicodeCharacter{2192}{\ensuremath{\to}}
+\DeclareUnicodeCharacter{2227}{\ensuremath{\wedge}}
+\DeclareUnicodeCharacter{2228}{\ensuremath{\vee}}
+\DeclareUnicodeCharacter{27E8}{\ensuremath{\langle}}
+\DeclareUnicodeCharacter{27E9}{\ensuremath{\rangle}}
+\DeclareUnicodeCharacter{2264}{\ensuremath{\le}}
+\DeclareUnicodeCharacter{2265}{\ensuremath{\ge}}
+\DeclareUnicodeCharacter{00AC}{\ensuremath{\neg}}
+
+Several of the programme's claims carry the tag \texttt{[proved]}, and some of those proofs have been checked by a computer program called a proof assistant. A reader needs to know what that check covers. It covers more than a referee can, since every inference step is verified mechanically. It also covers less than the word ``proved'' suggests, since the check is about the formal statement and says nothing about whether the premises are true or whether the formal statement says what the English sentence says. This chapter builds the logic needed to read such a statement. It starts with propositional logic and quantifiers, collects the proof patterns used throughout the book, and then develops modal logic, where a single relation on ``worlds'' decides which inferences are valid. The worked case is a published formal check of the modal ontological argument. The argument is valid on every symmetric frame, it fails on a frame that is reflexive and transitive but not symmetric, and the machine check says nothing at all about whether its premises deserve belief. The chapter ends with Lean 4, the proof assistant the programme uses.
+
+% ---------------------------------------------------------------------------
+\section{An argument is valid when no row of the truth table makes its premises true and its conclusion false}\label{sec:ch10:prop}
+
+A \emph{proposition} is a statement that is either true or false. Propositional logic builds compound propositions from atoms $p,q,r,\dots$ with the connectives negation $\neg$, conjunction $\wedge$, disjunction $\vee$ and implication $\to$. The meaning of each connective is a truth table. The one that surprises newcomers is implication. The formula $p\to q$ is false only when $p$ is true and $q$ is false, so it is true on three of the four rows. ``If $p$ then $q$'' asserts nothing about the case where $p$ is false.
+
+A \emph{valuation} assigns true or false to each atom, and with $n$ atoms there are $2^n$ valuations, the rows of the truth table. Validity is a statement about all of them.
+\begin{definition}[Validity and soundness]\label{def:ch10:valid}
+An argument with premises $\varphi_1,\dots,\varphi_k$ and conclusion $\psi$ is \emph{valid}, written $\varphi_1,\dots,\varphi_k\models\psi$, when every valuation that makes all the premises true also makes the conclusion true,
+\begin{equation}
+\varphi_1,\dots,\varphi_k\models\psi\quad\iff\quad\text{for every valuation }v,\ \ \big(v(\varphi_1)=\dots=v(\varphi_k)=\mathrm{T}\big)\Rightarrow v(\psi)=\mathrm{T}.
+\label{eq:ch10:valid}
+\end{equation}
+An argument is \emph{sound} when it is valid and its premises are in fact true.
+\end{definition}
+The distinction carries the whole chapter. Validity is a property of the form and can be checked by enumeration or by proof. Soundness also needs the premises to be true, which no amount of logic can supply. A valid argument with a false premise can have a false conclusion. ``All metals float, iron is a metal, so iron floats'' is valid and unsound.
+
+Two equivalences do most of the everyday work. An implication is equivalent to its contrapositive, and De Morgan's laws move a negation through a conjunction or a disjunction,
+\begin{equation}
+(p\to q)\equiv(\neg q\to\neg p),\qquad \neg(p\wedge q)\equiv\neg p\vee\neg q,\qquad \neg(p\vee q)\equiv\neg p\wedge\neg q.
+\label{eq:ch10:equiv}
+\end{equation}
+The converse $q\to p$ is not equivalent to $p\to q$, and it differs from it on two of the four rows.
+
+\begin{example}[Two forms that look alike]\label{ex:ch10:mp}
+Modus ponens has premises $p$ and $p\to q$ and conclusion $q$. The only row with both premises true is $p=q=\mathrm{T}$, where $q$ is true, so it is valid. Affirming the consequent has premises $q$ and $p\to q$ and conclusion $p$. The row $p=\mathrm{F}$, $q=\mathrm{T}$ makes both premises true and the conclusion false, so it is invalid, and that row is its only counterexample. Denying the antecedent, from $\neg p$ and $p\to q$ to $\neg q$, fails on the same row. Modus tollens, from $\neg q$ and $p\to q$ to $\neg p$, is valid. With three atoms the table has $8$ rows, and the hypothetical syllogism $p\to q,\ q\to r\models p\to r$ holds on all of them.
+\end{example}
+
+A truth table grows as $2^n$, so it stops being practical by ten atoms ($1024$ rows). Proof replaces enumeration with a chain of steps, each licensed by a rule such as modus ponens. A proof system is \emph{sound} (a different use of the word) when everything it proves is valid, and \emph{complete} when every valid argument has a proof. Classical propositional logic has both properties.
+
+\buildson{Boolean algebra from a first programming course, and indicator functions from Primer S.}
+\usedin{Every later section. The status words of \cref{ch09} are claims about soundness, not validity.}
+
+% ---------------------------------------------------------------------------
+\section{A quantifier ranges over a domain, and swapping two quantifiers changes the claim}\label{sec:ch10:quant}
+
+Propositional logic cannot say ``every'' or ``some''. Predicate logic adds variables ranging over a domain $D$, predicates such as $P(x)$ or $R(x,y)$, and the quantifiers $\forall$ (for all) and $\exists$ (there exists). Their truth conditions are
+\begin{equation}
+\forall x\,P(x)\ \text{is true}\iff P(d)\ \text{is true for every } d\in D,\qquad \exists x\,P(x)\ \text{is true}\iff P(d)\ \text{is true for some } d\in D.
+\label{eq:ch10:quant}
+\end{equation}
+Negation swaps them, which is De Morgan's law for an index set,
+\begin{equation}
+\neg\forall x\,P(x)\equiv\exists x\,\neg P(x),\qquad \neg\exists x\,P(x)\equiv\forall x\,\neg P(x).
+\label{eq:ch10:negquant}
+\end{equation}
+The first of these is why one counterexample refutes a universal claim. The order of quantifiers matters. $\forall x\,\exists y\,R(x,y)$ lets $y$ depend on $x$, while $\exists y\,\forall x\,R(x,y)$ demands one $y$ that serves every $x$. The second implies the first and not conversely.
+
+\begin{example}[Order on a three-element domain]\label{ex:ch10:order}
+Let $D=\{1,2,3\}$ and $R(x,y)$ be $x\neq y$. Then $\forall x\,\exists y\,(x\neq y)$ is true, since each $x$ has some other element. But $\exists y\,\forall x\,(x\neq y)$ is false, since any candidate $y$ fails at $x=y$. With $R(x,y)$ being $x\le y$ both orders are true, and $y=3$ is the witness for the stronger one. In analysis the same distinction separates continuity ($\forall\varepsilon\,\exists\delta$ at each point, with $\delta$ allowed to depend on the point) from uniform continuity (one $\delta$ for all points).
+\end{example}
+
+A statement with free variables is not yet true or false. The programme's theorems are closed statements of the form $\forall$ (objects of a stated kind) $\forall$ (hypotheses about them), conclusion. Reading such a theorem means finding the domain of each quantifier, which is where an informal statement most often hides an assumption.
+
+\buildson{\cref{sec:ch10:prop}, and the $\varepsilon$--$\delta$ definitions of calculus.}
+\usedin{\cref{sec:ch10:kripke,sec:ch10:lean}, where $\Box$ and $\Diamond$ are quantifiers over worlds and Lean writes $\forall$ and $\exists$ directly.}
+
+% ---------------------------------------------------------------------------
+\section{Five proof patterns cover most of what the programme proves}\label{sec:ch10:patterns}
+
+Most proofs in this book, and in the programme's papers, use one of five shapes. Each corresponds to a valid inference from \cref{sec:ch10:prop,sec:ch10:quant}.
+
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Direct.} Assume the hypothesis and derive the conclusion by a chain of valid steps. To show that the square of an odd number is odd, write it as $2m+1$ and compute $(2m+1)^2=2(2m^2+2m)+1$.
+\item \textbf{Contrapositive.} To show $p\to q$, show $\neg q\to\neg p$ instead, which \eqref{eq:ch10:equiv} makes equivalent. To show that if $n^2$ is even then $n$ is even, show that odd $n$ has odd $n^2$, which is the direct proof above.
+\item \textbf{Contradiction.} Assume the negation of the claim and derive a false statement. If $\sqrt2=a/b$ in lowest terms, then $a^2=2b^2$, so $a$ is even, so $4$ divides $a^2=2b^2$, so $b$ is even, and $a/b$ was not in lowest terms.
+\item \textbf{Induction.} To show $P(n)$ for every natural number $n$, show $P(0)$ and show $P(k)\to P(k+1)$ for every $k$. The principle is
+\begin{equation}
+\Big(P(0)\ \wedge\ \forall k\,\big(P(k)\to P(k+1)\big)\Big)\ \to\ \forall n\,P(n).
+\label{eq:ch10:induction}
+\end{equation}
+\item \textbf{Counterexample.} To refute $\forall x\,P(x)$, exhibit one $d$ with $\neg P(d)$, by \eqref{eq:ch10:negquant}.
+\end{enumerate}
+
+\begin{example}[Induction and a counterexample]\label{ex:ch10:induction}
+Let $S(n)=1+2+\dots+n$. The claim $2S(n)=n(n+1)$ holds at $n=0$ since both sides are $0$. If it holds at $k$, then $2S(k+1)=2S(k)+2(k+1)=k(k+1)+2(k+1)=(k+1)(k+2)$, which is the claim at $k+1$. At $n=10$ it gives $S(10)=55$. For a counterexample, the claim ``$n^2>n$ for every natural number $n$'' fails at $n=1$, where both sides are $1$. It holds for every $n$ from $2$ to $100$, and that is irrelevant, since a universal claim needs every case and a refutation needs one.
+\end{example}
+
+Contrapositive and contradiction differ in a way that will matter in \cref{sec:ch10:audit}. Proving $\neg q\to\neg p$ from $p\to q$ uses only the rules for implication. Going back, from $\neg q\to\neg p$ to $p\to q$, needs the law of excluded middle, $p\vee\neg p$, or equivalently proof by contradiction. Classical mathematics accepts it. Some logics do not, and Lean records when a proof uses it.
+
+\inproject{\texttt{geometric-observation/lean/ObservationTheory/AdaptivePilot.lean}, theorem \texttt{run\_answers\_zero}, shows that a strategy fed the all-zeros pilot reproduces it against either operator. The project's \texttt{README.md} records that the proof is by induction on the query sequence.}
+
+\buildson{\cref{sec:ch10:prop,sec:ch10:quant}.}
+\usedin{Every proof in this book, and \cref{sec:ch10:lean}, where each pattern becomes a Lean tactic.}
+
+% ---------------------------------------------------------------------------
+\section{A modal formula is evaluated at a world, by looking at the worlds that world can see}\label{sec:ch10:kripke}
+
+Modal logic adds two operators to propositional logic. $\Box\varphi$ reads ``necessarily $\varphi$'' and $\Diamond\varphi$ reads ``possibly $\varphi$''. Other readings use the same mathematics. $\Box\varphi$ can mean ``$\varphi$ is known'', ``$\varphi$ holds at every later time'' or ``$\varphi$ holds in every state the program can reach''. Kripke's semantics gives all of them one structure \citep{kripke1963}.
+
+\begin{definition}[Frame, model, truth at a world]\label{def:ch10:kripke}
+A \emph{frame} is a pair $(W,R)$ with $W$ a nonempty set of worlds and $R\subseteq W\times W$ an accessibility relation. A \emph{model} adds a valuation $V$ saying which atoms are true at which worlds. Truth at a world $w$ is defined by the propositional rules at $w$ and, for the modal operators,
+\begin{equation}
+w\models\Box\varphi\iff\forall v\,\big(wRv\to v\models\varphi\big),\qquad w\models\Diamond\varphi\iff\exists v\,\big(wRv\wedge v\models\varphi\big).
+\label{eq:ch10:boxdia}
+\end{equation}
+A formula is \emph{valid on a frame} when it is true at every world under every valuation.
+\end{definition}
+So $\Box$ is a universal quantifier over accessible worlds and $\Diamond$ an existential one, and \eqref{eq:ch10:negquant} gives the duality
+\begin{equation}
+\Diamond\varphi\equiv\neg\Box\neg\varphi.
+\label{eq:ch10:duality}
+\end{equation}
+A world with no accessible worlds makes every $\Box\varphi$ true, vacuously, and every $\Diamond\varphi$ false.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[>=stealth,node distance=2.4cm,world/.style={circle,draw,minimum size=9mm,inner sep=1pt}]
+\node[world] (w1) {$w_1$};
+\node[world,above right=0.6cm and 2.2cm of w1] (w2) {$w_2$};
+\node[world,below right=0.6cm and 2.2cm of w1] (w3) {$w_3$};
+\draw[->,thick] (w1) -- (w2);
+\draw[->,thick] (w1) -- (w3);
+\draw[->,thick] (w2) edge[loop right] (w2);
+\node[right=0.9cm of w2,font=\small] {$p$};
+\node[right=0.3cm of w3,font=\small] {$\neg p$, no successor};
+\node[left=0.3cm of w1,font=\small] {$\neg p$};
+\end{tikzpicture}
+\caption{The model of Example~\ref{ex:ch10:model}. Arrows are the accessibility relation. The atom $p$ is true only at $w_2$.}
+\label{fig:ch10:model}
+\end{figure}
+
+\begin{example}[Reading a three-world model]\label{ex:ch10:model}
+Let $W=\{w_1,w_2,w_3\}$, $R=\{(w_1,w_2),(w_1,w_3),(w_2,w_2)\}$ and let $p$ be true only at $w_2$ (\cref{fig:ch10:model}). At $w_1$, $\Box p$ is false because $w_3$ is accessible and $p$ fails there, and $\Diamond p$ is true because of $w_2$. At $w_2$, the only accessible world is $w_2$ itself, so $\Box p$ and $\Diamond p$ are both true. At $w_3$, nothing is accessible, so $\Box p$ is true and $\Diamond p$ is false. The world $w_3$ already shows that $\Box p\to p$ can fail, since $\Box p$ holds there and $p$ does not.
+\end{example}
+
+\buildson{\cref{sec:ch10:quant} (quantifiers), and relations from a discrete-mathematics course.}
+\usedin{\cref{sec:ch10:frames,sec:ch10:ontological}.}
+
+% ---------------------------------------------------------------------------
+\section{Each standard modal axiom says exactly one thing about the accessibility relation}\label{sec:ch10:frames}
+
+Different readings of $\Box$ call for different principles. If $\Box$ means ``known'', then what is known is true, $\Box p\to p$. If $\Box$ means ``believed'', that principle fails. Kripke semantics turns each such choice into a condition on $R$. The four standard axioms and their frame conditions are
+\begin{equation}
+\begin{aligned}
+\mathrm{T}\colon\ &\Box p\to p &&\text{valid on }(W,R)\iff R\text{ is reflexive},\\
+\mathrm{B}\colon\ &p\to\Box\Diamond p &&\text{valid on }(W,R)\iff R\text{ is symmetric},\\
+\mathrm{4}\colon\ &\Box p\to\Box\Box p &&\text{valid on }(W,R)\iff R\text{ is transitive},\\
+\mathrm{5}\colon\ &\Diamond p\to\Box\Diamond p &&\text{valid on }(W,R)\iff R\text{ is Euclidean } (wRu\wedge wRv\to uRv).
+\end{aligned}
+\label{eq:ch10:correspondence}
+\end{equation}
+Every frame validates axiom K, $\Box(p\to q)\to(\Box p\to\Box q)$, and the rule that a valid formula is necessary. The systems are named by the axioms they add to K. System T adds T, S4 adds T and 4, B adds T and B, and S5 adds T and 5, which on frames means $R$ is an equivalence relation, since reflexive and Euclidean together are the same as reflexive, symmetric and transitive \citep{hughescresswell1996,blackburn2001}.
+
+\begin{theorem}[Axiom T and reflexivity]\label{thm:ch10:T}
+$\Box p\to p$ is valid on a frame $(W,R)$ if and only if $R$ is reflexive.
+\end{theorem}
+\begin{proof}
+If $R$ is reflexive and $w\models\Box p$, then $p$ holds at every $v$ with $wRv$, including $v=w$. Conversely, suppose some $w$ has $\neg wRw$. Choose the valuation that makes $p$ true everywhere except at $w$. Then $p$ holds at every world $w$ can see, so $w\models\Box p$, while $w\not\models p$.
+\end{proof}
+The second half of the proof is the method of \emph{countermodels}. To show that a formula is not valid on a class of frames, build one frame in the class and one valuation that falsify it at one world. The other three correspondences are proved the same way.
+
+\begin{example}[Counting frames]\label{ex:ch10:count}
+On two worlds there are $2^4=16$ relations. Of these $4$ are reflexive, $8$ symmetric, $13$ transitive and $2$ are equivalence relations. On three worlds there are $512$ relations, $64$ of them symmetric, $29$ reflexive and transitive (the S4 frames) and $5$ equivalence relations. An exhaustive check over all $2+16+512=530$ frames with at most three worlds and every valuation of one atom confirms each line of \eqref{eq:ch10:correspondence}. The axiom holds on a frame exactly when the frame has the stated property. The same check confirms that reflexive and Euclidean coincide with equivalence on all $530$ frames.
+\end{example}
+
+An exhaustive check over small frames is evidence for the correspondence, not a proof of it, since the theorem is about frames of every size. The proof is a short argument of the kind given for T.
+
+\buildson{\cref{sec:ch10:kripke}, and equivalence relations.}
+\usedin{\cref{sec:ch10:ontological}, where B and S4 decide the worked case.}
+
+% ---------------------------------------------------------------------------
+\section{The modal ontological argument is valid on symmetric frames and fails on an S4 frame}\label{sec:ch10:ontological}
+
+The modal ontological argument, in the form Plantinga gave it \citep{plantinga1974}, has two premises and a conclusion. Let $G$ stand for ``a maximally great being exists''. Premise 1 says $G$ is possible, $\Diamond G$. Premise 2 says that, necessarily, if $G$ then necessarily $G$, $\Box(G\to\Box G)$. The conclusion is $G$. The question for logic is on which frames the inference is valid.
+\begin{equation}
+\Diamond G,\ \ \Box(G\to\Box G)\ \models\ G\qquad\text{on every symmetric frame}.
+\label{eq:ch10:ontological}
+\end{equation}
+\begin{proof}
+Fix a world $w$ with $w\models\Diamond G$ and $w\models\Box(G\to\Box G)$. By the first premise there is $v$ with $wRv$ and $v\models G$. By the second, $v\models G\to\Box G$, so $v\models\Box G$. Symmetry gives $vRw$, so $w\models G$.
+\end{proof}
+On S5 frames the same argument gives more, namely $w\models\Box G$, since every world $w$ can see is also seen by $v$.
+
+Symmetry was used once, and it is needed. Take two worlds $w_0$ and $w_1$, with $G$ false at $w_0$ and true at $w_1$, and let $R=\{(w_0,w_0),(w_1,w_1),(w_0,w_1)\}$ (\cref{fig:ch10:s4}). This frame is reflexive and transitive, hence an S4 frame, and it is not symmetric. At $w_0$, $\Diamond G$ holds because of $w_1$. Premise 2 holds at $w_0$. At $w_0$ itself $G$ is false, so the implication is vacuous, and at $w_1$ the only accessible world is $w_1$, where $G$ is true, so $\Box G$ holds. Yet $G$ is false at $w_0$. Both premises are true and the conclusion is false, so the argument is invalid in S4. Adding the missing arrow $(w_1,w_0)$ makes the frame symmetric, and then premise 2 fails at $w_0$, as \eqref{eq:ch10:ontological} requires.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\node[world,minimum size=10mm,draw=pred,fill=pred!8] (a) at (0,0) {$w_0$};
+\node[world,minimum size=10mm,draw=pgreen,fill=pgreen!12] (b) at (4,0) {$w_1$};
+\draw[flow] (a) -- node[lbl,above] {$w_0$ sees $w_1$} (b);
+\draw[flow] (a) to[out=160,in=200,looseness=6] (a);
+\draw[flow] (b) to[out=20,in=-20,looseness=6] (b);
+\draw[flow,pgray,dashed] (b) to[bend left=35] node[lbl,below] {missing, so not symmetric} (a);
+\node[lbl,above=0.35cm of a,align=center] {$\neg G$\\[1pt] $\Diamond G$ \ \ $\Box(G\to\Box G)$};
+\node[lbl,above=0.35cm of b,align=center] {$G$\\[1pt] $\Box G$};
+\end{tikzpicture}
+\caption{An S4 countermodel to the modal ontological argument. At $w_0$ both premises are true and $G$ is false. The dashed arrow from $w_1$ back to $w_0$ is the one symmetry would add, and adding it breaks premise 2.}
+\label{fig:ch10:s4}
+\end{figure}
+
+\begin{example}[The argument on every small frame]\label{ex:ch10:exhaustive}
+Run over all frames with one to three worlds, every valuation of $G$ and every world. Among symmetric frames there are $1604$ such cases, and in none are both premises true with $G$ false. Among frames that are reflexive and transitive but not symmetric, $68$ cases are countermodels. The reverse argument, from $\Diamond\neg G$ and the same premise 2 to $\neg G$, holds in all $1570$ cases on reflexive frames. On frames that are both reflexive and symmetric, the two possibility premises $\Diamond G$ and $\Diamond\neg G$ are never true together with premise 2.
+\end{example}
+
+The last two facts are the point of the case. The reverse argument is as valid as the original, on weaker frames, and on a reflexive symmetric frame its premises and the original's cannot all hold. So validity cannot decide between them. Whether $\Diamond G$ or $\Diamond\neg G$ should be accepted is a question about the premises, and logic, formal or mechanical, has nothing to say about it. The argument is valid in B and S5 and unsound unless its first premise is true, and that is where the dispute lives.
+
+\inproject{\texttt{counter-apologetics/formal/Formal/Modal.lean} proves \texttt{ontological\_valid\_B}, \texttt{ontological\_S5\_necessary}, \texttt{reverse\_ontological}, \texttt{rivals\_incompatible} and \texttt{S4\_countermodel} against Mathlib. Its \texttt{README.md} opens with ``These files check the logical and arithmetic claims in the paper. They do not check any philosophical premise.'' The project's \texttt{symbolic\_checks.py} reports the $1604$, $1570$ and $68$ counts of Example~\ref{ex:ch10:exhaustive} in \texttt{symbolic.log}.}
+
+\buildson{\cref{sec:ch10:kripke,sec:ch10:frames}.}
+\usedin{\cref{sec:ch10:lean,sec:ch10:audit}, where the same two results are checked in Lean.}
+
+% ---------------------------------------------------------------------------
+\section{In Lean a proposition is a type, and a proof is a term the kernel checks}\label{sec:ch10:lean}
+
+Lean 4 is a functional programming language and a proof assistant \citep{demoura2021}. Its logic rests on one idea, called propositions as types. A proposition \texttt{p : Prop} is a type, and a proof of \texttt{p} is a value of that type. A proof of $p\to q$ is a function that takes a proof of $p$ and returns a proof of $q$, and modus ponens is function application. A proof of $p\wedge q$ is a pair, and a proof of $\exists x\,P(x)$ is a pair of a witness and a proof about it. The \emph{kernel}, a small program, checks that each proof term has the type claimed for it. Every other part of the system, including the tactics that help build proofs, can be wrong without making a false theorem pass, as long as the kernel is correct.
+\begin{equation}
+\text{a proof of } p\to q\ \ =\ \ \text{a function } (h_p : p)\mapsto(h_q : q),\qquad \text{checking}\ =\ \text{type checking}.
+\label{eq:ch10:curryhoward}
+\end{equation}
+
+A theorem statement names its hypotheses as arguments and states the conclusion after a colon. The proof follows \texttt{:=}, either as a term or after \texttt{by} as a script of \emph{tactics}, commands that build the term step by step. Six tactics cover the snippets in this chapter. \texttt{intro} moves a hypothesis of an implication or a universally quantified variable into context. \texttt{exact} closes a goal with a term of the right type. \texttt{obtain} takes apart a conjunction or an existential. \texttt{simp} rewrites with a set of simplification lemmas. \texttt{decide} evaluates a decidable closed statement. \texttt{omega} decides linear arithmetic over the integers and natural numbers. All the snippets below use core Lean only, with no library import, and were checked with Lean v4.32.2.
+\begin{verbatim}
+theorem modus_ponens (p q : Prop) (hp : p) (hpq : p → q) : q :=
+  hpq hp
+
+theorem contrapositive (p q : Prop) (hpq : p → q) : ¬q → ¬p := by
+  intro hnq hp
+  exact hnq (hpq hp)
+
+theorem and_swap (p q : Prop) (h : p ∧ q) : q ∧ p := by
+  obtain ⟨hp, hq⟩ := h
+  exact ⟨hq, hp⟩
+
+theorem exists_even_above (n : Nat) : ∃ m, m > n ∧ m % 2 = 0 :=
+  ⟨2 * n + 2, by omega⟩
+
+theorem not_all_square_gt : ¬ ∀ n : Nat, n * n > n := by
+  intro h
+  have h1 := h 1
+  exact absurd h1 (by decide)
+\end{verbatim}
+The last two are the existential and counterexample patterns of \cref{sec:ch10:patterns}. The witness $2n+2$ is supplied by hand and \texttt{omega} checks it, and the counterexample $n=1$ is supplied by hand and \texttt{decide} checks that $1\cdot1>1$ is false. Induction from Example~\ref{ex:ch10:induction} reads
+\begin{verbatim}
+def sumTo : Nat → Nat
+  | 0 => 0
+  | n + 1 => sumTo n + (n + 1)
+
+theorem two_mul_sumTo (n : Nat) : 2 * sumTo n = n * (n + 1) := by
+  induction n with
+  | zero => rfl
+  | succ k ih =>
+    simp only [sumTo, Nat.mul_add, ih, Nat.add_mul, Nat.mul_one, Nat.one_mul]
+    omega
+
+example : sumTo 10 = 55 := by decide
+\end{verbatim}
+Kripke semantics needs no library. A frame is a relation \texttt{R : W → W → Prop}, $\Box$ is a universal quantifier and $\Diamond$ an existential, exactly as in \eqref{eq:ch10:boxdia}. The frame condition enters as a hypothesis. The validity proof of \eqref{eq:ch10:ontological} is two lines, and they follow the hand proof step by step.
+\begin{verbatim}
+variable {W : Type} (R : W → W → Prop)
+
+def box (p : W → Prop) (w : W) : Prop := ∀ v, R w v → p v
+def dia (p : W → Prop) (w : W) : Prop := ∃ v, R w v ∧ p v
+def Prem2 (G : W → Prop) (w : W) : Prop :=
+  box R (fun u => G u → box R G u) w
+
+theorem ontological_valid_B (hsym : ∀ a b, R a b → R b a)
+    (G : W → Prop) (w : W) (h1 : dia R G w) (h2 : Prem2 R G w) :
+    G w := by
+  obtain ⟨v, hwv, hGv⟩ := h1
+  exact h2 v hwv hGv w (hsym w v hwv)
+\end{verbatim}
+The S4 countermodel is stated on the type \texttt{Bool}, with \texttt{false} for $w_0$ and \texttt{true} for $w_1$, and proved by case analysis on the two worlds. It is in the file \texttt{checks/lean/ch10\_modal.lean} of this book, a core-only restatement of the Mathlib version in \texttt{counter-apologetics}.
+
+\inproject{\texttt{geometric-observation/lean/} checks the algebra of the confinement theorems (\texttt{ObservationTheory/Confinement.lean}, \texttt{AdaptivePilot.lean}) and states in its \texttt{README.md} which standard results it cites rather than formalizes. \texttt{observation-data-mining/lean/} checks $151$ statements of the companion book, listed with what each file covers in that project's \texttt{README.md}. Both build against Mathlib with Lean v4.32.2.}
+
+\buildson{\cref{sec:ch10:prop,sec:ch10:quant,sec:ch10:patterns,sec:ch10:ontological}.}
+\usedin{\cref{sec:ch10:audit}, and the \texttt{[proved]} class of \cref{ch09}.}
+
+% ---------------------------------------------------------------------------
+\section{A machine check certifies the inference and is silent about the premises}\label{sec:ch10:audit}
+
+When Lean accepts a theorem, the kernel has checked that the stated conclusion follows from the stated hypotheses, the definitions in scope and a short list of axioms. The command \texttt{\#print axioms} reports that list. Three axioms appear in ordinary use. \texttt{propext} says logically equivalent propositions are equal, \texttt{Quot.sound} supports quotient types, and \texttt{Classical.choice} gives the axiom of choice, from which Lean derives the law of excluded middle. A theorem whose proof needs none of them is reported as depending on no axioms. A proof left unfinished with the placeholder \texttt{sorry} compiles with only a warning, and \texttt{\#print axioms} exposes it as \texttt{sorryAx}. Run on the snippets of this chapter, the command reports
+\begin{equation}
+\begin{array}{ll}
+\texttt{contrapositive} & \text{no axioms}\\
+\texttt{of\_contrapositive}\ (\neg q\to\neg p)\to(p\to q) & \texttt{propext},\ \texttt{Classical.choice},\ \texttt{Quot.sound}\\
+\texttt{two\_mul\_sumTo} & \texttt{propext},\ \texttt{Quot.sound}\\
+\texttt{ontological\_valid\_B} & \text{no axioms}\\
+\texttt{S4\_countermodel} & \texttt{propext}\\
+\text{a theorem closed by } \texttt{sorry} & \texttt{sorryAx}
+\end{array}
+\label{eq:ch10:axioms}
+\end{equation}
+The backward contrapositive uses classical logic, as \cref{sec:ch10:patterns} said it must. The induction uses \texttt{propext} and \texttt{Quot.sound} because the \texttt{simp} and \texttt{omega} tactics produce proof terms that use them, not because induction needs them. The Mathlib versions in \texttt{counter-apologetics} report the same pattern in its \texttt{axioms.log}. The modal theorems use no axioms, apart from the countermodel, which uses \texttt{propext}.
+
+What the check establishes can now be stated exactly. It establishes that the formal conclusion follows from the formal hypotheses. It does not establish four other things, and each has to be argued separately.
+\begin{enumerate}[leftmargin=*]
+\item \textbf{That the premises are true.} In \texttt{ontological\_valid\_B} the premises \texttt{h1} and \texttt{h2} are hypotheses. The theorem is an implication, and its use is the soundness question of \cref{def:ch10:valid}, which the kernel never sees.
+\item \textbf{That the formal statement says what the English says.} The proposition \texttt{G : W → Prop} is any predicate on worlds. Calling it ``a maximally great being exists'' is an interpretation the code does not contain. The same holds for the definitions. A wrong definition of \texttt{box} would give a correct proof of the wrong theorem.
+\item \textbf{That the hypotheses can hold together.} From contradictory hypotheses anything follows. Lean accepts \texttt{theorem from\_false (h : False) : 1 = 2 := h.elim}, with no axioms, and accepts a theorem concluding \texttt{n = 100} from \texttt{n < 3} and \texttt{n > 5} by \texttt{omega}. A theorem with an unsatisfiable hypothesis is true and empty. The guard is to exhibit one object that satisfies all the hypotheses, as the S4 countermodel does for the premises of the ontological argument.
+\item \textbf{That the kernel, the compiler and the machine are correct.} This is the residual trust. It is small, since the kernel is a small program, but it is not zero.
+\end{enumerate}
+In the language of \cref{ch09}, a machine check upgrades the verification half of a \texttt{[proved]} claim, the line-by-line check of each inference, and leaves the modelling half where it was. A theorem about a read operator is only as relevant as the read operator's definition, and a validity proof is only as relevant as the premises. The protocol of the programme keeps this order. Machine checks are queued for elementary results, and a machine-checked status is never claimed until the check passes.
+
+\begin{example}[Reading the counter-apologetics audit]\label{ex:ch10:audit}
+The \texttt{axioms.log} of \texttt{counter-apologetics/formal} lists thirteen theorems. Seven modal theorems depend on no axioms, the eighth, \texttt{S4\_countermodel}, on \texttt{propext}, and the five probability theorems on \texttt{propext}, \texttt{Classical.choice} and \texttt{Quot.sound}. None mentions \texttt{sorryAx}, so no step was left unproved. The log certifies that each listed inference is valid on the stated frames. It is silent about whether $\Diamond G$ is true, and the project's own \texttt{README.md} says so in its first paragraph.
+\end{example}
+
+\inproject{\texttt{counter-apologetics/formal/Axioms.lean} runs \texttt{\#print axioms} on every theorem, with output in \texttt{axioms.log}. \texttt{geometric-observation/PROTOCOL.md}, section 7, queues elementary results for optional machine-checking, with the status tracked in the ledger and never claimed until the check passes. The companion book's ledger rule is itself stated and checked in Lean, in \texttt{observation-data-mining/lean/DataMiningAsObservation/Ledger.lean}.}
+
+\buildson{\cref{sec:ch10:lean}, and the claim classes of \cref{ch09}.}
+\usedin{Every \texttt{[proved]} tag in the programme's ledgers.}
+
+% ---------------------------------------------------------------------------
+\section*{Exercises}
+
+\subsection*{Warm-up}
+
+\begin{exercise}\label{exr:ch10:tt}
+Write the truth table of $(p\to q)\wedge(q\to p)$. On how many rows is it true? Is the argument from $p\to q$ and $\neg p$ to $\neg q$ valid?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch10:neg}
+Negate $\forall x\,\exists y\,(x<y)$ and push the negation inside. On the domain $\{1,2,3\}$, which of the two is true?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch10:T}
+Give a one-world model in which $\Box p\to p$ is false.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch10:sound}
+Give a valid argument with a false conclusion. Which of its premises must be false?
+\end{exercise}
+
+\subsection*{By hand}
+
+\begin{exercise}\label{exr:ch10:odd}
+Prove by induction that $1+3+5+\dots+(2n-1)=n^2$ for every $n\ge1$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch10:four}
+Let $W=\{w_1,w_2,w_3\}$ with $R=\{(w_1,w_2),(w_2,w_3)\}$, and let $p$ be true only at $w_2$. Show that $\Box p\to\Box\Box p$ fails at $w_1$. Which frame condition is missing?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch10:reverse}
+Prove that $\Diamond\neg G$ and $\Box(G\to\Box G)$ together entail $\neg G$ on every reflexive frame.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch10:s4}
+For the frame of \cref{fig:ch10:s4}, check reflexivity and transitivity by listing the required pairs. Then add the arrow $(w_1,w_0)$ and show that premise 2 now fails at $w_0$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch10:count}
+How many relations on three worlds are reflexive? How many are symmetric? Explain both counts.
+\end{exercise}
+
+\subsection*{Programming}
+
+\begin{exercise}\label{exr:ch10:brute}
+In Python, enumerate all frames with one to three worlds and every valuation of one atom, and confirm the four correspondences of \eqref{eq:ch10:correspondence}. Report how many frames validate each axiom.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch10:leanbasic}
+In Lean 4 without Mathlib, prove \texttt{p ∧ q → q ∧ p} and \texttt{∀ n : Nat, n + 0 = n}, then run \texttt{\#print axioms} on both.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch10:leanfour}
+Using the core definition of \texttt{box} from \cref{sec:ch10:lean}, state and prove in Lean that axiom 4 holds at every world of a transitive frame.
+\end{exercise}
+
+\makeatletter\let\sectionmark\omp@savedsectionmark\makeatother
+
+% Check record: checks/ch10_examples.py on Atlas (final count in the report);
+% Lean snippets checks/lean/ch10_*.lean, Lean v4.32.2, all exit 0.

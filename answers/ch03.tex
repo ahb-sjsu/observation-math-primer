@@ -1,0 +1,28 @@
+% Answers to selected exercises, chapter 03.
+% Every number here is checked in checks/ch03_examples.py.
+
+\paragraph{Exercise 3.1}
+$\Ent=\frac12\cdot1+\frac14\cdot2+2\cdot\frac18\cdot3=1.75$ bits. The prefix code $\{0,10,110,111\}$ has lengths $1,2,3,3$ and mean length $1.75$ bits, equal to the entropy because every probability is a power of two.
+
+\paragraph{Exercise 3.3}
+The density is $2$ on $[0,\frac12]$, so $\h=-\int_0^{1/2}2\log_2 2\,dx=\log_2\frac12=-1$ bit. Differential entropy is a volume relative to the unit interval, not a count of bits, and it is not an information. Mutual information, a difference of two differential entropies, stays nonnegative.
+
+\paragraph{Exercise 3.4}
+At $\theta=0.5$ the first two columns keep $0.5$ each and the third keeps its own $0.1$. The rates are $\frac12\log_2 16=2$, $\frac12\log_2 4=1$ and $0$ bits, which sum to $3$. The distortion is $D=0.5+0.5+0.1=1.1$. This is the allocation of section 0.7, now read as the rate--distortion floor rather than as a high-resolution quantizer rule.
+
+\paragraph{Exercise 3.5}
+With $\sigma_1^2=1$ and $\sigma_2^2=4$, $\frac12(0.25-1+\ln4)=0.3181$ nats. In the other order, $\frac12(4-1-\ln4)=0.8069$ nats. Coding a wide distribution with a model that is too narrow wastes more than the reverse.
+
+\paragraph{Exercise 3.6}
+$\MI{X}{Y_1}=\frac12\log_2(1+1)=0.5$ bit. The pair $(Y_1,Y_2)$ has $\Var(X\mid Y_1,Y_2)=(1+1+1)^{-1}=\frac13$, so $\MI{X}{Y_1,Y_2}=\frac12\log_2 3=0.7925$ bits. By the chain rule the second look adds $\MI{X}{Y_2\mid Y_1}=0.7925-0.5=0.2925$ bits, less than the first because the looks overlap.
+
+\paragraph{Exercise 3.7}
+(a) $\PC\Sigma_x=\begin{psmallmatrix}2&1\\0.25&0.5\end{psmallmatrix}$ has trace $2.5$ and determinant $0.75$, so $\gamma=(2.1514,0.3486)$. At $D=0.5$ both exceed $\theta=0.25$, and $\RC(0.5)=\frac12\log_2(2.1514/0.25)+\frac12\log_2(0.3486/0.25)=1.7926$ bits.
+(b) The products $(2,0.5)$ water-fill at $\theta=0.25$, giving per-coordinate distortions $D_i=\theta/\lambda_i=(0.25,1)$ on coordinates of variance $2$ each. The rate is $\frac12\log_2 8+\frac12\log_2 2=2$ bits, an excess of $0.2075$ bits.
+(c) When every mode is above water the optimal error covariance is $\theta\PC^{-1}=\diag(0.25,1)$, the same error the coordinatewise coder leaves. The joint rate is $\frac12\log(\det\Sigma_x/\det\Sd)$ and the coordinatewise rate is $\sum_i\frac12\log(\sigma_i^2/D_i)$. Their difference is $\frac12\log(\sigma_1^2\sigma_2^2/\det\Sigma_x)=\MI{x_1}{x_2}=0.2075$ bits. The coordinatewise coder pays for the correlation it ignores. When some modes are under water the two errors differ and the excess is not this simple.
+
+\paragraph{Exercise 3.8}
+For $\Var U=0.25$, $\Var(X\mid S)=0.2$ and $\Var(X\mid\hat X,S)=(4+4)^{-1}=0.125$, so $\ell=\frac12\log_2 1.6=0.339$ bits. For $\Var U=100$, $\ell=\frac12\log_2\bigl(\frac{100}{101}\cdot4.01\bigr)=0.9946$ bits. As $\Var U\to0$ the holder already knows $X$ and $\ell\to0$. As $\Var U\to\infty$ the holder knows nothing, $\MI{\hat X}{S}\to0$, and $\ell\to r=1$ bit.
+
+\paragraph{Exercise 3.9}
+$P_2-P_1=\diag(0,1)\psd0$. Observer 1 has $\Sigma_1^\star=\diag(0.25,1)$ at $1$ bit. Observer 2 water-fills $\gamma=(1,1)$ at $D_2=1$, so $\theta=0.5$ and $\Sigma_2^\star=0.5I$ at $1$ bit. Since $0.5>0.25$ in the first coordinate, $\Sigma_2^\star\not\preceq\Sigma_1^\star$ and the pair is not refinable. Built on $\Sigma_1^\star$, the second stage maximizes $\log\det\Sd$ subject to $\Sd\preceq\diag(0.25,1)$ and $\tr\Sd\le1$, which gives $\diag(0.25,0.75)$ and a total rate of $\frac12\log_2\bigl(1/(0.25\cdot0.75)\bigr)=1.2075$ bits. The loss relative to $R_2(D_2)=1$ bit is $0.2075$ bits.

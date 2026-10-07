@@ -1,0 +1,34 @@
+\documentclass[11pt,openany]{book}
+\input{preamble}
+
+\title{Mathematics for the Observation Programme\\[6pt]
+\large A primer for engineering students}
+\author{Andrew H. Bond\\ \small San Jos\'e State University}
+\date{Draft 0.1, October 2026}
+
+\begin{document}
+\frontmatter
+\maketitle
+\tableofcontents
+\include{chapters/ch00_preface}
+
+\mainmatter
+\include{chapters/ch01_linear_algebra}
+\include{chapters/ch02_random_vectors}
+\include{chapters/ch03_information_theory}
+\include{chapters/ch04_optimization}
+\include{chapters/ch05_geometry}
+\include{chapters/ch06_observation_theory}
+\include{chapters/ch07_quantization_search}
+\include{chapters/ch08_evaluation_decisions}
+\include{chapters/ch09_registration_statistics}
+\include{chapters/ch10_logic_proof}
+
+\appendix
+\include{chapters/appA_notation}
+\include{chapters/appB_answers}
+
+\backmatter
+\bibliographystyle{plainnat}
+\bibliography{refs/ch01,refs/ch02,refs/ch03,refs/ch04,refs/ch05,refs/ch06,refs/ch07,refs/ch08,refs/ch09,refs/ch10}
+\end{document}

@@ -1,0 +1,100 @@
+% Shared preamble for "Mathematics for the Observation Programme".
+% Every chapter uses only the packages and macros defined here.
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=1.1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing,patterns,shapes.geometric,fit,backgrounds}
+\usepgfplotslibrary{fillbetween,groupplots}
+
+% ---------- figure palette and styles (use these in every figure) ----------
+\definecolor{pblue}{RGB}{31,94,166}     % primary: the source, the signal, the main curve
+\definecolor{porange}{RGB}{214,110,22}  % the consumer, the read operator, the reader
+\definecolor{pgreen}{RGB}{46,139,87}    % the optimum, the accepted, the kept
+\definecolor{pred}{RGB}{192,40,45}      % the error, the floor, the rejected
+\definecolor{pgray}{RGB}{120,120,120}   % axes, guides, context
+\definecolor{plight}{RGB}{232,238,247}  % fills and shaded regions
+\tikzset{
+  vec/.style={-{Stealth[length=2.6mm]},thick},
+  guide/.style={pgray,dashed,thin},
+  block/.style={draw,rounded corners=2pt,thick,fill=plight,minimum height=7mm,minimum width=16mm,align=center,font=\small},
+  flow/.style={-{Stealth[length=2.2mm]},thick},
+  world/.style={circle,draw,thick,minimum size=7mm,inner sep=0pt,font=\small},
+  lbl/.style={font=\small},
+}
+\pgfplotsset{
+  primer/.style={
+    width=0.62\linewidth, height=0.40\linewidth,
+    axis lines=left, tick label style={font=\footnotesize},
+    label style={font=\small}, legend style={font=\footnotesize,draw=none,fill=none},
+    every axis plot/.append style={thick},
+    cycle list={{pblue},{porange},{pgreen},{pred},{pgray,dashed}},
+  },
+}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=green!35!black,urlcolor=blue!50!black]{hyperref}
+\usepackage[nameinlink,capitalise]{cleveref}
+
+\numberwithin{equation}{chapter}
+
+% ---------- environments ----------
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{example}[definition]{Example}
+\newtheorem{exercise}{Exercise}[chapter]
+\theoremstyle{plain}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{proposition}[definition]{Proposition}
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{corollary}[definition]{Corollary}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+% "Builds on" and "Used in" pointers at the end of a section
+\newcommand{\buildson}[1]{\par\noindent\textit{Builds on.} #1\par}
+\newcommand{\usedin}[1]{\par\noindent\textit{Used in.} #1\par}
+% A boxed "where this appears in the projects" pointer
+\newcommand{\inproject}[1]{\par\smallskip\noindent\fbox{\parbox{0.96\linewidth}{\small\textbf{In the projects.} #1}}\par\smallskip}
+
+% ---------- notation (see appendix A) ----------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\Pr}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\range}{range}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\renewcommand{\ker}{\operatorname{ker}}
+\newcommand{\T}{^{\top}}
+\newcommand{\inner}[2]{\langle #1,#2\rangle}
+\newcommand{\norm}[1]{\lVert #1\rVert}
+\newcommand{\abs}[1]{\lvert #1\rvert}
+\newcommand{\psd}{\succeq}          % Loewner order
+\newcommand{\pd}{\succ}
+\newcommand{\Sym}{\mathbb{S}}       % symmetric matrices, \Sym^d_+ PSD cone
+\newcommand{\PC}{P_C}               % read operator of consumer C
+\newcommand{\Sd}{\Sigma_\delta}     % error covariance
+\newcommand{\dO}{d_O}               % observer distortion tr(P_C Sigma_delta)
+\newcommand{\RC}{R_C}               % consumer-relative rate-distortion function
+\newcommand{\KL}[2]{D\!\left(#1\,\middle\|\,#2\right)}
+\newcommand{\MI}[2]{I(#1;#2)}
+\newcommand{\Ent}{H}
+\newcommand{\h}{h}                  % differential entropy
+\newcommand{\Normal}{\mathcal{N}}
+\newcommand{\iid}{\overset{\text{iid}}{\sim}}

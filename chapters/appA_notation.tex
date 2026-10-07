@@ -1,0 +1,37 @@
+\chapter{Notation}\label{appA}
+
+The symbols below keep one meaning throughout the book. A chapter that needs a symbol for something else says so where it introduces it.
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{0.27\linewidth}p{0.65\linewidth}@{}}
+\toprule
+Symbol & Meaning \\
+\midrule
+$x\in\R^d$ & a source vector, written as a column \\
+$x\T y$, $xy\T$ & dot product (a number) and outer product (a matrix) \\
+$\inner{x}{y}_G=x\T G y$ & inner product weighted by a positive semidefinite $G$ \\
+$\Sigma_x$ & covariance of the source, positive definite unless stated \\
+$A\psd B$, $A\pd B$ & Loewner order, $A-B$ is positive semidefinite (definite) \\
+$\tr A$, $\det A$, $\rank A$ & trace, determinant, rank \\
+$\range A$, $\ker A$ & column space and null space \\
+$C$ & a consumer, a computation that reads a representation and outputs something \\
+$J=\partial C/\partial x$, $g=\nabla C$ & Jacobian of the consumer, gradient of a scalar consumer \\
+$G$ & output metric of the consumer, positive semidefinite \\
+$O=(C,G,B)$ & an observer, a consumer with its output metric and its budget \\
+$\PC=J\T G J$ & read operator at a point \\
+$\bar P_{C,\mu}=\E_\mu[\PC(x)]$ & read operator averaged over a workload $\mu$ \\
+$\delta=\hat x-x$ & reconstruction error \\
+$M_\delta=\E[\delta\delta\T]$, $\Sd$ & second moment of the error, its covariance when the error is centred \\
+$\dO=\tr(\PC\Sd)$ & observer distortion, $\tr\Sd$ for the identity reader $\PC=I$ \\
+$\Normal(\mu,\Sigma)$ & normal distribution with mean $\mu$ and covariance $\Sigma$ \\
+$\Ent(X)$, $\h(X)$ & entropy, differential entropy \\
+$\KL{p}{q}$ & Kullback--Leibler divergence \\
+$\MI{X}{Y}$, $I(X;Y\mid S)$ & mutual information, conditional mutual information \\
+$R(D)$, $\RC(D)$ & rate--distortion function, consumer-relative rate--distortion function \\
+$\theta$ & water level in reverse water-filling \\
+$\log$, $\log_2$ & natural logarithm (nats), base-two logarithm (bits) \\
+$\Box\varphi$, $\Diamond\varphi$ & necessity and possibility in modal logic (\cref{ch10}) \\
+\bottomrule
+\end{tabular}
+\end{center}

@@ -1,0 +1,28 @@
+% Answers to selected exercises, chapter 06.
+
+\paragraph{Exercise 6.1}
+The gradient is the constant $g=(3,-1)$, so $P_C=gg\T=\begin{pmatrix}9&-3\\-3&1\end{pmatrix}$. For $\Sd=0.02\,I$, $\dO=0.02\,\tr P_C=0.02\cdot10=0.2$. The identity reader gives $\tr\Sd=0.04$. For isotropic error the ratio $0.2/0.04=5$ is $	r P_C$ divided by the dimension, $10/2$.
+
+\paragraph{Exercise 6.2}
+$\ker P_C=\{v: 3v_1-v_2=0\}=\operatorname{span}\{(1,3)\}$. The inputs $(0,0)$ and $(1,3)$ give the same output $0$, and so do any two inputs whose difference is a multiple of $(1,3)$. The quotient $\R^2/\ker P_C$ is the set of lines parallel to $(1,3)$, and each line is labelled by the one number $3x_1-x_2$ that the consumer outputs.
+
+\paragraph{Exercise 6.3}
+``Conditional content'' is the conditional leakage $I(X^n;M\mid S^n)/n$ of secure source coding (Villard and Piantanida, Ekrem and Ulukus). The assessment's terminology map retires this phrase in favour of ``conditional leakage''. ``Blind probe'' is finite-difference estimation of the active-subspace matrix (Constantine). ``Read distortion'' $\tr(P_C\Sd)$ is a weighted squared error (Sakrison), the sensitivity-weighted loss of task-based and Hessian-aware quantization. The map also asks for the replacements ``finite-difference active-subspace estimation'' and ``weighted mean squared error'' in papers aimed at information theorists.
+
+\paragraph{Exercise 6.5}
+O water-fills to $\theta$ with $\tfrac12\log_2(4/\theta)+\tfrac12\log_2(1/\theta)=3$, so $\theta^2=4/64$ and $\theta=0.25$. Then $\Sd^{\mathrm O}=\diag(0.25,0.25)$ with reconstruction $0.5$ and consumer distortion $0.25$. R spends $3$ bits on $e_2$, so $\Sd^{\mathrm R}=\diag(4,1/64)$ with reconstruction $4.015625$ and consumer distortion $0.015625$. O still reconstructs better and R serves the consumer sixteen times better.
+
+\paragraph{Exercise 6.6}
+Here $m=1$, $M=3$ and $r=2$, so the bound is $\log3\approx1.099$ nats, which is $\log_23\approx1.585$ bits. It is attained by $P=m\hat P=I$. The coder that only knows the bracket designs for $D/3$ and pays $R_I(D/3)$, while the oracle pays $R_I(D)$. With $\Sigma_x=I$ both modes are active whenever the water level $D/2$ is below $1$, that is for every target in the coding range $0<D<2$, and then the excess is exactly $\tfrac12\cdot2\cdot\log3=\log3$.
+
+\paragraph{Exercise 6.7}
+With $\rho=0.5$ the conditional variance is $1-\rho^2=0.75$. The theorem gives the same floor, $D_{\mathrm{floor}}=\tr(\tilde P\Pi)=0.75$. They agree because the whitened kernel is the direction of $x$-space that carries the part of $x_2$ uncorrelated with $x_1$. Describing $x_1$ perfectly removes the correlated part of $x_2$ and leaves exactly the independent part.
+
+\paragraph{Exercise 6.8}
+Consumer~1 caps $e_2$ at $0.25$ and leaves $e_1$ at its full variance, so $\Sigma_1^\star=\diag(4,0.25)$ at $R_1=\tfrac12\log4\approx0.693$ nats. For $D_2=0.4$ the identity reader water-fills to $\theta=0.2$, and $\Sigma_2^\star=0.2\,I\preceq\diag(4,0.25)$, so the pair is refinable. For $D_2=1$, $\theta=0.5$ and $\Sigma_2^\star=0.5\,I$, whose second entry exceeds $0.25$, so it is not. The constrained optimum keeps $\sigma_2\le0.25$ with $\sigma_1+\sigma_2\le1$, giving $\Sigma^\circ=\diag(0.75,0.25)$ and $L=\tfrac12\log\big(0.25/0.1875\big)=\tfrac12\log\tfrac43\approx0.144$ nats. Here the base layer spent its precision on $e_2$, finer than consumer~2 wanted.
+
+\paragraph{Exercise 6.9}
+With $r=1$, $\kappa=\lambda_2/\lambda_1=4/9\approx0.444$, and $\kappa$ can range over $[\lambda_3/\lambda_1,1]=[1/9,1]$. The coupling null needs the read direction inside the modes O fills first. Here O spends all its rate on $e_1$ up to $\tfrac12\log_2(9/4)\approx0.585$ bits, so at low rate O leaves the consumer's error at its full variance $4$ while R reduces it. There is no coupling null at low rate. A flip in the sense of \cref{eq:ch06:flip} appears at every positive rate.
+
+\paragraph{Exercise 6.10}
+With $200$ points the top eigenvector of $\hat P$ matches $w$ to $|\cos|>0.9999$ and the other four eigenvalues are at the level of finite-difference round-off, because \cref{prop:ch06:recovery} makes the population operator rank one. A probe confined to the first three coordinates sees $\hat P$ restricted to those coordinates, whose top eigenvector is $(1,2,0)/\sqrt5$, the projection of $w$ onto the probed subspace. It cannot see the $-1/\sqrt6$ component on the fifth coordinate. This is the confinement limit described in \emph{Data Mining as Observation}, Chapter~11, section 11.7.

@@ -1,0 +1,1005 @@
+\chapter{Linear algebra beyond the first course}\label{ch01}
+% Short running heads for long sentence-style section titles. The original
+% \sectionmark is saved here and restored at the end of the chapter.
+\let\ompSavedSectionmark\sectionmark
+\providecommand{\ompnexthead}[1]{\def\ompheadtext{#1}%
+  \renewcommand{\sectionmark}[1]{\markright{\MakeUppercase{\thesection.\ \ompheadtext}}}}
+\providecommand{\Kc}{K_c}
+
+The first course in linear algebra ends with eigenvalues of small symmetric
+matrices, the singular value decomposition and the projection onto a line.
+Primer~L of \emph{Data Mining as Observation} covers that ground, and its
+chapter~0 introduces the read operator $\PC$ and the observer distortion
+$\dO=\tr(\PC\Sd)$. This chapter starts there. Its subject is the algebra of
+\emph{two} quadratic forms at once, because nearly every object in the
+programme is one quadratic form measured against another. An error covariance
+is read through a consumer's operator. A source covariance sets the scale
+against which a reader's weights are compared. A budget enters a pencil of two
+matrices whose largest generalized eigenvalue decides a rate.
+
+Each section introduces one tool, states it as a numbered equation or theorem,
+and works an example small enough to check by hand. Every number in those
+examples is recomputed by \texttt{checks/ch01\_examples.py}.
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Inner products and projectors}
+\section{A positive definite matrix defines an inner product, and an orthogonal projector is a symmetric idempotent}\label{sec:ch01:proj}
+
+The dot product $x\T y$ of Primer~L, section~L.2, treats every coordinate
+alike. Many readers do not. A consumer that is twice as sensitive to the first
+coordinate as to the second measures length with a weight. Any symmetric
+positive definite matrix $G$ supplies such a weight, and the result has every
+property the reader uses an inner product for.
+
+\begin{definition}[Weighted inner product]\label{def:ch01:ginner}
+For a symmetric matrix $G\pd 0$, the $G$-inner product and the norm it induces are
+\begin{equation}\label{eq:ch01:ginner}
+\inner{x}{y}_G = x\T G\,y,\qquad \norm{x}_G=\sqrt{x\T G\,x}.
+\end{equation}
+\end{definition}
+
+The inner product is symmetric because $G$ is, it is linear in each argument,
+and $\norm{x}_G>0$ for $x\neq 0$ because $G$ is positive definite. When $G$ is
+only positive semidefinite the same formula gives a \emph{seminorm}. It assigns
+length zero to every vector in $\ker G$. That case is the normal one for a read
+operator, whose kernel holds the directions a consumer never reads, and it is
+why the programme writes $\PC\psd 0$ rather than $\PC\pd 0$.
+
+Primer~L, section~L.5, builds the projection onto one unit vector as $uu\T$. The
+general object is a matrix that does nothing the second time it is applied.
+
+\begin{definition}[Projector]\label{def:ch01:projector}
+A square matrix $\Pi$ is a \emph{projector} when it is idempotent, and an
+\emph{orthogonal projector} when it is also symmetric,
+\begin{equation}\label{eq:ch01:projector}
+\Pi^2=\Pi \quad\text{(projector)},\qquad \Pi^2=\Pi=\Pi\T\quad\text{(orthogonal projector)}.
+\end{equation}
+\end{definition}
+
+A projector splits every vector into a part it keeps and a part it discards,
+$x=\Pi x+(I-\Pi)x$. The kept part lies in $\range\Pi$ and the discarded part
+lies in $\ker\Pi$, since $\Pi(I-\Pi)x=(\Pi-\Pi^2)x=0$. Symmetry is exactly the
+condition that makes the two parts perpendicular,
+\begin{equation}\label{eq:ch01:split}
+(\Pi x)\T(I-\Pi)y = x\T(\Pi\T-\Pi\T\Pi)y = 0\ \text{for all }x,y
+\quad\Longleftrightarrow\quad \Pi\T=\Pi\T\Pi \quad\Longleftrightarrow\quad \Pi=\Pi\T .
+\end{equation}
+The last equivalence holds because $\Pi\T\Pi$ is symmetric, so $\Pi\T=\Pi\T\Pi$
+forces $\Pi\T$ to be symmetric, and transposing $\Pi\T=\Pi\T\Pi$ then gives
+$\Pi=\Pi\T\Pi=\Pi\T$. An idempotent that is not symmetric is an \emph{oblique}
+projector. It still splits $x$ into a range part and a kernel part, but the two
+parts are not at right angles.
+
+If the columns of $Q\in\R^{d\times k}$ are an orthonormal basis of a subspace
+$\mathcal S$, the orthogonal projector onto $\mathcal S$ is $QQ\T$. If the
+columns of $A$ are any basis, orthonormal or not, the same projector is
+\begin{equation}\label{eq:ch01:projbasis}
+\Pi_{\mathcal S}=QQ\T=\sum_{i=1}^k q_iq_i\T = A(A\T A)^{-1}A\T,\qquad
+\tr\Pi_{\mathcal S}=\rank\Pi_{\mathcal S}=k .
+\end{equation}
+The trace equals the rank because the eigenvalues of an orthogonal projector
+are $1$ on $\mathcal S$ and $0$ on its complement, and the trace is the sum of
+the eigenvalues.
+
+Replacing the dot product by the $G$-inner product changes which point of
+$\mathcal S$ is nearest. Minimizing $\norm{x-Ac}_G^2$ over $c$ gives the normal
+equations $A\T G(x-Ac)=0$, and so the \emph{$G$-orthogonal projector}
+\begin{equation}\label{eq:ch01:gproj}
+\Pi_G = A(A\T GA)^{-1}A\T G,\qquad \Pi_G^2=\Pi_G,\qquad G\,\Pi_G=\Pi_G\T G .
+\end{equation}
+It is idempotent but in general not symmetric. It is orthogonal in the
+$G$-inner product, which is what the identity $G\Pi_G=\Pi_G\T G$ says. Read
+in the ordinary dot product, it is oblique. Because the residual is
+$G$-orthogonal to the subspace, Pythagoras holds in the $G$-norm,
+\begin{equation}\label{eq:ch01:gpyth}
+\norm{x}_G^2=\norm{\Pi_Gx}_G^2+\norm{x-\Pi_Gx}_G^2 .
+\end{equation}
+The split of a weighted error into a part the reader sees in a subspace and a
+part it sees outside is this identity.
+
+\begin{example}[Two projections of the same point]\label{ex:ch01:gproj}
+Take the line spanned by $u=(1,1)\T$, the point $x=(1,-1)\T$ and the weight
+$G=\diag(2,1)$. The ordinary projector is $uu\T/2$, with every entry
+$\tfrac12$, and it sends $x$ to $(0,0)\T$ because $x\perp u$. The
+$G$-projector is $\Pi_G=u(u\T Gu)^{-1}u\T G$. Here $u\T Gu=3$ and
+$u\T G=(2,1)$, so
+\[
+\Pi_G=\tfrac13\begin{pmatrix}2&1\\2&1\end{pmatrix},\qquad
+\Pi_G x=\tfrac13\,(1,1)\T .
+\]
+Squaring $\Pi_G$ gives back $\Pi_G$, since $\tfrac19(4+2)=\tfrac23$ in the
+first entry and the rest follow the same way, and $\Pi_G$ is visibly not
+symmetric. The residual is $x-\Pi_Gx=(\tfrac23,-\tfrac43)\T$. Its $G$-inner
+product with $u$ is $\tfrac23\cdot2-\tfrac43\cdot1=0$, so it is $G$-orthogonal
+to the line, while its dot product with $u$ is $-\tfrac23\neq0$. The squared
+$G$-distance from $x$ to the line is $2\cdot\tfrac49+\tfrac{16}9=\tfrac83$,
+smaller than the $G$-distance $\norm{x}_G^2=3$ to the Euclidean foot $(0,0)\T$.
+The kept part has $\norm{\Pi_Gx}_G^2=(2+1)/9=\tfrac13$, and
+$\tfrac13+\tfrac83=3$, as \cref{eq:ch01:gpyth} requires.
+\Cref{fig:ch01:gproj} shows the two feet.
+
+For a subspace of dimension two in $\R^3$, take $q_1=(1,1,0)\T/\sqrt2$ and
+$q_2=(0,0,1)\T$. Then
+\[
+\Pi=q_1q_1\T+q_2q_2\T=\begin{pmatrix}\tfrac12&\tfrac12&0\\ \tfrac12&\tfrac12&0\\ 0&0&1\end{pmatrix},
+\qquad \Pi\,(3,1,2)\T=(2,2,2)\T .
+\]
+The residual $(1,-1,0)\T$ spans $\ker\Pi$, and $\tr\Pi=2=\rank\Pi$.
+\end{example}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[scale=1.35]
+\draw[->,gray] (-1.3,0)--(2.6,0) node[right] {$x_1$};
+\draw[->,gray] (0,-2.9)--(0,1.4) node[above] {$x_2$};
+\draw[thick] (-1.2,-1.2)--(1.3,1.3) node[above right] {$\operatorname{span}(u)$};
+\draw[dashed,blue!60!black] (1,-1) circle ({sqrt(2)});
+\draw[dashed,red!70!black] (1,-1) ellipse ({sqrt(4/3)} and {sqrt(8/3)});
+\fill (1,-1) circle (1.2pt) node[below right] {$x$};
+\fill[blue!60!black] (0,0) circle (1.4pt);
+\node[blue!60!black,left] at (-0.05,0.12) {$\Pi x$};
+\fill[red!70!black] (1/3,1/3) circle (1.4pt);
+\node[red!70!black,above left] at (1/3,1/3) {$\Pi_G x$};
+\end{tikzpicture}
+\caption{The Euclidean and the $G$-orthogonal projection of $x=(1,-1)\T$ onto the
+line spanned by $(1,1)\T$, with $G=\diag(2,1)$. The circle is the smallest
+Euclidean ball around $x$ that touches the line, and it touches at the origin.
+The ellipse is the smallest $G$-ball, and it touches at $(\tfrac13,\tfrac13)$.}
+\label{fig:ch01:gproj}
+\end{figure}
+
+\inproject{The read operator is a weighted sum of projectors onto the directions a
+consumer reads. In \nolinkurl{geometric-observation/paper/observation-theory.tex},
+appendix ``The price of a misidentified observer'', the theorem ``Omission floor''
+is stated with $\Pi$ the orthogonal projector onto a kernel, and the paragraph
+after it uses the overlap $\tfrac1r\tr(\Pi_R\Pi_{\hat R})$ of two projectors to
+measure how well a probe recovered a read subspace.}
+
+\buildson{Primer~L, sections~L.4 and L.5 (kernel, rank, the projection $uu\T$).
+Chapter~0 of \emph{Data Mining as Observation}, section~0.2.}
+\usedin{\Cref{sec:ch01:whiten,sec:ch01:pencil}. Chapter~5, where a
+positive definite $G$ that varies from point to point is a Riemannian metric.
+Chapter~6, read subspaces and their overlaps.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Spectral theorem and Loewner order}
+\section{A symmetric matrix is a weighted sum of orthogonal projectors, and the Loewner order compares them}\label{sec:ch01:spectral}
+
+Primer~L, section~L.7, writes a symmetric matrix as $V\Lambda V\T$. Grouping
+the eigenvectors that share an eigenvalue turns that into a statement about
+projectors, and in that form it handles repeated eigenvalues without fuss.
+
+\begin{theorem}[Spectral theorem]\label{thm:ch01:spectral}
+Let $A\in\R^{d\times d}$ be symmetric with distinct eigenvalues
+$\lambda_1>\dots>\lambda_m$. Then
+\begin{equation}\label{eq:ch01:spectral}
+A=\sum_{j=1}^m \lambda_j\,\Pi_j,\qquad \Pi_j\Pi_k=0\ (j\neq k),\qquad \sum_{j=1}^m\Pi_j=I,
+\end{equation}
+where $\Pi_j$ is the orthogonal projector onto the eigenspace of $\lambda_j$.
+\end{theorem}
+
+The decomposition makes any function of a symmetric matrix a function of
+numbers. For a function $f$ defined on the eigenvalues,
+\begin{equation}\label{eq:ch01:funcalc}
+f(A)=\sum_{j=1}^m f(\lambda_j)\,\Pi_j .
+\end{equation}
+With $f(t)=t^{-1}$ this is the inverse, with $f(t)=\log t$ the matrix
+logarithm of \cref{sec:ch01:logdet}, and with $f(t)=\sqrt t$ the square root.
+Among positive semidefinite matrices the square root is unique. Only one PSD
+matrix $B$ has $B^2=A$, and it is the one \cref{eq:ch01:funcalc} gives
+\cite{hornjohnson2012}. Other square roots exist if PSD is not required, for
+example $-A^{1/2}$, and non-symmetric factors such as the Cholesky factor $L$
+with $LL\T=A$ are also used. They are not ``the'' square root.
+
+Positive semidefiniteness, written $A\psd 0$, means $x\T Ax\ge 0$ for all $x$
+(Primer~L, section~L.6). By \cref{eq:ch01:spectral} that holds exactly when
+every eigenvalue is nonnegative, and the eigenvalues bound the form,
+\begin{equation}\label{eq:ch01:rayleighbounds}
+\lambda_{\min}(A)\,\norm{x}^2\ \le\ x\T Ax\ \le\ \lambda_{\max}(A)\,\norm{x}^2 .
+\end{equation}
+
+The ratio of the two bounds in \cref{eq:ch01:rayleighbounds} is the
+\emph{condition number} $\kappa(A)=\lambda_{\max}/\lambda_{\min}$ of a positive
+definite matrix. For a covariance it says how elongated the cloud is. A
+covariance with $\kappa=100$ has one direction with a hundred times the
+variance of another, so its whitening $\Sigma^{-1/2}$ stretches the thin
+direction by a factor of ten relative to the thick one. Any error made before
+whitening, for example by estimating $\Sigma$ from too few samples, is
+amplified along that thin direction. A large condition number is a warning
+that a whitened quantity rests on the smallest eigenvalues, which are the
+least reliably estimated.
+
+Comparing two symmetric matrices uses the same test on their difference.
+
+\begin{definition}[Loewner order]\label{def:ch01:loewner}
+For symmetric $A,B$ of the same size,
+\begin{equation}\label{eq:ch01:loewner}
+A\psd B \iff A-B\psd 0 \iff x\T Ax\ge x\T Bx\ \text{for every } x .
+\end{equation}
+\end{definition}
+
+The relation is reflexive, antisymmetric and transitive, so it is an order. It
+is only a \emph{partial} order. Two matrices can be incomparable, each larger
+than the other along some direction. An error covariance can be smaller than
+another along the directions one consumer reads and larger along the
+directions a second consumer reads. That is why the programme compares errors
+through a scalar such as $\tr(\PC\Sd)$, and why a statement of the form
+$\Sigma_1\psd\Sigma_2$ is a much stronger claim, a win for every consumer at
+once.
+
+Three facts carry most of the weight in later chapters.
+\begin{align}
+A\psd B &\implies C\T AC\psd C\T BC\ \text{for any } C, \label{eq:ch01:congruence}\\
+A\psd B,\ P\psd 0 &\implies \tr(PA)\ge\tr(PB), \label{eq:ch01:tracemono}\\
+A\psd B\pd 0 &\implies B^{-1}\psd A^{-1}. \label{eq:ch01:inversemono}
+\end{align}
+The first is $x\T C\T(A-B)Cx=(Cx)\T(A-B)(Cx)\ge0$. The second follows from
+\cref{sec:ch01:trace}, since $\tr(P(A-B))\ge0$ when both factors are PSD. The
+third has a short proof that uses whitening, given below. The second has a
+converse. If $\tr(PA)\ge\tr(PB)$ for every $P\psd0$, then choosing $P=xx\T$
+gives $x\T Ax\ge x\T Bx$ for every $x$. So
+\begin{equation}\label{eq:ch01:everyreader}
+A\psd B\iff \tr(PA)\ge\tr(PB)\ \text{for every } P\psd0 .
+\end{equation}
+In the language of the programme, one error covariance is below another in
+the Loewner order exactly when every consumer, whatever its read operator,
+finds it no worse.
+The proof of the inverse rule goes through whitening. By \cref{eq:ch01:congruence} with
+$C=B^{-1/2}$, the hypothesis gives $B^{-1/2}AB^{-1/2}\psd I$, so every
+eigenvalue of $B^{-1/2}AB^{-1/2}$ is at least $1$. Its inverse
+$B^{1/2}A^{-1}B^{1/2}$ then has every eigenvalue at most $1$, so
+$B^{1/2}A^{-1}B^{1/2}\preceq I$, and applying \cref{eq:ch01:congruence} with
+$C=B^{-1/2}$ once more gives $A^{-1}\preceq B^{-1}$.
+
+Not every operation that is monotone on numbers is monotone in this order.
+Squaring is the standard warning. From $A\psd B\psd 0$ it does not follow that
+$A^2\psd B^2$.
+
+\begin{example}[A square root, an incomparable pair and a failure of squaring]\label{ex:ch01:spectral}
+Let $A=\begin{pmatrix}5&2\\2&2\end{pmatrix}$. Its trace is $7$ and its
+determinant is $6$, so its eigenvalues are $6$ and $1$, with unit
+eigenvectors $(2,1)\T/\sqrt5$ and $(1,-2)\T/\sqrt5$. The two eigenprojectors are
+\[
+\Pi_1=\tfrac15\begin{pmatrix}4&2\\2&1\end{pmatrix},\qquad
+\Pi_2=\tfrac15\begin{pmatrix}1&-2\\-2&4\end{pmatrix},
+\]
+and $6\Pi_1+\Pi_2=A$. The square root is $\sqrt6\,\Pi_1+\Pi_2$, which has
+diagonal entries $(4\sqrt6+1)/5\approx2.1596$ and $(\sqrt6+4)/5\approx1.2899$
+and off-diagonal entry $(2\sqrt6-2)/5\approx0.5798$. Its square has top-left
+entry $2.1596^2+0.5798^2\approx5.000$.
+
+The matrices $\diag(2,0)$ and $I$ are incomparable. Their difference
+$\diag(1,-1)$ has one positive and one negative eigenvalue, so
+$\diag(2,0)$ is larger along $e_1$ and smaller along $e_2$.
+
+For squaring, take $A=\begin{pmatrix}2&1\\1&1\end{pmatrix}$ and
+$B=\begin{pmatrix}1&0\\0&0\end{pmatrix}$. Then
+$A-B=\begin{pmatrix}1&1\\1&1\end{pmatrix}$ has eigenvalues $2$ and $0$, so
+$A\psd B\psd 0$. But $A^2-B^2=\begin{pmatrix}4&3\\3&2\end{pmatrix}$ has
+determinant $-1$, so it has a negative eigenvalue and $A^2\not\psd B^2$.
+
+For inversion, take $A=\begin{pmatrix}3&1\\1&2\end{pmatrix}$ and $B=I$. Then
+$A-I$ has trace $3$ and determinant $1$, so $A\psd I$. And
+$A^{-1}=\tfrac15\begin{pmatrix}2&-1\\-1&3\end{pmatrix}$, so
+$I-A^{-1}=\tfrac15\begin{pmatrix}3&1\\1&2\end{pmatrix}$, with determinant
+$\tfrac{5}{25}=0.2>0$ and positive trace. So $I\psd A^{-1}$, as
+\cref{eq:ch01:inversemono} predicts.
+\end{example}
+
+\inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex}, appendix
+``The price of a misidentified observer'', theorem ``Commission tax'', assumes
+$m\hat P\preceq P\preceq M\hat P$ and its proof uses \cref{eq:ch01:tracemono}
+in the form $P\preceq M\hat P\Rightarrow\tr(P\Sigma_\delta)\le M\tr(\hat
+P\Sigma_\delta)$. In \nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex},
+section ``Convex Structure'', the step $\Sigma\preceq\Sigma_T$ if and only if
+$\Sigma^{-1}\succeq\Sigma_T^{-1}$ is \cref{eq:ch01:inversemono}.}
+
+\buildson{Primer~L, sections~L.6 and L.7.}
+\usedin{Every later section of this chapter. Chapter~2, where the
+Cram\'er--Rao bound is a Loewner inequality. Chapter~4, semidefinite
+constraints. Chapter~6, the commission and omission theorems.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Trace as weighted variance}
+\section{The trace of a product is a weighted sum of variances}\label{sec:ch01:trace}
+
+Chapter~0 of \emph{Data Mining as Observation} defines the observer distortion as
+a trace. This section collects the identities that make the trace usable and
+shows why the trace of a product, and not a product of traces, is the right
+scalar.
+
+The trace is linear, and it does not see the order of two factors,
+\begin{equation}\label{eq:ch01:cyclic}
+\tr(AB)=\sum_{i,j}A_{ij}B_{ji}=\tr(BA),\qquad \tr(ABC)=\tr(CAB)=\tr(BCA).
+\end{equation}
+The rule allows cyclic shifts only. In general $\tr(ABC)\neq\tr(ACB)$
+(\cref{exr:ch01:cyclic}). Here $A$ and $B$ need not be square, only
+conformable, and that case gives the identity behind every quadratic form,
+\begin{equation}\label{eq:ch01:qftrace}
+x\T Ax=\tr(x\T Ax)=\tr(A\,xx\T),\qquad \norm{x}^2=\tr(xx\T).
+\end{equation}
+
+Taking expectations of \cref{eq:ch01:qftrace} turns a random quadratic form
+into a deterministic trace. Let $\delta$ be a random error with mean $\mu$,
+covariance $\Sd$ and second moment $M_\delta=\E[\delta\delta\T]=\Sd+\mu\mu\T$.
+Linearity of trace and expectation gives, for a fixed matrix $P$,
+\begin{equation}\label{eq:ch01:expqf}
+\E\big[\delta\T P\delta\big]=\tr\big(P\,M_\delta\big)=\tr\big(P\,\Sd\big)+\mu\T P\mu .
+\end{equation}
+This is chapter~0's identity, equation~0.10, with the mean term written out.
+A biased error pays $\mu\T P\mu$ on top of its covariance term.
+
+\begin{definition}[Observer distortion]\label{def:ch01:dO}
+For a read operator $\PC\psd 0$ and a centred error with covariance $\Sd$,
+\begin{equation}\label{eq:ch01:dO}
+\dO=\tr(\PC\Sd)=\E\big[\delta\T\PC\,\delta\big].
+\end{equation}
+\end{definition}
+
+The definition is a weighted mean squared error. Weighting squared error by a
+PSD matrix is standard in estimation and in rate--distortion theory. The
+programme takes the weight from the consumer's Jacobian, as chapter~0 does, and
+chapter~6 gives the history of both the weighted error and that choice of
+weight. The trace has a reading that explains the name.
+Write $\PC=\sum_i p_i v_iv_i\T$ by the spectral theorem. Then
+\begin{equation}\label{eq:ch01:weightedvar}
+\tr(\PC\Sd)=\sum_i p_i\,v_i\T\Sd v_i=\sum_i p_i\Var\big(v_i\T\delta\big).
+\end{equation}
+The distortion is a sum of the error's variances along the consumer's
+eigendirections, each weighted by how strongly the consumer reads that
+direction. Setting $\PC=I$ recovers $\tr\Sd$, the total variance, which is
+the identity reader. A direction in $\ker\PC$ contributes nothing however
+large the error is there.
+
+Two PSD matrices always have a nonnegative trace product, and it vanishes
+only in a specific way,
+\begin{equation}\label{eq:ch01:tracepos}
+\tr(P\Sigma)=\tr\big(P^{1/2}\Sigma P^{1/2}\big)=\big\|\Sigma^{1/2}P^{1/2}\big\|_F^2\ \ge 0,
+\qquad \tr(P\Sigma)=0 \iff P\Sigma=0 .
+\end{equation}
+The equality case says the error lives entirely in the kernel of the reader.
+
+\begin{example}[Same total error, different distortion]\label{ex:ch01:trace}
+Let the consumer have $\PC=\begin{pmatrix}2&1\\1&2\end{pmatrix}$, with
+eigenvalue $3$ along $(1,1)\T/\sqrt2$ and $1$ along $(1,-1)\T/\sqrt2$. Compare
+two centred errors with the same total variance $4$,
+\[
+\Sigma_a=\begin{pmatrix}1&0\\0&3\end{pmatrix},\qquad
+\Sigma_b=\begin{pmatrix}2&1\\1&2\end{pmatrix}.
+\]
+For $\Sigma_a$, the variance along $(1,1)\T/\sqrt2$ is $(1+3)/2=2$ and along
+$(1,-1)\T/\sqrt2$ is also $2$, so \cref{eq:ch01:weightedvar} gives
+$3\cdot2+1\cdot2=8$. Directly, $\PC\Sigma_a=\begin{pmatrix}2&3\\1&6\end{pmatrix}$
+has trace $8$. For $\Sigma_b$, the variances along the two eigendirections are
+$3$ and $1$, so the distortion is $3\cdot3+1\cdot1=10$, and
+$\tr(\PC\Sigma_b)=\tr\begin{pmatrix}5&4\\4&5\end{pmatrix}=10$. The identity
+reader scores the two errors equal at $4$. This consumer scores $\Sigma_b$
+worse, because $\Sigma_b$ puts its error along the direction the consumer reads
+most. Adding a bias $\mu=(1,0)\T$ to $\Sigma_a$ raises the distortion by
+$\mu\T\PC\mu=2$, to $10$.
+\end{example}
+
+\inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex}, section GO-2
+on distortion (label \texttt{sec:distortion}), compares codes at matched
+reconstruction error and reports that $\tr(\PC\Sd)$ tracks which code the
+consumer prefers while reconstruction error does not, with the claim status
+\texttt{[demonstrated]}. \Cref{ex:ch01:trace} is the two-dimensional version of
+that dissociation.}
+
+\buildson{Chapter~0 of \emph{Data Mining as Observation}, sections~0.3 and 0.5,
+equations~0.3, 0.4 and 0.10. Primer~S, section~S.2 (linearity of expectation).}
+\usedin{Chapter~2, where $\tr(\PC\Sigma)$ is evaluated on Kalman covariances.
+Chapter~3, consumer-relative rate--distortion. Chapter~6 throughout. Chapter~7,
+where a quantizer's error covariance is scored by $\dO$.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Whitening}
+\section{Whitening makes the source isotropic, and the whitened operator carries the reader into those coordinates}\label{sec:ch01:whiten}
+
+Primer~L, section~L.8, shows that the singular value decomposition of a
+centred data matrix $X\in\R^{n\times d}$ gives the principal components,
+\begin{equation}\label{eq:ch01:svd}
+X=U\Sigma_{\!s}V\T,\qquad \Sigma=\tfrac1n X\T X=V\Lambda V\T,\qquad \Lambda=\tfrac1n\Sigma_{\!s}^2 .
+\end{equation}
+Principal component analysis keeps the top $k$ columns $V_k$ of $V$. The
+projector $V_kV_k\T$ keeps the variance $\tr(V_k\T\Sigma V_k)=\lambda_1+\dots+\lambda_k$,
+and \cref{sec:ch01:pencil} shows that no other $k$-dimensional subspace keeps more.
+That is the identity reader's answer. A consumer that reads other directions
+wants a different subspace, and the tool that compares a reader with a source
+is whitening.
+
+\begin{definition}[Whitening]\label{def:ch01:whiten}
+For $\Sigma\pd 0$, a matrix $W$ \emph{whitens} $\Sigma$ when $W\Sigma W\T=I$.
+The symmetric choice and the general solution are
+\begin{equation}\label{eq:ch01:whiten}
+W=\Sigma^{-1/2},\qquad\text{and every whitening matrix is } W=Q\,\Sigma^{-1/2}\ \text{with } Q\T Q=I .
+\end{equation}
+\end{definition}
+
+To see the second claim, note that $Q=W\Sigma^{1/2}$ satisfies
+$QQ\T=W\Sigma W\T=I$, so it is orthogonal. Whitening is therefore unique only
+up to a rotation, a point \cref{sec:ch01:orth} returns to. The choice
+$Q=V\T$ gives PCA whitening $\Lambda^{-1/2}V\T$, which rotates into the
+principal axes and then rescales. The choice $Q=I$ gives the symmetric whitening
+$\Sigma^{-1/2}$, which rescales without leaving the original orientation.
+
+Now let a source $x$ have covariance $\Sigma_x\pd0$ and write it as
+$x=\mu+\Sigma_x^{1/2}z$, so that $z$ has covariance $I$. An error $\delta_z$ in
+whitened coordinates becomes $\delta_x=\Sigma_x^{1/2}\delta_z$ in source
+coordinates. A consumer with read operator $P$ in source coordinates sees
+\begin{equation}\label{eq:ch01:whitenedop}
+\delta_x\T P\,\delta_x=\delta_z\T\tilde P\,\delta_z,\qquad \tilde P=\Sigma_x^{1/2}P\,\Sigma_x^{1/2}.
+\end{equation}
+The matrix $\tilde P$ is the \emph{whitened operator}. Its eigenvalues weigh
+how much a consumer cares about each direction against how much variance the
+source has there, and they are what reverse water-filling in chapter~3 acts on.
+Three facts make it easy to use,
+\begin{equation}\label{eq:ch01:whitenfacts}
+\tr(P\Sigma_x)=\tr\tilde P,\qquad
+\operatorname{spec}\tilde P=\operatorname{spec}(P\Sigma_x),\qquad
+\ker\tilde P=\Sigma_x^{-1/2}\ker P .
+\end{equation}
+The first is the cyclic rule. The second holds because
+$P\Sigma_x=\Sigma_x^{-1/2}\tilde P\,\Sigma_x^{1/2}$ is similar to $\tilde P$,
+even though $P\Sigma_x$ itself is not symmetric. The same argument shows that
+$P^{1/2}\Sigma_xP^{1/2}$ has the same eigenvalues as well, so papers that use
+either symmetric form are diagonalizing the same spectrum. The third holds
+because $\tilde Pv=0$ exactly when $P\Sigma_x^{1/2}v=0$. The whitened operator
+is \emph{not} $P$ with its eigenvalues rescaled. Its eigenvectors differ from
+those of $P$ and of $\Sigma_x$ whenever the two do not commute.
+
+\begin{example}[A reader of the sum, whitened]\label{ex:ch01:whiten}
+Let $\Sigma_x=\diag(4,1)$ and let the consumer read $x_1+x_2$, so $g=(1,1)\T$
+and $P=gg\T$, with every entry $1$. The eigenvalues of $P$ are $2$ and $0$. The
+whitened operator is
+\[
+\tilde P=\diag(2,1)\begin{pmatrix}1&1\\1&1\end{pmatrix}\diag(2,1)
+=\begin{pmatrix}4&2\\2&1\end{pmatrix}=(2,1)\T(2,1),
+\]
+with eigenvalue $5$ along $(2,1)\T/\sqrt5$ and $0$ along $(1,-2)\T/\sqrt5$.
+The trace $\tr(P\Sigma_x)=4+1=5$ matches. The nonsymmetric product
+$P\Sigma_x=\begin{pmatrix}4&1\\4&1\end{pmatrix}$ also has trace $5$ and
+determinant $0$, so the same eigenvalues. The whitened kernel
+$(1,-2)\T$ maps back to $\Sigma_x^{1/2}(1,-2)\T=(2,-2)\T$, which spans
+$\ker P$, as the third identity in \cref{eq:ch01:whitenfacts} says. In whitened
+coordinates the consumer's top direction leans toward the first coordinate,
+because that is where the source has more variance to spoil.
+\end{example}
+
+\inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex} defines
+$\tilde P:=\Sigma_x^{1/2}P\Sigma_x^{1/2}$ as ``the whitened operator'' in appendix
+``The price of a misidentified observer''. The theorem ``Omission floor'' projects
+onto the \emph{whitened} kernel $\Sigma_x^{-1/2}\ker\hat P$, and its proof explains
+why the naive kernel $\ker\hat P$ is the wrong one when $\Sigma_x\neq I$. The
+Berger-reduction proposition (label \texttt{prop:rd}) in section ``A
+consumer-relative rate--distortion function'' diagonalizes
+$\PC^{1/2}\Sigma_x\PC^{1/2}$, which has the same spectrum.}
+
+\buildson{Primer~L, sections~L.7 and L.8. Chapter~0 of \emph{Data Mining as
+Observation}, equation~0.6.}
+\usedin{Chapter~2 (whitening a Gaussian), chapter~3 (reverse water-filling on
+the eigenvalues of $\tilde P$), chapter~6 (omission floor).}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Pencils and Rayleigh quotients}
+\section{Two quadratic forms can be diagonalized together, and the Rayleigh quotient ranks the directions}\label{sec:ch01:pencil}
+
+Many questions in the programme ask for the direction that does best on one
+quadratic form relative to another. Which one-dimensional description of a
+source buys the most reduction in a consumer's error per unit of leaked
+information? Which direction carries the most consumer-weighted variance per
+unit of source variance? The answer is always a generalized eigenvector.
+
+\begin{definition}[Matrix pencil and generalized eigenproblem]\label{def:ch01:pencil}
+For symmetric $A$ and symmetric $B\pd 0$, the \emph{pencil} $(A,B)$ has
+generalized eigenpairs $(\mu,v)$ with
+\begin{equation}\label{eq:ch01:geneig}
+Av=\mu\,Bv,\qquad \det(A-\mu B)=0 .
+\end{equation}
+\end{definition}
+
+Substituting $v=B^{-1/2}w$ turns the pencil into an ordinary symmetric
+eigenproblem for the matrix $B^{-1/2}AB^{-1/2}$. So the $\mu$ are real, and the
+eigenvectors can be chosen orthonormal \emph{in the $B$-inner product}.
+Collecting them in a matrix $V$ diagonalizes both forms at once,
+\begin{equation}\label{eq:ch01:simdiag}
+V\T BV=I,\qquad V\T AV=\diag(\mu_1,\dots,\mu_d).
+\end{equation}
+This is simultaneous diagonalization. In the coordinates $c=V^{-1}x$ both forms
+are sums of squares, $x\T Bx=\sum_ic_i^2$ and $x\T Ax=\sum_i\mu_ic_i^2$. It needs
+one of the two matrices to be positive definite. Two PSD matrices $A$ and $B$
+with $A+B\pd0$ can still be diagonalized together, by applying
+\cref{eq:ch01:simdiag} to the pencil $(A,A+B)$. Then $V\T(A+B)V=I$ and
+$V\T AV$ is diagonal, so $V\T BV=I-V\T AV$ is diagonal too.
+
+The ratio of the two forms is the \emph{Rayleigh quotient} of the pencil,
+\begin{equation}\label{eq:ch01:rayleigh}
+\rho(x)=\frac{x\T Ax}{x\T Bx}=\frac{\sum_i\mu_ic_i^2}{\sum_ic_i^2},\qquad
+\mu_{\min}\le\rho(x)\le\mu_{\max}.
+\end{equation}
+The second form of $\rho$ shows it is a weighted average of the $\mu_i$, so it
+lies between the extreme generalized eigenvalues and reaches them at the
+corresponding eigenvectors. Its gradient is
+$\nabla\rho=\tfrac{2}{x\T Bx}\big(Ax-\rho(x)Bx\big)$, so the stationary points
+of $\rho$ are exactly the generalized eigenvectors. The intermediate
+eigenvalues have a variational description too.
+
+\begin{theorem}[Courant--Fischer]\label{thm:ch01:cf}
+With $\mu_1\ge\dots\ge\mu_d$ the generalized eigenvalues of $(A,B)$,
+\begin{equation}\label{eq:ch01:courant}
+\mu_k=\max_{\dim\mathcal S=k}\ \min_{0\neq x\in\mathcal S}\rho(x)
+=\min_{\dim\mathcal S=d-k+1}\ \max_{0\neq x\in\mathcal S}\rho(x).
+\end{equation}
+\end{theorem}
+
+With $B=I$ this is the classical statement for eigenvalues of a symmetric
+matrix \cite{hornjohnson2012}. The pencil version follows by the substitution
+$x=B^{-1/2}w$, which maps subspaces of dimension $k$ to subspaces of dimension
+$k$. Asking for the best $k$-dimensional subspace as a whole, rather than the
+$k$-th best direction, gives the trace form.
+
+\begin{theorem}[Ky Fan's maximum principle]\label{thm:ch01:kyfan}
+For symmetric $A$ with eigenvalues $\lambda_1\ge\dots\ge\lambda_d$,
+\begin{equation}\label{eq:ch01:kyfan}
+\max_{U\in\R^{d\times k},\ U\T U=I_k}\tr\big(U\T AU\big)=\lambda_1+\dots+\lambda_k ,
+\end{equation}
+attained when the columns of $U$ span the top-$k$ eigenspace. For the pencil
+$(A,B)$ the same holds with the constraint $U\T BU=I_k$ and the generalized
+eigenvalues $\mu_1+\dots+\mu_k$.
+\end{theorem}
+
+The result is due to Ky Fan \cite{fan1949}. With $A=\Sigma$ it is the PCA
+statement of \cref{sec:ch01:whiten}. Note that $\tr(U\T AU)=\tr(A\,UU\T)$ is the
+trace of $A$ against the projector $UU\T$, the form of \cref{sec:ch01:trace}.
+
+\begin{example}[A pencil whose eigenvectors are not orthogonal]\label{ex:ch01:pencil}
+Let $A=\begin{pmatrix}2&2\\2&8\end{pmatrix}$ and $B=\diag(1,4)$. Then
+$\det(A-\mu B)=(2-\mu)(8-4\mu)-4=4\mu^2-16\mu+12$, with roots $\mu=3$ and
+$\mu=1$. For $\mu=3$, $A-3B=\begin{pmatrix}-1&2\\2&-4\end{pmatrix}$ and
+$v_1\propto(2,1)\T$. For $\mu=1$, $A-B=\begin{pmatrix}1&2\\2&4\end{pmatrix}$ and
+$v_2\propto(2,-1)\T$. Both have $v\T Bv=4+4=8$, so the $B$-normalized vectors
+are $(2,\pm1)\T/(2\sqrt2)$. They are $B$-orthogonal, since
+$(2,1)B(2,-1)\T=4-4=0$, but not orthogonal in the dot product, since
+$(2,1)\cdot(2,-1)=3$. With $V$ holding the normalized vectors, $V\T BV=I$ and
+$V\T AV=\diag(3,1)$. The check on the first entry is $A(2,1)\T=(6,12)\T$,
+then $(2,1)(6,12)\T/8=24/8=3$. At $x=e_1$ the Rayleigh quotient is
+$2/1=2$, between $1$ and $3$. The ordinary eigenvalues of $A$ are
+$5\pm\sqrt{13}$, about $8.606$ and $1.394$, which shows that the pencil, and not
+$A$ alone, answers the relative question.
+
+For Ky Fan, let $A=\begin{pmatrix}3&1&0\\1&3&0\\0&0&1\end{pmatrix}$, with
+eigenvalues $4$, $2$ and $1$. The best two-dimensional trace is $4+2=6$. The
+subspace spanned by $e_1,e_2$ is the top eigenspace and gives
+$\tr(U\T AU)=3+3=6$. The subspace spanned by $e_1,e_3$ gives $3+1=4$.
+\end{example}
+
+\inproject{In \nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex},
+section ``The One-Dimensional Case'', the theorem labelled \texttt{thm:onedim}
+gives the minimum leakage as $\tfrac12\log(1+\Delta/\mu_{\max})$, and its proof
+reduces the minimization to maximizing ``the Rayleigh quotient
+$b\T A(\Delta)b/b\T\Kc b$ of a symmetric pencil''. Section ``Directions and
+Misalignment'' states that, with no second party, the best one-dimensional
+descriptions read the top generalized eigenspace of the pencil
+$(\Sigma_TQ\Sigma_T,\Sigma_T)$. The observation-theory paper's ``commuting
+observers'' case in section ``Successive refinement across observers'' assumes
+that $\Sigma_x,P_1,P_2$ are simultaneously diagonalizable.}
+
+\buildson{\Cref{sec:ch01:spectral,sec:ch01:whiten}. Primer~L, section~L.7,
+the PCA paragraph.}
+\usedin{Chapter~3, where water-filling acts on simultaneously diagonal forms.
+Chapter~4, Lagrange multipliers for the Rayleigh quotient. Chapter~6, the pencil
+characterization of leakage.}
+
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Schur complements}
+\section{The Schur complement is what remains of a block after the other block is eliminated}\label{sec:ch01:schur}
+
+Gaussian elimination on a matrix split into blocks produces one matrix again
+and again. It is the conditional covariance of chapter~2, the error covariance
+of a Kalman update and the certificate in a semidefinite constraint.
+
+\begin{definition}[Schur complement]\label{def:ch01:schur}
+For a symmetric block matrix with $A$ invertible,
+\begin{equation}\label{eq:ch01:schur}
+M=\begin{pmatrix}A&B\\B\T&D\end{pmatrix},\qquad M/A=S=D-B\T A^{-1}B .
+\end{equation}
+\end{definition}
+
+Subtracting $B\T A^{-1}$ times the first block row from the second clears the
+lower-left block, and doing the same with columns clears the upper-right. The
+result is a block factorization,
+\begin{equation}\label{eq:ch01:ldu}
+M=\begin{pmatrix}I&0\\B\T A^{-1}&I\end{pmatrix}
+\begin{pmatrix}A&0\\0&S\end{pmatrix}
+\begin{pmatrix}I&A^{-1}B\\0&I\end{pmatrix}.
+\end{equation}
+The outer factors are triangular with unit diagonal, so they have determinant
+one and are easy to invert. Three consequences follow at once,
+\begin{gather}
+\det M=\det A\cdot\det S, \label{eq:ch01:schurdet}\\
+M^{-1}=\begin{pmatrix}A^{-1}+A^{-1}BS^{-1}B\T A^{-1}&-A^{-1}BS^{-1}\\-S^{-1}B\T A^{-1}&S^{-1}\end{pmatrix}, \label{eq:ch01:schurinv}
+\end{gather}
+and the positive definiteness test below. The lower-right block of $M^{-1}$ is
+$S^{-1}$. That fact is the bridge to chapter~2, where the inverse covariance
+holds the conditional precisions.
+
+\begin{theorem}[Schur complement test]\label{thm:ch01:schurpsd}
+If $A\pd0$, then
+\begin{equation}\label{eq:ch01:schurpsd}
+M\psd 0 \iff S\psd0,\qquad M\pd0\iff S\pd0 .
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The outer factors in \cref{eq:ch01:ldu} are transposes of each other, so
+$M=L\,\diag(A,S)\,L\T$ with $L$ invertible. By \cref{eq:ch01:congruence},
+congruence by an invertible matrix preserves both $\psd0$ and $\pd0$ in both
+directions. And $\diag(A,S)$ is PSD (PD) exactly when $S$ is, given $A\pd0$.
+\end{proof}
+
+Eliminating in the other order, with $D$ invertible, gives the other Schur
+complement $A-BD^{-1}B\T$. Equating the upper-left blocks of the two expressions
+for $M^{-1}$ gives the matrix inversion lemma, often called the Woodbury
+identity,
+\begin{equation}\label{eq:ch01:woodbury}
+(A-BD^{-1}B\T)^{-1}=A^{-1}+A^{-1}B\big(D-B\T A^{-1}B\big)^{-1}B\T A^{-1}.
+\end{equation}
+Chapter~2 uses it to pass between the covariance and the information forms of
+the Kalman update.
+
+\begin{example}[A three-by-three matrix split one and two]\label{ex:ch01:schur}
+Let
+\[
+M=\begin{pmatrix}4&2&2\\2&2&1\\2&1&3\end{pmatrix},\qquad A=4,\quad B=(2,2),\quad D=\begin{pmatrix}2&1\\1&3\end{pmatrix}.
+\]
+Then $B\T A^{-1}B=\tfrac14\begin{pmatrix}4&4\\4&4\end{pmatrix}$, every entry $1$,
+and
+\[
+S=D-B\T A^{-1}B=\begin{pmatrix}1&0\\0&2\end{pmatrix}.
+\]
+So $\det M=4\cdot2=8$. Expanding along the first row gives the same number,
+$4(6-1)-2(6-2)+2(2-4)=20-8-4=8$. Since $A=4>0$ and $S\pd0$, $M\pd0$. The
+lower-right block of $M^{-1}$ is $S^{-1}=\diag(1,\tfrac12)$. Changing the
+bottom-right entry of $M$ from $3$ to $\tfrac12$ changes $S$ to
+$\diag(1,-\tfrac12)$, and the test says that $M$ is then not PSD.
+\end{example}
+
+\inproject{\nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex},
+section ``Convex Structure'', turns a nonlinear matrix constraint into the linear
+matrix inequality labelled \texttt{eq:lmi} ``by the Schur complement criterion''
+and uses the Woodbury identity in the same paragraph. Appendix ``The Gaussian
+Exhaustion Lemma'' computes a determinant by ``the Schur factorization in the
+other order'', which is \cref{eq:ch01:schurdet}.}
+
+\buildson{Primer~L, section~L.3 (determinants and inverses). \Cref{sec:ch01:spectral},
+congruence.}
+\usedin{Chapter~2, Gaussian conditioning and the Kalman update. Chapter~4,
+semidefinite programs and the max-det problem.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Orthogonal matrices}
+\section{Orthogonal matrices preserve every length, and a random one spreads a vector's energy across coordinates}\label{sec:ch01:orth}
+
+Primer~L, section~L.5, defines an orthogonal matrix by $Q\T Q=I$. This section
+collects what such matrices preserve, what they do not, and why vector
+quantizers multiply by a random one before rounding.
+
+\begin{definition}[Orthogonal group and rotations]\label{def:ch01:orth}
+\begin{equation}\label{eq:ch01:orth}
+O(d)=\{Q\in\R^{d\times d}: Q\T Q=I\},\qquad \det Q=\pm1,\qquad
+SO(d)=\{Q\in O(d):\det Q=1\}.
+\end{equation}
+\end{definition}
+The matrices in $SO(d)$ are the rotations. Those with determinant $-1$ include
+a reflection. In the plane every rotation has the form
+$R(\varphi)=\begin{pmatrix}\cos\varphi&-\sin\varphi\\ \sin\varphi&\cos\varphi\end{pmatrix}$.
+
+An orthogonal change of coordinates preserves lengths, angles, traces and
+eigenvalues, but it moves a covariance relative to any reader that stays put,
+\begin{equation}\label{eq:ch01:orthinv}
+\norm{Qx}=\norm{x},\qquad \tr(Q\Sigma Q\T)=\tr\Sigma,\qquad
+\tr\big(P\,Q\Sigma Q\T\big)=\tr\big(Q\T PQ\,\Sigma\big)\neq\tr(P\Sigma)\ \text{in general}.
+\end{equation}
+The identity reader cannot tell a rotated error from the original. A consumer
+with $P\neq cI$ can. One special case matters for quantizers. If an encoder
+rotates $x$ to $Qx$, makes an error $\varepsilon$ in rotated coordinates with
+covariance $\sigma^2I$, and rotates back, the error in source coordinates is
+$Q\T\varepsilon$, whose covariance is $\sigma^2Q\T Q=\sigma^2I$ again. Isotropic
+error stays isotropic, and its distortion for any reader is $\sigma^2\tr P$.
+
+A \emph{Haar-distributed} random orthogonal matrix is one whose distribution is
+unchanged by multiplying it by any fixed orthogonal matrix. The standard recipe
+draws $G$ with independent $\Normal(0,1)$ entries, factors $G=QR$, and
+corrects signs so that $R$ has a positive diagonal,
+\begin{equation}\label{eq:ch01:haar}
+G=QR,\qquad Q_{\mathrm{Haar}}=Q\,\diag\big(\operatorname{sign}r_{11},\dots,\operatorname{sign}r_{dd}\big).
+\end{equation}
+The correction matters. LAPACK-based QR routines such as \texttt{np.linalg.qr} do not guarantee a
+positive diagonal of $R$, and without the correction the output is not exactly Haar
+distributed \cite{mezzadri2007}. Invariance gives the property quantizers rely
+on. For a fixed $x$, the matrix $C=\E[Qxx\T Q\T]$ satisfies $UCU\T=C$ for every
+orthogonal $U$, and the only symmetric matrices with that property are
+multiples of $I$. Its trace is $\norm{x}^2$, so
+\begin{equation}\label{eq:ch01:spread}
+\E\big[(Qx)(Qx)\T\big]=\frac{\norm{x}^2}{d}\,I .
+\end{equation}
+Every coordinate of the rotated vector has second moment $\norm{x}^2/d$, however
+the energy of $x$ was spread before. A scalar quantizer designed for that
+spread then fits every coordinate.
+
+More is true for a unit vector $x$. The rotated vector $Qx$ is uniformly
+distributed on the unit sphere, and in high dimension each of its
+coordinates is close in distribution to $\Normal(0,1/d)$. That is why
+turboquant-pro scales a single Lloyd--Max codebook for the standard normal by
+$1/\sqrt d$ and uses it on every coordinate, with the vector's norm stored
+separately. The rotation does not reduce any error by itself. It reshapes the
+input so that one fixed scalar codebook suits all coordinates, and so that no
+coordinate carries an outlier the codebook was not designed for. The price is
+that coordinates of $Qx$ are no longer the original features, so a consumer
+that reads a few original features now depends on all rotated coordinates at
+once.
+
+A dense random $Q$ costs $d^2$ multiplications to apply. The Hadamard transform
+gives a structured alternative. Sylvester's construction is
+\begin{equation}\label{eq:ch01:hadamard}
+H_1=(1),\qquad H_{2m}=\begin{pmatrix}H_m&H_m\\H_m&-H_m\end{pmatrix},\qquad
+H_dH_d\T=d\,I,\qquad R=\tfrac{1}{\sqrt d}\,H_d\,D_s ,
+\end{equation}
+where $d$ is a power of two and $D_s=\diag(s_1,\dots,s_d)$ holds independent
+random signs. The matrix $R$ is orthogonal, and the recursion applies it in
+$d\log_2d$ additions and subtractions. Every entry of $H_d$ is $\pm1$, so
+$R e_j$ has every coordinate equal to $\pm1/\sqrt d$. Each coordinate of $Rx$
+has second moment $\norm{x}^2/d$ over the random signs, the diagonal of
+\cref{eq:ch01:spread}, though $R$ is not Haar distributed. The random signs
+are needed. Without them, vectors aligned with a row of $H_d$ are concentrated
+onto a single coordinate instead of being spread. Randomized Hadamard
+preprocessing of this kind is the basis of the fast Johnson--Lindenstrauss
+transform \cite{ailonchazelle2009}.
+
+\begin{example}[Spreading with a randomized Hadamard matrix]\label{ex:ch01:hadamard}
+For $d=4$ Sylvester's construction gives rows $(1,1,1,1)$, $(1,-1,1,-1)$,
+$(1,1,-1,-1)$ and $(1,-1,-1,1)$. Take $D_s=\diag(1,-1,1,1)$ and
+$R=\tfrac12H_4D_s$. The coordinate vector $x=e_1$ maps to the first column of
+$H_4$ over $2$, that is $(\tfrac12,\tfrac12,\tfrac12,\tfrac12)\T$. Every
+coordinate has square $\tfrac14=\norm{x}^2/d$, and the length is still $1$.
+
+Now take $x=\tfrac12(1,1,1,1)\T$. Without signs, $\tfrac12H_4x=(1,0,0,0)\T$. All
+the energy lands on one coordinate. With the signs, $D_sx=\tfrac12(1,-1,1,1)\T$,
+the dot products with the four rows of $H_4$ are $2,2,-2,2$ over $2$, and
+$Rx=(\tfrac12,\tfrac12,-\tfrac12,\tfrac12)\T$, spread evenly again.
+
+A random sign flip followed by a permutation is also orthogonal, but it maps
+$e_1$ to $\pm e_j$ for some $j$. It moves energy between coordinates without
+spreading it.
+\end{example}
+
+\inproject{\nolinkurl{turboquant-pro/turboquant_pro/core.py} implements the TurboQuant
+algorithm of Zandieh et al.\ \cite{zandieh2025}, which rotates and then applies a
+scalar quantizer to each coordinate. For \texttt{head\_dim} up to $4096$ it
+builds the rotation as \texttt{np.linalg.qr} of a Gaussian matrix, with no sign
+correction, and above $4096$ it uses a random sign flip followed by a
+permutation. \nolinkurl{turboquant-pro/turboquant_pro/pgvector.py} adds an opt-in
+\texttt{rotation="hadamard"} family, $R=(1/\sqrt d)H\,\diag(\text{sign})$ applied
+by a fast Walsh--Hadamard transform, and refuses a dimension that is not a power
+of two. A comment there calls the QR rotation Haar-random. Mezzadri's
+correction \cref{eq:ch01:haar} is what makes that exact. The project files do
+not state whether the missing sign correction changes any measured result. A
+rotation preserves Euclidean error, which is not the acceptance criterion for a
+quantizer. Chapter~7 explains why acceptance uses rank fidelity instead.}
+
+\buildson{Primer~L, section~L.5. \Cref{sec:ch01:trace}.}
+\usedin{Chapter~7, random rotation and scalar quantization in turboquant-pro.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{The log-determinant}
+\section{The log-determinant is concave, and its gradient is the inverse}\label{sec:ch01:logdet}
+
+The determinant of a covariance is the squared volume of its unit ellipsoid,
+up to a constant. Its logarithm turns products of eigenvalues into sums,
+\begin{equation}\label{eq:ch01:logdet}
+\log\det X=\sum_{i=1}^d\log\lambda_i(X)=\tr\log X,\qquad X\pd 0,
+\end{equation}
+where $\log X$ is defined by \cref{eq:ch01:funcalc}. Chapter~2 shows that the
+mutual information between jointly Gaussian vectors is a difference of two
+log-determinants, and chapters~3 and~4 meet a Gaussian rate--distortion problem
+that maximizes one. Two calculus facts are needed for those chapters.
+
+\begin{proposition}[Derivatives of $\log\det$ and of the inverse]\label{prop:ch01:logdetgrad}
+For $X\pd0$ and a small symmetric perturbation $H$,
+\begin{gather}
+\log\det(X+H)=\log\det X+\tr(X^{-1}H)-\tfrac12\tr\big(X^{-1}HX^{-1}H\big)+O(\norm{H}^3), \label{eq:ch01:logdetexp}\\
+\nabla_X\log\det X=X^{-1},\qquad d(X^{-1})=-X^{-1}\,(dX)\,X^{-1}. \label{eq:ch01:logdetgrad}
+\end{gather}
+\end{proposition}
+
+\begin{proof}
+Write $X+H=X^{1/2}(I+E)X^{1/2}$ with $E=X^{-1/2}HX^{-1/2}$. Then
+$\log\det(X+H)=\log\det X+\sum_i\log(1+e_i)$, where $e_i$ are the eigenvalues
+of $E$. Expanding $\log(1+e)=e-\tfrac12e^2+O(e^3)$ and using
+$\sum_ie_i=\tr E=\tr(X^{-1}H)$ and $\sum_ie_i^2=\tr E^2=\tr(X^{-1}HX^{-1}H)$
+gives \cref{eq:ch01:logdetexp}. The gradient is the matrix whose trace inner
+product with $H$ is the first-order term. Differentiating $XX^{-1}=I$ gives
+$dX\,X^{-1}+X\,d(X^{-1})=0$, which is the second identity.
+\end{proof}
+
+The second-order term $-\tfrac12\tr(E^2)$ is never positive, because $E$ is
+symmetric, so $\log\det$ is concave on the positive definite matrices,
+\begin{equation}\label{eq:ch01:logdetconcave}
+\log\det\big(\theta X+(1-\theta)Y\big)\ \ge\ \theta\log\det X+(1-\theta)\log\det Y,\qquad 0\le\theta\le1 .
+\end{equation}
+It is also monotone. If $X\psd Y\pd0$, then $Y^{-1/2}XY^{-1/2}\psd I$, every
+eigenvalue of it is at least $1$, and so $\log\det X\ge\log\det Y$. Concavity
+is what makes a max-det problem have a unique maximizer, and monotonicity is
+what makes ``smaller covariance in the Loewner order'' mean ``less volume''.
+
+\begin{example}[First and second order, and a midpoint]\label{ex:ch01:logdet}
+Let $X=\begin{pmatrix}2&1\\1&1\end{pmatrix}$, with $\det X=1$ and
+$X^{-1}=\begin{pmatrix}1&-1\\-1&2\end{pmatrix}$. Perturb by $H=\diag(0.1,0)$.
+Exactly, $\det(X+H)=2.1-1=1.1$ and $\log1.1\approx0.09531$. The first-order term
+is $\tr(X^{-1}H)=0.1$. The second-order term is
+$-\tfrac12\tr(X^{-1}HX^{-1}H)=-\tfrac12(0.1)^2=-0.005$, because
+$X^{-1}H$ has only one nonzero entry on its diagonal, $0.1$. So the
+expansion gives $0.095$, within $0.0004$ of the exact value.
+
+For concavity, take $X=\diag(1,4)$ and $Y=\diag(4,1)$. Each has
+$\log\det=\log4\approx1.386$. Their midpoint is $\diag(2.5,2.5)$, with
+$\log\det=2\log2.5\approx1.833$, larger than the average $1.386$ of the
+endpoints.
+\end{example}
+
+\inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex}, section
+``Successive refinement across observers'', the lemma on the Gaussian optimum
+in max-det form (label \texttt{lem:maxdet}), writes the consumer-relative rate as
+$\tfrac12\log\det\Sigma_x-\tfrac12\log\det\Sigma^\star$ with $\Sigma^\star$
+maximizing $\log\det\Sigma$ subject to $0\preceq\Sigma\preceq\Sigma_x$ and
+$\tr(P\Sigma)\le D$. Its uniqueness argument is the strict concavity in
+\cref{eq:ch01:logdetconcave}.}
+
+\buildson{Primer~L, section~L.7 (determinant as product of eigenvalues) and
+section~L.9 (gradients). \Cref{sec:ch01:spectral}.}
+\usedin{Chapter~2, Gaussian mutual information. Chapter~3, Gaussian
+rate--distortion. Chapter~4, the max-det program and its KKT conditions.}
+
+% ---------------------------------------------------------------------------
+% ---------------------------------------------------------------------------
+\ompnexthead{The tools together}
+\section{The tools combine to price a direction the coder did not read}\label{sec:ch01:together}
+
+This last section puts five tools of the chapter into one calculation from
+the programme. A coder designs its error for an \emph{estimated} read
+operator $\hat P$ while the consumer's true operator is $P$. Suppose the coder
+codes perfectly every direction that $\hat P$ reads and leaves the rest alone.
+How much distortion does the true consumer still see? The answer needs a
+whitened operator (\cref{sec:ch01:whiten}), a kernel and its orthogonal
+projector (\cref{sec:ch01:proj}), a trace (\cref{sec:ch01:trace}) and, for
+interpretation, a Schur complement (\cref{sec:ch01:schur}).
+
+Work in whitened coordinates $z=\Sigma_x^{-1/2}x$, where the source has
+covariance $I$. The coder reads the directions outside
+$\ker(\Sigma_x^{1/2}\hat P\Sigma_x^{1/2})$ and leaves the whitened kernel
+uncoded. Let $\Pi$ be the orthogonal projector onto that kernel. The whitened
+error is then $\Pi z$, with covariance $\Pi I\Pi=\Pi$, and by
+\cref{eq:ch01:whitenedop} the true consumer sees
+\begin{equation}\label{eq:ch01:floor}
+D_{\mathrm{floor}}=\tr\big(\tilde P\,\Pi\big),\qquad \tilde P=\Sigma_x^{1/2}P\,\Sigma_x^{1/2},\qquad
+\Pi=\text{projector onto }\ker\big(\Sigma_x^{1/2}\hat P\,\Sigma_x^{1/2}\big).
+\end{equation}
+By \cref{eq:ch01:tracepos} the floor is positive exactly when $\tilde P\Pi\neq0$,
+that is, when the true consumer reads some whitened direction the coder left
+out. The whitening matters. Using the projector onto $\ker\hat P$ in source
+coordinates ignores that coding the read directions also pins down whatever
+is correlated with them.
+
+\begin{example}[An omitted direction that is partly recovered]\label{ex:ch01:floor}
+Let $\Sigma_x=\begin{pmatrix}2&1\\1&1\end{pmatrix}$. The coder believes the
+consumer reads $x_1$, so $\hat P=e_1e_1\T$. The true consumer reads $x_2$, so
+$P=e_2e_2\T$. Then $\Sigma_x^{1/2}\hat P\Sigma_x^{1/2}=s_1s_1\T$ with
+$s_1=\Sigma_x^{1/2}e_1$, so its kernel is the line orthogonal to $s_1$ and
+$\Pi=I-s_1s_1\T/\norm{s_1}^2$, with $\norm{s_1}^2=e_1\T\Sigma_xe_1=2$. Using
+the cyclic rule,
+\[
+D_{\mathrm{floor}}=\tr\tilde P-\frac{s_1\T\tilde Ps_1}{2}
+=e_2\T\Sigma_xe_2-\frac{(e_1\T\Sigma_xe_2)^2}{2}=1-\tfrac12=\tfrac12 .
+\]
+This is the Schur complement $\Sigma_{22}-\Sigma_{21}\Sigma_{11}^{-1}\Sigma_{12}$
+of \cref{eq:ch01:schur}, which chapter~2 identifies as the variance of $x_2$
+left after $x_1$ is known exactly. Coding $x_1$ perfectly has removed half of
+the variance of $x_2$. The naive projector onto $\ker\hat P=\operatorname{span}(e_2)$,
+applied to $\tilde P$, gives $\big((\Sigma_x^{1/2})_{22}\big)^2$. For a
+$2\times2$ positive definite matrix the square root is
+$(\Sigma_x+\sqrt{\det\Sigma_x}\,I)/\sqrt{\tr\Sigma_x+2\sqrt{\det\Sigma_x}}$,
+here $\tfrac1{\sqrt5}\begin{pmatrix}3&1\\1&2\end{pmatrix}$, so the naive number
+is $\tfrac45$. It overstates the floor of $\tfrac12$.
+\end{example}
+
+\inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex}, appendix ``The
+price of a misidentified observer'', theorem ``Omission floor'', defines
+$D_{\mathrm{floor}}:=\tr(\tilde P\Pi)$ with $\Pi$ projecting onto the whitened
+kernel, proves that every allocation in the $\hat P$-water-filling family has
+true distortion at least $D_{\mathrm{floor}}$, and remarks that ``the naive
+$\ker\hat P$ overstates the floor when $\Sigma_x\ne I$''.
+\Cref{ex:ch01:floor} is a two-dimensional instance of that remark.}
+
+\buildson{\Cref{sec:ch01:proj,sec:ch01:trace,sec:ch01:whiten,sec:ch01:schur}.}
+\usedin{Chapter~2, where the same Schur complement is a conditional variance.
+Chapter~6, the commission tax and the omission floor.}
+
+\let\sectionmark\ompSavedSectionmark
+\section*{Exercises}
+
+\subsection*{Warm-up}
+
+\begin{exercise}\label{exr:ch01:rank}
+Show that the trace of an orthogonal projector equals its rank. Check it on the
+projector of \cref{ex:ch01:gproj} in $\R^3$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch01:oblique}
+Is $\Pi=\begin{pmatrix}1&1\\0&0\end{pmatrix}$ a projector? Is it an orthogonal
+projector? Find its range and kernel and the angle between them.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch01:incomparable}
+For $A=\diag(3,1)$ and $B=\begin{pmatrix}2&1\\1&2\end{pmatrix}$, decide whether
+$A\psd B$, $B\psd A$ or neither.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch01:cyclic}
+Find $2\times2$ matrices with $\tr(ABC)\neq\tr(ACB)$.
+\end{exercise}
+
+\subsection*{By hand}
+
+\begin{exercise}\label{exr:ch01:whiten}
+Let $\Sigma_x=\diag(4,1)$ and $P=gg\T$ with $g=(1,-1)\T$. Compute the whitened
+operator $\tilde P$, its nonzero eigenvalue and eigenvector, and $\tr(P\Sigma_x)$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch01:pencil}
+Find the generalized eigenvalues and eigenvectors of the pencil $(A,B)$ with
+$A=\diag(1,0)$ and $B=\begin{pmatrix}2&1\\1&1\end{pmatrix}$. Which direction
+maximizes $x\T Ax/x\T Bx$, and what is the maximum?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch01:schur}
+For $M=\begin{pmatrix}2&1&1\\1&2&1\\1&1&2\end{pmatrix}$, compute the Schur
+complement of the top-left entry, decide whether $M\pd0$, and compute $\det M$
+from \cref{eq:ch01:schurdet}.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch01:signperm}
+Show that a sign flip followed by a permutation maps every coordinate vector to a
+signed coordinate vector, and that $\tfrac1{\sqrt d}H_dD_s$ maps every coordinate
+vector to a vector whose coordinates all have magnitude $1/\sqrt d$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch01:logdet}
+Let $X=\diag(2,4)$ and $H=\begin{pmatrix}0&0.1\\0.1&0\end{pmatrix}$. Compute
+$\log\det(X+H)-\log\det X$ exactly and compare with the first- and second-order
+terms of \cref{eq:ch01:logdetexp}.
+\end{exercise}
+
+\subsection*{Programming}
+
+\begin{exercise}\label{exr:ch01:mc}
+Draw $10^5$ errors $\delta=\mu+\Sigma^{1/2}z$ with $z\sim\Normal(0,I)$, using
+$\Sigma=\Sigma_a$, $\mu=(1,0)\T$ and $P=\PC$ from \cref{ex:ch01:trace}. Compare the
+sample mean of $\delta\T P\delta$ with $\tr(P\Sigma)+\mu\T P\mu=10$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch01:haar}
+Generate $10^4$ random $2\times2$ orthogonal matrices with \texttt{np.linalg.qr}
+of a Gaussian matrix, with and without the sign correction of \cref{eq:ch01:haar}.
+Record the determinant and the rotation angle of each. Compare the two
+histograms with the uniform distribution that Haar measure gives, and check
+\cref{eq:ch01:spread} for $x=(3,4)\T$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch01:kyfan}
+For a random symmetric $6\times6$ matrix and $k=2$, evaluate $\tr(U\T AU)$ for
+$10^4$ random $U$ with orthonormal columns and confirm that none exceeds
+$\lambda_1+\lambda_2$, which the top two eigenvectors attain.
+\end{exercise}
+
+% checks/ch01_examples.py on Atlas: CHECKRESULT

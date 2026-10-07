@@ -1,0 +1,38 @@
+% Answers to selected exercises, chapter 10.
+% Numbers are checked in checks/ch10_examples.py, Lean in checks/lean/ch10_exercises.lean.
+
+\paragraph{Exercise 10.1}
+The formula is $p\leftrightarrow q$. It is true when $p$ and $q$ agree, which is $2$ of the $4$ rows. The argument from $p\to q$ and $\neg p$ to $\neg q$ is denying the antecedent. It is invalid, and the row $p=\mathrm{F}$, $q=\mathrm{T}$ makes both premises true and the conclusion false.
+
+\paragraph{Exercise 10.2}
+By \eqref{eq:ch10:negquant} applied twice, $\neg\forall x\,\exists y\,(x<y)\equiv\exists x\,\forall y\,(x\ge y)$. On $\{1,2,3\}$ the original is false, since $x=3$ has no larger element, and the negation is true with $x=3$ as the witness.
+
+\paragraph{Exercise 10.3}
+Take one world $w$ with no arrows and $p$ false at $w$. Nothing is accessible, so $\Box p$ is true at $w$ vacuously, while $p$ is false. The frame is not reflexive, as \cref{thm:ch10:T} requires.
+
+\paragraph{Exercise 10.4}
+``Every prime is odd, $2$ is prime, so $2$ is odd.'' The form is valid and the conclusion is false. In a valid argument a false conclusion forces at least one false premise, here the first.
+
+\paragraph{Exercise 10.5}
+At $n=1$ both sides are $1$. If $1+3+\dots+(2k-1)=k^2$, adding the next odd number gives $k^2+(2k+1)=(k+1)^2$, which is the claim at $k+1$. By \eqref{eq:ch10:induction} the claim holds for every $n\ge1$.
+
+\paragraph{Exercise 10.6}
+At $w_1$ the only accessible world is $w_2$, where $p$ holds, so $w_1\models\Box p$. For $\Box\Box p$ at $w_1$ we need $\Box p$ at $w_2$. But $w_2$ sees $w_3$, where $p$ fails, so $w_2\not\models\Box p$ and $w_1\not\models\Box\Box p$. Transitivity is missing, since $w_1Rw_2$ and $w_2Rw_3$ hold but $w_1Rw_3$ does not.
+
+\paragraph{Exercise 10.7}
+Fix $w$ with $w\models\Diamond\neg G$ and $w\models\Box(G\to\Box G)$, and suppose $w\models G$. Reflexivity gives $wRw$, so premise 2 applied at $w$ gives $w\models\Box G$. The first premise gives $v$ with $wRv$ and $v\models\neg G$, but $\Box G$ at $w$ gives $v\models G$, a contradiction. So $w\models\neg G$. The proof is by contradiction on $G$, and in Lean it is the theorem \texttt{reverse\_ontological} of \texttt{counter-apologetics/formal/Formal/Modal.lean}.
+
+\paragraph{Exercise 10.8}
+Reflexivity needs $(w_0,w_0)$ and $(w_1,w_1)$, both present. Transitivity needs, for each chain $aRb$, $bRc$, the pair $(a,c)$. The chains are $w_0Rw_0Rw_0$, $w_0Rw_0Rw_1$, $w_0Rw_1Rw_1$ and $w_1Rw_1Rw_1$, and the pairs they require, $(w_0,w_0)$, $(w_0,w_1)$ and $(w_1,w_1)$, are all present. With $(w_1,w_0)$ added, $w_1$ sees $w_0$, where $G$ is false, so $w_1\not\models\Box G$. Since $w_0Rw_1$ and $w_1\models G$, the implication $G\to\Box G$ fails at $w_1$, and premise 2 fails at $w_0$.
+
+\paragraph{Exercise 10.9}
+A relation on three worlds is a choice, for each of the $9$ ordered pairs, of in or out, so there are $2^9=512$. A reflexive relation fixes the $3$ diagonal pairs and chooses freely on the other $6$, giving $2^6=64$. A symmetric relation chooses freely on the $3$ diagonal pairs and on each of the $3$ unordered off-diagonal pairs, which enter or leave together, giving $2^{3+3}=64$.
+
+\paragraph{Exercise 10.12}
+One proof, checked with Lean v4.32.2 and depending on no axioms, is
+\begin{verbatim}
+theorem four_of_trans (htr : ∀ a b c, R a b → R b c → R a c)
+    (p : W → Prop) (w : W) (h : box R p w) : box R (box R p) w :=
+  fun v hv u hu => h u (htr w v u hv hu)
+\end{verbatim}
+Given $wRv$ and $vRu$, transitivity gives $wRu$, and $\Box p$ at $w$ then gives $p$ at $u$.
