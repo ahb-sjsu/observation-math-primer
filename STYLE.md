@@ -32,6 +32,8 @@ These apply to prose, captions and headings. Mathematics, `\label`s, code and bi
 - No filler words. "Gap", "regime", "paradigm", "crucially", "notably", "delve" and "landscape" are banned.
 - No self-justifying sentences about the book's own value or honesty. Every sentence states something.
 - Precise beats smooth. If a word implies more than the mathematics shows, change the word.
+- **Hypothesis discipline.** Students remember the sentence and forget the conditions. Every theorem, rule of thumb and memorable explanation states its scope in the same sentence or the next one: when it holds, and what breaks it. Where a natural reading overreaches, give the counterexample. A positive floor does not imply a divergent rate, for instance, and a permutation null preserves dependence only under the right exchangeability.
+- **Never hard-code a chapter or exercise number.** Printed numbers change when chapters are added. Use `\cref`/`\ref` everywhere, including answer headings: `\paragraph{Exercise~\ref{exr:chNN:name}}`.
 - Put each caveat next to its result. Say what a quantity is NOT when confusion is likely. For example, "this is a joint probability, not a conditional rate".
 - The prose rules govern prose, not mathematics. **Every definition and every result gets a numbered displayed equation.** A textbook without formulas is a failure (the author has flagged this before).
 

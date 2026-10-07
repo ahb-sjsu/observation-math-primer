@@ -1,1 +1,69 @@
-% placeholder until the drafting agent writes this file
+% Answers to selected exercises, chapter 11 (high dimensions and hubs).
+% Every number is recomputed by checks/ch11_examples.py.
+
+\paragraph{Exercise \ref{exr:ch11:scale}}
+Write $x=\sigma g$ with $g\sim\Normal(0,I_d)$. Then $\norm x^2=\sigma^2\norm g^2$, so
+$\E\norm x^2=d\sigma^2$ and $\Var\norm x^2=\sigma^4\cdot2d$. The relative spread is
+$\sqrt{2d}\,\sigma^2/(d\sigma^2)=\sqrt{2/d}$, the same as for $\sigma=1$. Concentration
+is a statement about ratios, and a change of units cannot affect it.
+
+\paragraph{Exercise \ref{exr:ch11:sum}}
+Count the pairs $(q,x)$ with $x\in\mathrm{top}_k(q)$ in two ways. Grouping by query,
+each $q$ contributes exactly $k$ pairs, for $k|Q|$ in total. Grouping by stored point,
+$x$ contributes $N_k(x)$ pairs. So $\sum_xN_k(x)=k|Q|$, and in the corpus-to-corpus
+experiment the mean count is $k$ for every corpus, metric and dimension. The mean
+therefore carries no information about hubness, and a statistic of shape, such as the
+skewness, the largest count or the Robin Hood index, is needed.
+
+\paragraph{Exercise \ref{exr:ch11:shift}}
+$\norm{(x+b)-(q+b)}=\norm{x-q}$, so every distance, every neighbour list and every count
+is unchanged. The inner product is not shift-invariant,
+$\inner{q+b}{x+b}=\inner qx+\inner bx+\inner qb+\norm b^2$, and the term $\inner bx$
+favours the same stored points for every query. Cosine similarity changes as well.
+That is why centering is a remedy for inner-product and cosine hubs and does nothing
+for Euclidean ones.
+
+\paragraph{Exercise \ref{exr:ch11:nullskew}}
+Under the no-structure null of \cref{eq:ch11:null} the counts are close to
+$\mathrm{Poisson}(10)$, whose skewness is $1/\sqrt{10}=0.316$. A reading of $0.30$ is
+what random assignment of slots produces. It gives no evidence of hubness, mild or
+otherwise, and the corpus may even be slightly more even than chance. It does not
+prove that hubs are absent, since one skewness value summarizes the whole count
+distribution. The largest count against the ceiling $c^\star$ of
+\cref{eq:ch11:ceiling} is the more direct check.
+
+\paragraph{Exercise \ref{exr:ch11:shell}}
+$1-0.98^{50}=0.6358$. The lower bound is $1-e^{-0.02\cdot50}=1-e^{-1}=0.6321$, close
+to the exact value because $\epsilon$ is small.
+
+\paragraph{Exercise \ref{exr:ch11:five2}}
+The two nearest neighbours are $A\colon B,C$, $B\colon A,D$, $C\colon A,D$,
+$D\colon A,B$ and $E\colon A,B$, using $BD=3.081<BE=3.499<BC=3.8$ and
+$CD=3.202<CE=3.606$. So $N_2=(4,3,1,2,0)$ for $(A,B,C,D,E)$, with sum $10$ and mean $2$.
+The deviations are $2,1,-1,0,-2$, the variance is $10/5=2$, and the cubed deviations
+sum to $8+1-1+0-8=0$, so the skewness is $0$. The Robin Hood index is
+$(2+1+1+0+2)/(2\cdot10)=0.3$, against $0.6$ for $N_1$. The point $A$ is still the
+busiest, but at $k=2$ the five points share the slots symmetrically around the mean.
+
+\paragraph{Exercise \ref{exr:ch11:jlk}}
+$\epsilon^2/2-\epsilon^3/3=0.005-0.000333=0.004667$ and $4\ln10^4=36.84$, so
+$m\ge7894.6$ and $m=7895$ suffices. The tolerance enters as $1/\epsilon^2$ and the
+number of points only as $\ln n$.
+
+\paragraph{Exercise \ref{exr:ch11:ceil}}
+The Poisson skewness is $1/\sqrt{20}=0.224$. With $\mu=20$ and $n=5000$,
+$5000\Pr[\mathrm{Poisson}(20)\ge38]=1.09$ and $5000\Pr[\mathrm{Poisson}(20)\ge39]=0.54$,
+so $c^\star=38$. A busiest count of $190$ is a hub excess of $190/38=5$.
+
+\paragraph{Exercise \ref{exr:ch11:model}}
+$c=\Phi^{-1}(0.01)=-2.326$. At $z=0$, $p=\Phi(\sqrt6\,c/2)=\Phi(-2.849)=0.00219$, an
+expected count of $2.19$. At $z=-1$, $p=\Phi\big((\sqrt6\,c+\sqrt2)/2\big)=\Phi(-2.142)=0.0161$,
+an expected count of $16.1$. One standard deviation of centrality multiplies the
+expected count by more than seven.
+
+\paragraph{Exercise \ref{exr:ch11:prog-hub}}
+For the embedding part, $\norm{Ux-Uy}=\norm{x-y}$ because $U\T U=I_5$, so every
+distance, every neighbour list and every count is the same in $\R^{500}$ as in
+$\R^5$. The check script confirms the counts are identical. Hubness depends on the
+geometry of the data, not on the number of coordinates used to write them down, so
+for data on or near a low-dimensional set it is the intrinsic dimension that matters.

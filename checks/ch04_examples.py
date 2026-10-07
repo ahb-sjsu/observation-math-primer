@@ -334,6 +334,204 @@ check("Ex4.7: x_{t+1}=4(1+x_t)/(5+x_t) from -1/x+1/(1+x_t)+1/4=0",
       close(-1 / it[2] + 1 / (1 + it[1]) + 0.25, 0, 1e-12))
 check("Ex4.8: p1 = (0.5359, 0.4641)", close(1 - p1s[1], 0.5359))
 
+check("logdet figure: midpoint exceeds chord by 0.446 nats", close(mid - avg, 0.446))
+
+
+def rd_dual(lmb, gam, D):
+    tot = 0.0
+    for g_ in gam:
+        if 2 * lmb * g_ > 1:
+            tot += 0.5 * np.log(2 * lmb * g_) + 0.5
+        else:
+            tot += lmb * g_
+    return tot - lmb * D
+
+
+gam4 = [4, 2, 1, 0.25]
+check("RD dual: g(1)=2.0794 nats", close(rd_dual(1.0, gam4, 1.75), 2.0794))
+check("RD dual: g(1)= 3 bits", close(rd_dual(1.0, gam4, 1.75) / LN2, 3.0, 1e-9))
+check("RD dual: g(1) = 1/2 ln 64 + 1.5 + 0.25 - 1.75", close(0.5 * np.log(64) + 1.5 + 0.25 - 1.75, rd_dual(1.0, gam4, 1.75), 1e-12))
+check("RD dual: g(0.8)=2.0447 nats = 2.9499 bits",
+      close(rd_dual(0.8, gam4, 1.75), 2.0447) and close(rd_dual(0.8, gam4, 1.75) / LN2, 2.9499))
+lg_ = np.linspace(0.05, 5, 20001)
+gv_ = [rd_dual(v, gam4, 1.75) for v in lg_]
+check("RD dual: max over lambda is at lambda=1 and equals R", close(lg_[int(np.argmax(gv_))], 1.0, 1e-3) and close(max(gv_), 2.0794))
+# two sources sharing 2 bits
+check("two sources: R1=1.5,R2=0.5 give D1=D2=0.5", close(4 * 2 ** -3, 0.5, 1e-12) and close(2 ** -1, 0.5, 1e-12))
+R1g = np.linspace(0, 2, 200001)
+Dt = 4 * 2.0 ** (-2 * R1g) + 2.0 ** (-2 * (2 - R1g))
+check("two sources: optimum R1=1.5, total 1", close(R1g[np.argmin(Dt)], 1.5, 1e-4) and close(Dt.min(), 1.0, 1e-9))
+check("two sources: multiplier 2 ln2 * 0.5 = 0.6931", close(2 * LN2 * 0.5, 0.6931))
+# nonconvex KKT example: min -x^2 on [-1,1]
+check("nonconvex KKT: x=0 stationary yet maximum; minima at +-1 with multiplier 2",
+      close(-(0.0) ** 2, 0.0) and -1.0 < 0.0 and close(-(-2 * 1.0), 2.0))
+# projected gradient with eta = 1 cycles
+zz = np.zeros(2)
+seq = []
+for _ in range(6):
+    zz = proj(zz - 1.0 * grad(zz))
+    seq.append(tuple(np.round(zz, 12)))
+check("PGD eta=1: (2,0),(1,1),(2,0),... cycle", seq[0] == (2.0, 0.0) and seq[1] == (1.0, 1.0) and seq[2] == (2.0, 0.0) and seq[3] == (1.0, 1.0))
+check("PGD eta=1: raw steps (4,2),(2,2),(3,1)",
+      np.allclose(np.zeros(2) - grad(np.zeros(2)), [4, 2]) and np.allclose(np.array([2.0, 0]) - grad(np.array([2.0, 0])), [2, 2])
+      and np.allclose(np.array([1.0, 1]) - grad(np.array([1.0, 1])), [3, 1]))
+# matrix KKT -> water-filling: eigenvalues min(1, theta/gamma)
+gtilde = np.array([4.0, 1.0])
+check("matrix KKT: X eigenvalues min(1,theta/gamma) for gamma=(4,1), theta=0.5 give Sigma*=diag(0.125,0.5)",
+      np.allclose(np.minimum(1, 0.5 / gtilde), [0.125, 0.5]))
+check("Lagrange figure: guide ellipses levels 2 and 12 have radii (sqrt2,1) and (sqrt12,sqrt6)",
+      close(2 / 2, 1.0) and close(12 / 2, 6.0))
+check("Lagrange figure: level 2 misses the line (min on line is 6), level 12 crosses it", 2 < 6 < 12)
+check("KKT figure: guide circle is the level f=2, radius sqrt2", close(np.sqrt(2) ** 2, 2.0, 1e-12))
+check("PGD figure: start (0,0) lies on level 5, radius sqrt5", close((0 - 2) ** 2 + (0 - 1) ** 2, 5.0, 1e-12))
+check("Ex4.5: both-active level 2.5 < 3", close((1 + 1 + 3) / 2, 2.5, 1e-12))
+check("Ex4.10: theta P^-1 with theta=0.25 is diag(0.25,1)", np.allclose(0.25 * np.linalg.inv(np.diag([1.0, 0.25])), np.diag([0.25, 1.0])))
+check("Ex4.11: 1/(1+9)=0.1", close(1 / (1 + 9.0), 0.1, 1e-15))
+check("Ex4.1: -sqrt(x)'' = x^{-3/2}/4 (sympy)",
+      sp.simplify(sp.diff(-sp.sqrt(sp.Symbol('u', positive=True)), sp.Symbol('u', positive=True), 2)
+                  - sp.Symbol('u', positive=True) ** sp.Rational(-3, 2) / 4) == 0)
+check("MM: f(x2)=0.8864, f(x3)=0.8855", close(f(it[2]), 0.8864) and close(f(it[3]), 0.8855))
+
+# ---------------------------------------------------------------- fill-out additions
+# gradient descent on f = (x^2 + 10 y^2)/2, kappa = 10, eta = 2/(L+mu) = 2/11
+eta_ = 2 / 11
+zk = np.array([9.0, 1.5])
+gd = [zk.copy()]
+for _ in range(12):
+    zk = zk - eta_ * np.array([1.0, 10.0]) * zk
+    gd.append(zk.copy())
+series("zigzag", [v[0] for v in gd[:9]], [v[1] for v in gd[:9]])
+check("GD: contraction 9/11=0.8182 in both coordinates",
+      all(close(gd[k + 1][0] / gd[k][0], 9 / 11, 1e-12) and close(gd[k + 1][1] / gd[k][1], -9 / 11, 1e-12) for k in range(10)))
+check("GD: (kappa-1)/(kappa+1)=0.8182", close(9 / 11, 0.8182))
+check("GD: first step (7.364,-1.227)", np.allclose(gd[1], [7.3636, -1.2273], atol=1e-4))
+check("GD: eta=1/L=0.1 gives x-factor 0.9", close(1 - 0.1 * 1, 0.9, 1e-12))
+k6 = int(np.ceil(np.log(1e-6) / np.log(9 / 11)))
+check("GD: 69 steps to shrink error by 1e6 at kappa=10", k6 == 69)
+k6b = int(np.ceil(np.log(1e-6) / np.log(999 / 1001)))
+check("GD: 6908 steps at kappa=1000 (printed %d)" % k6b, k6b == 6908)
+check("GD figure: level ellipse through start has value 0.5*(81+22.5)=51.75", close(0.5 * (81 + 10 * 2.25), 51.75, 1e-12))
+check("GD figure: its semi-axes sqrt(103.5)=10.17 and sqrt(10.35)=3.217",
+      close(np.sqrt(103.5), 10.17, 5e-3) and close(np.sqrt(10.35), 3.217, 5e-3))
+# Newton on f = x - ln x
+xn = [0.5]
+for _ in range(4):
+    xn.append(2 * xn[-1] - xn[-1] ** 2)
+check("Newton: iterates 0.75, 0.9375, 0.99609, 0.9999847",
+      np.allclose(xn[1:], [0.75, 0.9375, 0.99609375, 0.9999847412], atol=1e-9))
+check("Newton: error squares each step", all(close(1 - xn[k + 1], (1 - xn[k]) ** 2, 1e-15) for k in range(4)))
+check("Newton: from x0=2 the update gives 0, from x0=3 it gives -3",
+      2 * 2 - 2 ** 2 == 0 and 2 * 3 - 3 ** 2 == -3)
+check("Newton: x1 in (0,1] exactly when 0<x0<2 (1-x1=(1-x0)^2<1)",
+      all((0 < 2 * x - x * x <= 1) == (0 < x < 2) for x in np.linspace(-1, 3, 401)))
+# local minimum on a nonconvex domain: x^2 on [-3,-2] u [1,2]
+check("nonconvex domain: x^2 has local min 4 at -2 and global min 1 at 1",
+      (-2) ** 2 == 4 and 1 ** 2 == 1 and min(x * x for x in np.linspace(-3, -2, 101)) == 4.0)
+# projected gradient descends for every eta < 2/L on the half-plane example (L=2)
+def _pg(z, eta):
+    g = 2 * (z - np.array([2.0, 1.0]))
+    y = z - eta * g
+    a = np.array([1.0, 1.0])
+    return y - max(a @ y - 2.0, 0.0) / 2.0 * a
+_f = lambda z: (z[0] - 2) ** 2 + (z[1] - 1) ** 2
+ok_desc = True
+for eta in [0.25, 0.5, 0.75, 0.95]:
+    z = np.zeros(2)
+    for _ in range(30):
+        zn = _pg(z, eta)
+        ok_desc &= _f(zn) <= _f(z) + 1e-12
+        z = zn
+check("projected gradient: cost never rises for eta in {0.25,0.5,0.75,0.95} < 2/L", ok_desc)
+check("Newton: one step on the quadratic reaches the minimum",
+      np.allclose(np.array([9.0, 1.5]) - np.array([9.0, 15.0]) / np.array([1.0, 10.0]), [0, 0]))
+# envelope theorem on the KKT example: constraint x+y <= 2+u, p*(u) = (1-u)^2/2
+u_ = sp.symbols("u")
+pu = (1 - u_) ** 2 / 2
+check("envelope: p*(0)=0.5, dp*/du at 0 = -1 = -mu", pu.subs(u_, 0) == sp.Rational(1, 2) and sp.diff(pu, u_).subs(u_, 0) == -1)
+check("envelope: p*(0.1)=0.405", close(float(pu.subs(u_, sp.Rational(1, 10))), 0.405, 1e-12))
+# curvature of R(D) jumps where a column goes under water (gamma=(4,2,1,0.25), theta=0.25 at D=1)
+check("R(D) breakpoint: theta=0.25 at D=1.0", close(3 * 0.25 + 0.25, 1.0, 1e-12))
+check("R(D) second derivative 2 (k=4) and 2.667 (k=3) nats at theta=0.25",
+      close(1 / (2 * 0.25 ** 2 * 4), 2.0, 1e-12) and close(1 / (2 * 0.25 ** 2 * 3), 2.6667))
+
+
+def Rbits(D):
+    lo, hi = 0.0, 4.0
+    for _ in range(200):
+        th = 0.5 * (lo + hi)
+        if np.minimum(gam, th).sum() > D:
+            hi = th
+        else:
+            lo = th
+    th = 0.5 * (lo + hi)
+    return sum(0.5 * np.log(g / th) for g in gam if g > th)
+
+
+h_ = 1e-4
+d2l = (Rbits(1 - h_) - 2 * Rbits(1 - 2 * h_) + Rbits(1 - 3 * h_)) / h_ ** 2
+d2r = (Rbits(1 + 3 * h_) - 2 * Rbits(1 + 2 * h_) + Rbits(1 + h_)) / h_ ** 2
+check("R(D) numerical second derivative ~2 left, ~2.667 right of D=1", close(d2l, 2.0, 1e-2) and close(d2r, 2.6667, 1e-2))
+s1_ = (Rbits(1 + h_) - Rbits(1 - h_)) / (2 * h_)
+check("R(D) slope continuous at D=1: -1/(2*0.25) = -2 nats", close(s1_, -2.0, 1e-3))
+# non-commuting matrix water-filling at D=1.0 (Sigma_x=[[2,1],[1,2]], P=diag(1,0.25))
+Sx_ = np.array([[2.0, 1.0], [1.0, 2.0]])
+Pn = np.diag([1.0, 0.25])
+w_, V_ = np.linalg.eigh(Sx_)
+Sh_ = V_ @ np.diag(np.sqrt(w_)) @ V_.T
+Qt_ = Sh_ @ Pn @ Sh_
+lq, Eq = np.linalg.eigh(Qt_)
+check("non-commuting: Sigma_x^{1/2} = [[1.366,0.366],[0.366,1.366]]", np.allclose(Sh_, [[1.3660, 0.3660], [0.3660, 1.3660]], atol=1e-4))
+check("non-commuting: Ptilde = [[1.8995,0.625],[0.625,0.6005]]", np.allclose(Qt_, [[1.8995, 0.625], [0.625, 0.6005]], atol=1e-4))
+check("non-commuting: gamma = (2.1514, 0.3486)", np.allclose(np.sort(lq)[::-1], [2.1514, 0.3486], atol=1e-4))
+thn = 1.0 - 0.34861
+thn = 1.0 - np.sort(lq)[0]
+check("non-commuting D=1: theta = 1 - 0.3486 = 0.6514", close(thn, 0.6514))
+Rn = 0.5 * np.log2(np.sort(lq)[1] / thn)
+check("non-commuting D=1: R_C(1) = 0.8617 bits", close(Rn, 0.8617))
+Xn = Eq @ np.diag([1.0 if l <= thn else thn / l for l in lq]) @ Eq.T
+Sn = Sh_ @ Xn @ Sh_
+check("non-commuting D=1: tr(P Sigma*) = 1", close(np.trace(Pn @ Sn), 1.0, 1e-9))
+check("non-commuting D=1: rate from det = 0.8617", close(0.5 * np.log2(np.linalg.det(Sx_) / np.linalg.det(Sn)), 0.8617))
+check("non-commuting D=1: Sigma* = [[0.6260,0.1679],[0.1679,1.4962]]", np.allclose(Sn, [[0.6260, 0.1679], [0.1679, 1.4962]], atol=1e-4))
+check("non-commuting D=1: Sigma_x - Sigma* has rank one", np.linalg.matrix_rank(Sx_ - Sn, tol=1e-8) == 1)
+check("non-commuting D=1: Sigma* is not diagonal (does not commute with P)", abs(Sn[0, 1]) > 0.1)
+check("non-commuting D=1: Sigma* does not commute with Sigma_x either",
+      np.abs(Sn @ Sx_ - Sx_ @ Sn).max() > 0.1 and abs(Sn[0, 0] - Sn[1, 1]) > 0.5)
+# hypothesis audit: with every mode above water and P invertible, Sigma* = theta P^{-1}
+# (D=0.5 on the same pair, theta=0.25), which commutes with P although P and Sigma_x do not
+th05 = 0.25
+X05 = Eq @ np.diag([1.0 if l <= th05 else th05 / l for l in lq]) @ Eq.T
+S05 = Sh_ @ X05 @ Sh_
+check("all modes above water: Sigma* = theta P^{-1} = diag(0.25,1), commutes with P",
+      np.all(lq > th05) and np.allclose(S05, th05 * np.linalg.inv(Pn), atol=1e-9)
+      and np.allclose(S05 @ Pn, Pn @ S05, atol=1e-9) and close(np.trace(Pn @ S05), 0.5, 1e-9))
+# coordinatewise (allocate_bits-style) scheme at D=1: products (2,0.5), theta' = 0.5, 1 bit
+wp = np.array([2.0, 0.5])
+check("coordinatewise D=1: theta'=0.5, rates 1 and 0 bits",
+      close(np.minimum(wp, 0.5).sum(), 1.0, 1e-12) and close(0.5 * np.log2(2 / 0.5), 1.0, 1e-12))
+check("coordinatewise D=1: excess 0.138 bits", close(1.0 - Rn, 0.1383, 1e-3))
+# KKT certificate for the matrix solution: X^{-1} = 2 nu Ptilde + 2 Theta
+nu_ = 1 / (2 * thn)
+Theta_ = 0.5 * (np.linalg.inv(Xn) - 2 * nu_ * Qt_)
+check("non-commuting KKT: Theta PSD and Theta (I - X) = 0",
+      np.linalg.eigvalsh(Theta_).min() > -1e-9 and np.allclose(Theta_ @ (np.eye(2) - Xn), 0, atol=1e-9))
+check("non-commuting KKT: Theta rank one, eigenvalue (1 - 0.3486/0.6514)/2 = 0.2324",
+      close(np.linalg.eigvalsh(Theta_).max(), (1 - np.sort(lq)[0] / thn) / 2, 1e-9) and close(np.linalg.eigvalsh(Theta_).max(), 0.2324))
+try:
+    Sv3 = cp.Variable((2, 2), symmetric=True)
+    cp.Problem(cp.Maximize(cp.log_det(Sv3)), [Sx_ - Sv3 >> 0, cp.trace(Pn @ Sv3) <= 1.0]).solve(solver=cp.CLARABEL)
+    check("non-commuting D=1: cvxpy agrees with Sigma*", np.allclose(Sv3.value, Sn, atol=1e-4))
+except Exception:
+    check("non-commuting D=1: cvxpy run", False)
+# saddle and rank examples
+check("saddle: x^2-y^2 Hessian eigenvalues (-2,2)", np.allclose(np.linalg.eigvalsh(np.diag([2.0, -2.0])), [-2, 2]))
+e1 = np.array([[1.0, 0], [0, 0]])
+e2 = np.array([[0.0, 0], [0, 1]])
+check("rank: average of two rank-one matrices has rank 2", np.linalg.matrix_rank(0.5 * (e1 + e2)) == 2)
+
+check("GD figure: guide ellipses are levels 15 and 4 (semi-axes sqrt30,sqrt3 and sqrt8,sqrt0.8)",
+      close(0.5 * 30, 15) and close(0.5 * 10 * 3, 15) and close(0.5 * 8, 4) and close(0.5 * 10 * 0.8, 4))
+check("non-commuting: Theta eigenvalue formula (1-0.3486/0.6514)/2", close((1 - 0.34861 / 0.65139) / 2, 0.2324))
 # ---------------------------------------------------------------- compare figure data in the chapter
 for cand in ["ch04_optimization.tex", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "chapters", "ch04_optimization.tex")]:
     if os.path.exists(cand):

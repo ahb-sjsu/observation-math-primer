@@ -3,17 +3,18 @@
 % Standalone-build stubs for cross-chapter labels. Active only when this chapter is
 % compiled alone through drivers/ch05.tex (jobname ch05), never in main.tex.
 \makeatletter
-\ifnum\pdfstrcmp{\jobname}{ch05}=0
+\ifdefined\pdfstrcmp\ifnum\pdfstrcmp{\jobname}{ch05}=0
   \begingroup
   \def\omp@stub#1#2{\setcounter{chapter}{#2}\addtocounter{chapter}{-1}\refstepcounter{chapter}\label{#1}}
   \omp@stub{ch01}{1}\omp@stub{ch02}{2}\omp@stub{ch03}{3}\omp@stub{ch04}{4}
-  \omp@stub{ch06}{6}\omp@stub{ch07}{7}\omp@stub{ch08}{8}
+  \omp@stub{ch06}{6}\omp@stub{ch07}{7}\omp@stub{ch08}{8}\omp@stub{ch11}{11}
   \endgroup
   \setcounter{chapter}{5}
-\fi
+\fi\fi
 \makeatother
+\chaptermark{Geometry}
 
-Every result in the Geometric series and in Observation Theory measures something. A cost, a distortion, a distance to an ideal, or the separation of two attention patterns. Each of those measurements is a quadratic form $\delta\T G\,\delta$ for some positive semidefinite matrix $G$, at least to second order. This chapter is about where that matrix comes from and what changes when it depends on where you stand.
+Every result in the Geometric series and in Observation Theory measures something. A cost, a distortion, a distance to an ideal, or the separation of two attention patterns. Each of those measurements that is smooth and smallest at zero error is, to second order, a quadratic form $\delta\T G\,\delta$ for some positive semidefinite matrix $G$. This chapter is about where that matrix comes from and what changes when it depends on where you stand.
 
 The plan is short. A constant positive definite $G$ gives the Mahalanobis distance. A $G(x)$ that varies smoothly with position is a Riemannian metric, and distances become lengths of shortest curves. A map $C$ carries a metric on its output back to its input as $J\T G J$, and that pullback is the read operator of Observation Theory. Its kernel is the set of directions the map cannot see. Fisher information is the metric that KL divergence induces. Covariance matrices, hierarchies and graphs each come with a geometry of their own, and the last section explains why the angle of a spectral embedding carries graph distance while its radius carries density.
 
@@ -35,7 +36,7 @@ For a symmetric positive definite matrix $G$, the inner product $\inner{u}{v}_G=
 \end{equation}
 \end{definition}
 
-Not every norm comes from an inner product. The $\ell_1$ norm $\sum_i\abs{v_i}$ and the $\ell_\infty$ norm $\max_i\abs{v_i}$ are norms whose unit balls are a diamond and a square. Their corners mean that the length of a small step depends on its direction in a way no matrix can express. The programme works almost entirely with norms of the form \eqref{eq:ch05:Gnorm}, for a reason that recurs in this chapter. A smooth cost that is zero at a point and has zero gradient there is, to second order, a quadratic form $\tfrac12\delta\T H\delta$, and $H$ is positive semidefinite at a minimum. So inner-product norms are what local analysis produces, whatever the global cost was.
+Not every norm comes from an inner product. The $\ell_1$ norm $\sum_i\abs{v_i}$ and the $\ell_\infty$ norm $\max_i\abs{v_i}$ are norms whose unit balls are a diamond and a square. Their corners mean that the length of a small step depends on its direction in a way no matrix can express. The programme works almost entirely with norms of the form \eqref{eq:ch05:Gnorm}, for a reason that recurs in this chapter. A smooth cost that is zero at a point and has zero gradient there is, to second order, a quadratic form $\tfrac12\delta\T H\delta$, and $H$ is positive semidefinite at a minimum. So inner-product norms are what local analysis produces for any cost that is twice differentiable at its minimum, whatever the cost does far away. The smoothness is needed. The cost $\norm{\delta}_1$ is zero at the origin and has no quadratic expansion there. Where $H$ is singular the quadratic term is silent along $\ker H$, and higher-order terms decide.
 
 Positive definiteness is what makes $d_G(x,y)=0$ force $x=y$. If $G$ is only positive semidefinite, two different points whose difference lies in $\ker G$ are at distance zero. Then $d_G$ is a \emph{pseudometric}, and we will see in \cref{sec:ch05:pullback} that this is not a defect. It is how a metric records what an observer ignores.
 
@@ -96,7 +97,7 @@ d_G(x,y)=\inf\{L(\gamma)\,:\,\gamma(0)=x,\ \gamma(1)=y\}.
 A curve that is locally length-minimizing, traced at constant speed, is a \emph{geodesic}.
 \end{definition}
 
-The length \eqref{eq:ch05:length} does not depend on how fast the curve is traced. Reparametrizing $t$ changes $\dot\gamma$ and $dt$ by reciprocal factors. When $G$ is constant, the shortest curve is the straight segment and $d_G$ is the distance \eqref{eq:ch05:Gnorm}. So the Mahalanobis distance is the flat case of \eqref{eq:ch05:geodist}. Geodesics in general solve a second-order ODE, the geodesic equation, which we will not need. Lee~\cite[ch.~4--6]{lee2018} derives it.
+The length \eqref{eq:ch05:length} does not depend on how fast the curve is traced. Reparametrizing $t$ changes $\dot\gamma$ and $dt$ by reciprocal factors. When $G$ is constant and $U$ is convex, the shortest curve is the straight segment and $d_G$ is the distance \eqref{eq:ch05:Gnorm}. If $U$ is not convex the segment may leave it, and the shortest curve inside $U$ is longer. So the Mahalanobis distance is the flat case of \eqref{eq:ch05:geodist}. Geodesics in general solve a second-order ODE, the geodesic equation, which we will not need. Lee~\cite[ch.~4--6]{lee2018} derives it.
 
 Where does a varying $G$ come from in practice? Usually from coordinates. Suppose a surface is described by a map $X(u)$ from parameters $u\in\R^k$ into $\R^n$, and lengths are measured in $\R^n$ in the ordinary way. A small step $du$ moves the point by $J\,du$ with $J=\partial X/\partial u$, and its squared length is $du\T J\T J\,du$. So the metric in the parameters is
 \begin{equation}\label{eq:ch05:induced}
@@ -114,8 +115,32 @@ The geodesics of the sphere are great circles, and the great-circle distance bet
 \[
 d_{\text{sphere}}(p,q)=\arccos\tfrac14=1.318<1.360.
 \]
-The latitude circle is not a geodesic. The straight chord through the ball, $\norm{p-q}=\sqrt{3/2}=1.225$, is shorter still, but it leaves the sphere. That ordering, chord then great circle then latitude, is the general one.
+The latitude circle is not a geodesic. The straight chord through the ball, $\norm{p-q}=\sqrt{3/2}=1.225$, is shorter still, but it leaves the sphere. That ordering, chord then great circle then latitude, holds for any two distinct points on a circle of latitude, with the last two equal only on the equator.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+%% SPHERE
+%% SPHERE
+\begin{tikzpicture}[scale=2.2]
+\fill[plight] (0,0) circle (1);
+\draw[thick,pgray] (0,0) circle (1);
+\draw[guide] (-0.707,-0.664) -- (-0.643,-0.720) -- (-0.574,-0.770) -- (-0.500,-0.814) -- (-0.423,-0.852) -- (-0.342,-0.883) -- (-0.259,-0.908) -- (-0.174,-0.925) -- (-0.087,-0.936) -- (0.000,-0.940) -- (0.087,-0.936) -- (0.174,-0.925) -- (0.259,-0.908) -- (0.342,-0.883) -- (0.423,-0.852) -- (0.500,-0.814) -- (0.574,-0.770) -- (0.643,-0.720) -- (0.707,-0.664) -- (0.766,-0.604) -- (0.819,-0.539) -- (0.866,-0.470) -- (0.906,-0.397) -- (0.940,-0.321) -- (0.966,-0.243) -- (0.985,-0.163) -- (0.996,-0.082) -- (1.000,0.000) -- (0.996,0.082) -- (0.985,0.163) -- (0.966,0.243) -- (0.940,0.321) -- (0.906,0.397) -- (0.866,0.470) -- (0.819,0.539) -- (0.766,0.604) -- (0.707,0.664) -- (0.643,0.720) -- (0.574,0.770) -- (0.500,0.814) -- (0.423,0.852) -- (0.342,0.883) -- (0.259,0.908) -- (0.174,0.925) -- (0.087,0.936) -- (0.000,0.940) -- (-0.087,0.936) -- (-0.174,0.925) -- (-0.259,0.908) -- (-0.342,0.883) -- (-0.423,0.852) -- (-0.500,0.814) -- (-0.574,0.770) -- (-0.643,0.720) -- (-0.707,0.664) -- (-0.766,0.604) -- (-0.819,0.539) -- (-0.866,0.470) -- (-0.906,0.397) -- (-0.940,0.321) -- (-0.966,0.243) -- (-0.985,0.163) -- (-0.996,0.082) -- (-1.000,0.000) -- (-0.996,-0.082) -- (-0.985,-0.163) -- (-0.966,-0.243) -- (-0.940,-0.321) -- (-0.906,-0.397) -- (-0.866,-0.470) -- (-0.819,-0.539) -- (-0.766,-0.604) -- (-0.707,-0.664);
+\draw[pgray,thin] (-0.612,-0.404) -- (-0.557,-0.452) -- (-0.497,-0.496) -- (-0.433,-0.534) -- (-0.366,-0.567) -- (-0.296,-0.594) -- (-0.224,-0.615) -- (-0.150,-0.630) -- (-0.075,-0.640) -- (0.000,-0.643) -- (0.075,-0.640) -- (0.150,-0.630) -- (0.224,-0.615) -- (0.296,-0.594) -- (0.366,-0.567) -- (0.433,-0.534) -- (0.497,-0.496) -- (0.557,-0.452) -- (0.612,-0.404) -- (0.663,-0.352) -- (0.709,-0.296) -- (0.750,-0.236) -- (0.785,-0.173) -- (0.814,-0.107) -- (0.837,-0.040) -- (0.853,0.030) -- (0.863,0.100) -- (0.866,0.171) -- (0.863,0.242) -- (0.853,0.312) -- (0.837,0.382) -- (0.814,0.449) -- (0.785,0.515) -- (0.750,0.578) -- (0.709,0.638) -- (0.663,0.694) -- (0.612,0.746) -- (0.557,0.794) -- (0.497,0.838) -- (0.433,0.876) -- (0.366,0.909) -- (0.296,0.936) -- (0.224,0.957) -- (0.150,0.972) -- (0.075,0.982) -- (0.000,0.985) -- (-0.075,0.982) -- (-0.150,0.972) -- (-0.224,0.957) -- (-0.296,0.936) -- (-0.366,0.909) -- (-0.433,0.876) -- (-0.497,0.838) -- (-0.557,0.794) -- (-0.612,0.746) -- (-0.663,0.694) -- (-0.709,0.638) -- (-0.750,0.578) -- (-0.785,0.515) -- (-0.814,0.449) -- (-0.837,0.382) -- (-0.853,0.312) -- (-0.863,0.242) -- (-0.866,0.171) -- (-0.863,0.100) -- (-0.853,0.030) -- (-0.837,-0.040) -- (-0.814,-0.107) -- (-0.785,-0.173) -- (-0.750,-0.236) -- (-0.709,-0.296) -- (-0.663,-0.352) -- (-0.612,-0.404);
+\draw[very thick,porange] (-0.612,-0.404) -- (-0.579,-0.434) -- (-0.545,-0.461) -- (-0.509,-0.487) -- (-0.472,-0.511) -- (-0.433,-0.534) -- (-0.393,-0.554) -- (-0.352,-0.572) -- (-0.310,-0.589) -- (-0.268,-0.603) -- (-0.224,-0.615) -- (-0.180,-0.625) -- (-0.135,-0.633) -- (-0.091,-0.638) -- (-0.045,-0.642) -- (0.000,-0.643) -- (0.045,-0.642) -- (0.091,-0.638) -- (0.135,-0.633) -- (0.180,-0.625) -- (0.224,-0.615) -- (0.268,-0.603) -- (0.310,-0.589) -- (0.352,-0.572) -- (0.393,-0.554) -- (0.433,-0.534) -- (0.472,-0.511) -- (0.509,-0.487) -- (0.545,-0.461) -- (0.579,-0.434) -- (0.612,-0.404);
+\draw[very thick,pgreen] (-0.612,-0.404) -- (-0.577,-0.418) -- (-0.541,-0.430) -- (-0.503,-0.442) -- (-0.465,-0.453) -- (-0.425,-0.463) -- (-0.385,-0.472) -- (-0.344,-0.480) -- (-0.303,-0.488) -- (-0.261,-0.494) -- (-0.218,-0.499) -- (-0.175,-0.504) -- (-0.131,-0.507) -- (-0.088,-0.510) -- (-0.044,-0.511) -- (0.000,-0.512) -- (0.044,-0.511) -- (0.088,-0.510) -- (0.131,-0.507) -- (0.175,-0.504) -- (0.218,-0.499) -- (0.261,-0.494) -- (0.303,-0.488) -- (0.344,-0.480) -- (0.385,-0.472) -- (0.425,-0.463) -- (0.465,-0.453) -- (0.503,-0.442) -- (0.541,-0.430) -- (0.577,-0.418) -- (0.612,-0.404);
+\draw[thick,pred,dashed] (-0.612,-0.404) -- (0.612,-0.404);
+\fill (-0.612,-0.404) circle (0.8pt) node[left,lbl] {$p$};
+\fill (0.612,-0.404) circle (0.8pt) node[right,lbl] {$q$};
+\fill (0.000,0.342) circle (0.6pt) node[above,lbl] {north pole};
+\node[lbl,porange,right] at (1.15,0.25) {latitude path, $1.360$};
+\node[lbl,pgreen,right] at (1.15,0.0) {great circle, $1.318$};
+\node[lbl,pred,right] at (1.15,-0.25) {chord, $1.225$};
+\end{tikzpicture}
+\caption{Two points on the circle of colatitude $60^\circ$, a quarter turn apart, seen from above the northern hemisphere. The great circle (green) is shorter than the latitude path (orange), and the chord through the ball (red, dashed) is shorter still but leaves the sphere.}
+\label{fig:ch05:sphere}
+\end{figure}
+
 
 A metric is attached to points, not to coordinates, so it must transform correctly when the coordinates change. Suppose new coordinates $z$ are related to old ones by $x=Az$ with $A$ invertible. A step $dz$ is the step $dx=A\,dz$, and its price must not change, so $dz\T G_z\,dz=dx\T G_x\,dx=dz\T A\T G_xA\,dz$ for every $dz$. Hence
 \begin{equation}\label{eq:ch05:transform}
@@ -143,7 +168,7 @@ It is symmetric and positive semidefinite. Its kernel is $\ker P_C(x)=\ker\big(G
 
 The second form in \eqref{eq:ch05:pullback} says what $P_C$ means. It prices an input displacement $\delta$ by how far it moves the output, measured in the output's own metric. This is exactly the read operator of Data Mining as Observation, equation 0.11, and of the shared notation of this book. Observation Theory states it as ``Observation Theory is pullback geometry''. The object is classical. Pullback metrics are standard Riemannian geometry~\cite{lee2018}, and with $G$ the Fisher metric the construction is Rao and Amari's information geometry~\cite{amari2016}. Averaged over a workload, $\bar P_{C,\mu}=\E_\mu[P_C(x)]$ is the active-subspace matrix of Constantine~\cite{constantine2015}. The programme's own assessment, \path{geometric-observation/articles/2026-10-01-ot-novelty-assessment.md}, credits these parents. What Observation Theory adds is the use of this one pullback across compression, retrieval and estimation, and \cref{ch06} sets out what is and is not new.
 
-The metric $P_C$ is usually degenerate, and that is the point. A displacement $\delta$ in $\ker P_C(x)$ moves the output by zero to first order. The consumer cannot see it.
+The metric $P_C$ is usually degenerate, and that is the point. A displacement $\delta$ in $\ker P_C(x)$ moves the output by zero to first order. The consumer cannot see it to first order. A finite step can still change the output. The consumer $C(x)=x_1^2$ has $J=0$ at the origin, so its kernel there is everything, yet the step $\delta=(0.1,0)$ changes the output by $0.01$.
 
 \begin{definition}[Fibers and the observer's quotient]\label{def:ch05:quotient}
 Two inputs are \emph{consumer-equivalent} when the consumer gives them the same output,
@@ -153,7 +178,7 @@ x\sim_C x'\iff C(x)=C(x').
 The equivalence classes are the \emph{fibers} $C^{-1}(y)$, and the set of classes is the quotient $U/\!\sim_C$. Near a point where $\rank J$ is constant and equal to $r$, the fiber through $x$ is a smooth surface of dimension $d-r$ whose tangent space is $\ker J(x)$.
 \end{definition}
 
-The last sentence is the constant-rank theorem. In the programme it is part (a) of the theorem ``Observer representation'' in \path{geometric-observation/paper/observer-representation.tex}. Pointwise, the kernel of the degenerate metric is the tangent to the fiber. Moving along a fiber costs nothing in the pullback metric because the consumer's output does not change. The quotient is the space the consumer actually lives on, and $P_C$ is a genuine, nondegenerate metric on it.
+The last sentence is the constant-rank theorem. In the programme it is part (a) of the theorem ``Observer representation'' in \path{geometric-observation/paper/observer-representation.tex}. Pointwise, the kernel of the degenerate metric is the tangent to the fiber. Moving along a fiber costs nothing in the pullback metric because the consumer's output does not change. The quotient is the space the consumer actually lives on. Where $\rank J$ is constant and $G\pd0$, $P_C$ is a genuine, nondegenerate metric on it. Where the rank drops, as at the origin of the consumer $x_1^2$ above, the quotient need not be smooth there.
 
 \begin{example}[A linear consumer]\label[example]{ex:ch05:linear}
 Let $C(x)=x_1+2x_2$ with $G=1$. Then $J=(1\ \ 2)$ and
@@ -171,6 +196,32 @@ P_C=\frac{I-uu\T}{25}=\begin{pmatrix}0.0256&-0.0192\\-0.0192&0.0144\end{pmatrix}
 Then $P_Cu=0$. The radial direction is the kernel, and the fibers are the open rays from the origin. The tangential unit vector $v=(-0.8,0.6)$ has $v\T P_Cv=1/25=0.04$, so a tangential step of length $\epsilon$ moves the direction by $\epsilon/5$. This is the polar metric of \cref{ex:ch05:sphere} with the radial term deleted and the angular term divided by $r^2$. The quotient by positive scaling is the sphere.
 \end{example}
 
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=0.95]
+\begin{scope}
+\clip (-2,-2) rectangle (2,2);
+\foreach \c in {-4,-3,-2,-1,0,1,2,3,4} {\draw[pgray,thin] ({\c-2*(-2)},-2) -- ({\c-2*2},2);}
+\end{scope}
+\draw[pgray] (-2,-2) rectangle (2,2);
+\draw[vec,porange] (0,0) -- (0.447,0.894) node[above right,lbl] {$\nabla C$};
+\draw[vec,pred] (0,0) -- (0.894,-0.447) node[below right,lbl,fill=white,inner sep=1pt] {$\ker P_C$};
+\node[lbl,fill=white,inner sep=1pt] at (-0.9,-1.7) {fibers $x_1+2x_2=c$};
+\node[lbl] at (0,-2.4) {(a) linear consumer};
+\begin{scope}[xshift=5.2cm]
+\foreach \a in {0,30,...,330} {\draw[pgray,thin] (0,0) -- (\a:2);}
+\draw[pgray] (0,0) circle (2);
+\fill (36.87:1.5) circle (1.6pt) node[left,lbl] {$x$};
+\draw[vec,pred] (36.87:1.5) -- ++(36.87:0.7) node[right,lbl,fill=white,inner sep=1pt] {radial, unread};
+\draw[vec,porange] (36.87:1.5) -- ++(126.87:0.7) node[above left,lbl,fill=white,inner sep=1pt] {tangential, read};
+\node[lbl] at (0,-2.4) {(b) angle reader $x/\norm{x}$};
+\end{scope}
+\end{tikzpicture}
+\caption{The kernel of the pullback metric is tangent to the fibers. For the linear consumer of \cref{ex:ch05:linear} the fibers are parallel lines along $(2,-1)$. For the angle reader of \cref{ex:ch05:normalize} they are rays, and the quotient is the circle of directions.}
+\label{fig:ch05:pullback}
+\end{figure}
+
+
 \begin{example}[Softmax reads differences of logits]\label[example]{ex:ch05:softmax}
 For the softmax output $p=\mathrm{softmax}(l)$ and KL divergence on the output, the metric on logits is $G=\diag(p)-pp\T$. With $p=(\tfrac12,\tfrac14,\tfrac14)$,
 \[
@@ -179,7 +230,7 @@ G=\begin{pmatrix}\tfrac14&-\tfrac18&-\tfrac18\\[2pt]-\tfrac18&\tfrac3{16}&-\tfra
 Adding the same constant to every logit leaves softmax unchanged, and $\mathbf 1$ is exactly the kernel. In \path{geometric-observation/paper/observation-theory.tex}, Proposition ``Softmax attention'', this kernel is why only the across-token demeaned key error reaches an attention head.
 \end{example}
 
-One caution belongs here, and Data Mining as Observation, section 0.6, gives its full form. The pointwise kernel $\ker P_C(x)$, the kernel of the workload average $\bar P_{C,\mu}$, and the global equivalence \eqref{eq:ch05:quotient} are three different objects. They agree for a linear consumer. For the angle reader of \cref{ex:ch05:normalize} each $P_C(x)$ has a kernel, but the kernel turns with $x$, and the average over a spread of directions has no kernel at all. The consumer still identifies whole rays. A zero eigenvalue of the average is a statement about directions that are unread almost everywhere, not a description of the fibers.
+One caution belongs here, and Data Mining as Observation, section 0.6, gives its full form. The pointwise kernel $\ker P_C(x)$, the kernel of the workload average $\bar P_{C,\mu}$, and the global equivalence \eqref{eq:ch05:quotient} are three different objects. They agree for a linear consumer with a positive definite output metric. For the angle reader of \cref{ex:ch05:normalize} each $P_C(x)$ has a kernel, but the kernel turns with $x$, and the average over a spread of directions has no kernel at all. The consumer still identifies whole rays. A zero eigenvalue of the average is a statement about directions that are unread almost everywhere, not a description of the fibers.
 
 \begin{example}[Averaging erases a turning kernel]\label[example]{ex:ch05:average}
 Average the angle reader of \cref{ex:ch05:normalize} over a workload of two points, $x_1=(3,4)$ and $x_2=(4,-3)$, with equal weight. Both have radius $5$, and their directions $u_1=(0.6,0.8)$ and $u_2=(0.8,-0.6)$ are orthonormal. So $u_1u_1\T+u_2u_2\T=I$ and
@@ -214,7 +265,7 @@ Under the usual conditions for differentiating under the integral,
 Write $\ell(\theta)=\log p_\theta(x)$ and expand $\ell(\theta+\delta)=\ell(\theta)+\delta\T\nabla\ell+\tfrac12\delta\T\nabla^2\ell\,\delta+o(\norm{\delta}^2)$. Then $\KL{p_\theta}{p_{\theta+\delta}}=-\E_\theta[\ell(\theta+\delta)-\ell(\theta)]$. The score has mean zero, $\E_\theta[\nabla\ell]=\int\nabla p_\theta=\nabla\!\int p_\theta=0$, so the linear term vanishes. The information identity $-\E_\theta[\nabla^2\ell]=F(\theta)$ turns the quadratic term into $\tfrac12\delta\T F\delta$.
 \end{proof}
 
-So $F(\theta)$ is a positive semidefinite matrix that varies with $\theta$, which is a Riemannian metric on the parameter space when it is positive definite. It is called the Fisher, or Fisher--Rao, metric~\cite{amari2016}. \Cref{ch02} develops $F$ as the curvature of the log-likelihood and the Cram\'er--Rao bound. Here the point is geometric. Statistical distinguishability is a length.
+So $F(\theta)$ is a positive semidefinite matrix that varies with $\theta$, which is a Riemannian metric on the parameter space when it is positive definite. It is called the Fisher, or Fisher--Rao, metric~\cite{amari2016}. \Cref{ch02} develops $F$ as the curvature of the log-likelihood and the Cram\'er--Rao bound. Here the point is geometric. Locally, statistical distinguishability is a length. For distant parameters it is not, since the divergence is asymmetric and the Fisher distance is symmetric, so no function of the Fisher distance alone can equal both $\KL{p}{q}$ and $\KL{q}{p}$.
 
 \begin{example}[Bernoulli family]\label[example]{ex:ch05:bernoulli}
 For $p_\theta=\mathrm{Bernoulli}(\theta)$, $F(\theta)=1/\big(\theta(1-\theta)\big)$, which is $4$ at $\theta=0.5$. Move to $\theta=0.6$. The exact divergence is
@@ -231,6 +282,27 @@ an angle. From $0.5$ to $0.9$ it is $2(1.2490-0.7854)=0.9273$.
 \begin{example}[Gaussian location family]\label[example]{ex:ch05:gausslocation}
 For $p_\mu=\Normal(\mu,\Sigma)$ with $\Sigma$ fixed, $F=\Sigma^{-1}$ for every $\mu$, and the expansion \eqref{eq:ch05:klquad} is exact, $\KL{p_\mu}{p_{\mu+\delta}}=\tfrac12\delta\T\Sigma^{-1}\delta$. The Fisher distance of the location family is the Mahalanobis distance \eqref{eq:ch05:mahalanobis}. With $\Sigma$ from \cref{ex:ch05:mahal} and $\delta=(0.3,-0.2)$, the divergence is $0.0633$.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=-1.6, xmax=1.6, ymin=0.3, ymax=2.0, xlabel={mean $\mu$}, ylabel={standard deviation $\sigma$}, axis equal image]
+\addplot[pblue, no marks] coordinates {(0.122,0.500) (0.124,0.516) (0.122,0.533) (0.115,0.548) (0.106,0.561) (0.094,0.572) (0.081,0.581) (0.067,0.588) (0.054,0.593) (0.040,0.596) (0.027,0.599) (0.013,0.600) (0.000,0.601) (-0.013,0.600) (-0.027,0.599) (-0.040,0.596) (-0.054,0.593) (-0.067,0.588) (-0.081,0.581) (-0.094,0.572) (-0.106,0.561) (-0.115,0.548) (-0.122,0.533) (-0.124,0.516) (-0.122,0.500) (-0.117,0.485) (-0.108,0.471) (-0.097,0.460) (-0.086,0.450) (-0.074,0.443) (-0.063,0.437) (-0.051,0.433) (-0.041,0.430) (-0.030,0.427) (-0.020,0.426) (-0.010,0.425) (-0.000,0.424) (0.010,0.425) (0.020,0.426) (0.030,0.427) (0.041,0.430) (0.051,0.433) (0.063,0.437) (0.074,0.443) (0.086,0.450) (0.097,0.460) (0.108,0.471) (0.117,0.485) (0.122,0.500)};
+\addplot[pblue, no marks] coordinates {(0.245,1.000) (0.249,1.033) (0.244,1.065) (0.231,1.096) (0.211,1.122) (0.188,1.144) (0.161,1.161) (0.134,1.175) (0.107,1.185) (0.080,1.193) (0.053,1.198) (0.026,1.201) (0.000,1.202) (-0.026,1.201) (-0.053,1.198) (-0.080,1.193) (-0.107,1.185) (-0.134,1.175) (-0.161,1.161) (-0.188,1.144) (-0.211,1.122) (-0.231,1.096) (-0.244,1.065) (-0.249,1.033) (-0.245,1.000) (-0.233,0.969) (-0.216,0.942) (-0.195,0.919) (-0.172,0.901) (-0.149,0.886) (-0.125,0.875) (-0.103,0.866) (-0.081,0.859) (-0.060,0.855) (-0.040,0.851) (-0.020,0.850) (-0.000,0.849) (0.020,0.850) (0.040,0.851) (0.060,0.855) (0.081,0.859) (0.103,0.866) (0.125,0.875) (0.149,0.886) (0.172,0.901) (0.195,0.919) (0.216,0.942) (0.233,0.969) (0.245,1.000)};
+\addplot[pblue, no marks] coordinates {(0.392,1.600) (0.398,1.652) (0.390,1.704) (0.369,1.753) (0.338,1.795) (0.300,1.830) (0.258,1.858) (0.215,1.880) (0.171,1.897) (0.128,1.909) (0.085,1.917) (0.042,1.921) (0.000,1.923) (-0.042,1.921) (-0.085,1.917) (-0.128,1.909) (-0.171,1.897) (-0.215,1.880) (-0.258,1.858) (-0.300,1.830) (-0.338,1.795) (-0.369,1.753) (-0.390,1.704) (-0.398,1.652) (-0.392,1.600) (-0.374,1.551) (-0.346,1.507) (-0.312,1.471) (-0.275,1.441) (-0.238,1.418) (-0.201,1.399) (-0.165,1.385) (-0.130,1.375) (-0.096,1.367) (-0.064,1.362) (-0.032,1.359) (-0.000,1.358) (0.032,1.359) (0.064,1.362) (0.096,1.367) (0.130,1.375) (0.165,1.385) (0.201,1.399) (0.238,1.418) (0.275,1.441) (0.312,1.471) (0.346,1.507) (0.374,1.551) (0.392,1.600)};
+\addplot[pblue, no marks] coordinates {(1.122,0.500) (1.124,0.516) (1.122,0.533) (1.115,0.548) (1.106,0.561) (1.094,0.572) (1.081,0.581) (1.067,0.588) (1.054,0.593) (1.040,0.596) (1.027,0.599) (1.013,0.600) (1.000,0.601) (0.987,0.600) (0.973,0.599) (0.960,0.596) (0.946,0.593) (0.933,0.588) (0.919,0.581) (0.906,0.572) (0.894,0.561) (0.885,0.548) (0.878,0.533) (0.876,0.516) (0.878,0.500) (0.883,0.485) (0.892,0.471) (0.903,0.460) (0.914,0.450) (0.926,0.443) (0.937,0.437) (0.949,0.433) (0.959,0.430) (0.970,0.427) (0.980,0.426) (0.990,0.425) (1.000,0.424) (1.010,0.425) (1.020,0.426) (1.030,0.427) (1.041,0.430) (1.051,0.433) (1.063,0.437) (1.074,0.443) (1.086,0.450) (1.097,0.460) (1.108,0.471) (1.117,0.485) (1.122,0.500)};
+\addplot[pblue, no marks] coordinates {(1.245,1.000) (1.249,1.033) (1.244,1.065) (1.231,1.096) (1.211,1.122) (1.188,1.144) (1.161,1.161) (1.134,1.175) (1.107,1.185) (1.080,1.193) (1.053,1.198) (1.026,1.201) (1.000,1.202) (0.974,1.201) (0.947,1.198) (0.920,1.193) (0.893,1.185) (0.866,1.175) (0.839,1.161) (0.812,1.144) (0.789,1.122) (0.769,1.096) (0.756,1.065) (0.751,1.033) (0.755,1.000) (0.767,0.969) (0.784,0.942) (0.805,0.919) (0.828,0.901) (0.851,0.886) (0.875,0.875) (0.897,0.866) (0.919,0.859) (0.940,0.855) (0.960,0.851) (0.980,0.850) (1.000,0.849) (1.020,0.850) (1.040,0.851) (1.060,0.855) (1.081,0.859) (1.103,0.866) (1.125,0.875) (1.149,0.886) (1.172,0.901) (1.195,0.919) (1.216,0.942) (1.233,0.969) (1.245,1.000)};
+\addplot[pblue, no marks] coordinates {(1.392,1.600) (1.398,1.652) (1.390,1.704) (1.369,1.753) (1.338,1.795) (1.300,1.830) (1.258,1.858) (1.215,1.880) (1.171,1.897) (1.128,1.909) (1.085,1.917) (1.042,1.921) (1.000,1.923) (0.958,1.921) (0.915,1.917) (0.872,1.909) (0.829,1.897) (0.785,1.880) (0.742,1.858) (0.700,1.830) (0.662,1.795) (0.631,1.753) (0.610,1.704) (0.602,1.652) (0.608,1.600) (0.626,1.551) (0.654,1.507) (0.688,1.471) (0.725,1.441) (0.762,1.418) (0.799,1.399) (0.835,1.385) (0.870,1.375) (0.904,1.367) (0.936,1.362) (0.968,1.359) (1.000,1.358) (1.032,1.359) (1.064,1.362) (1.096,1.367) (1.130,1.375) (1.165,1.385) (1.201,1.399) (1.238,1.418) (1.275,1.441) (1.312,1.471) (1.346,1.507) (1.374,1.551) (1.392,1.600)};
+\addplot[pblue, no marks] coordinates {(-0.878,0.500) (-0.876,0.516) (-0.878,0.533) (-0.885,0.548) (-0.894,0.561) (-0.906,0.572) (-0.919,0.581) (-0.933,0.588) (-0.946,0.593) (-0.960,0.596) (-0.973,0.599) (-0.987,0.600) (-1.000,0.601) (-1.013,0.600) (-1.027,0.599) (-1.040,0.596) (-1.054,0.593) (-1.067,0.588) (-1.081,0.581) (-1.094,0.572) (-1.106,0.561) (-1.115,0.548) (-1.122,0.533) (-1.124,0.516) (-1.122,0.500) (-1.117,0.485) (-1.108,0.471) (-1.097,0.460) (-1.086,0.450) (-1.074,0.443) (-1.063,0.437) (-1.051,0.433) (-1.041,0.430) (-1.030,0.427) (-1.020,0.426) (-1.010,0.425) (-1.000,0.424) (-0.990,0.425) (-0.980,0.426) (-0.970,0.427) (-0.959,0.430) (-0.949,0.433) (-0.937,0.437) (-0.926,0.443) (-0.914,0.450) (-0.903,0.460) (-0.892,0.471) (-0.883,0.485) (-0.878,0.500)};
+\addplot[pblue, no marks] coordinates {(-0.755,1.000) (-0.751,1.033) (-0.756,1.065) (-0.769,1.096) (-0.789,1.122) (-0.812,1.144) (-0.839,1.161) (-0.866,1.175) (-0.893,1.185) (-0.920,1.193) (-0.947,1.198) (-0.974,1.201) (-1.000,1.202) (-1.026,1.201) (-1.053,1.198) (-1.080,1.193) (-1.107,1.185) (-1.134,1.175) (-1.161,1.161) (-1.188,1.144) (-1.211,1.122) (-1.231,1.096) (-1.244,1.065) (-1.249,1.033) (-1.245,1.000) (-1.233,0.969) (-1.216,0.942) (-1.195,0.919) (-1.172,0.901) (-1.149,0.886) (-1.125,0.875) (-1.103,0.866) (-1.081,0.859) (-1.060,0.855) (-1.040,0.851) (-1.020,0.850) (-1.000,0.849) (-0.980,0.850) (-0.960,0.851) (-0.940,0.855) (-0.919,0.859) (-0.897,0.866) (-0.875,0.875) (-0.851,0.886) (-0.828,0.901) (-0.805,0.919) (-0.784,0.942) (-0.767,0.969) (-0.755,1.000)};
+\addplot[pblue, no marks] coordinates {(-0.608,1.600) (-0.602,1.652) (-0.610,1.704) (-0.631,1.753) (-0.662,1.795) (-0.700,1.830) (-0.742,1.858) (-0.785,1.880) (-0.829,1.897) (-0.872,1.909) (-0.915,1.917) (-0.958,1.921) (-1.000,1.923) (-1.042,1.921) (-1.085,1.917) (-1.128,1.909) (-1.171,1.897) (-1.215,1.880) (-1.258,1.858) (-1.300,1.830) (-1.338,1.795) (-1.369,1.753) (-1.390,1.704) (-1.398,1.652) (-1.392,1.600) (-1.374,1.551) (-1.346,1.507) (-1.312,1.471) (-1.275,1.441) (-1.238,1.418) (-1.201,1.399) (-1.165,1.385) (-1.130,1.375) (-1.096,1.367) (-1.064,1.362) (-1.032,1.359) (-1.000,1.358) (-0.968,1.359) (-0.936,1.362) (-0.904,1.367) (-0.870,1.375) (-0.835,1.385) (-0.799,1.399) (-0.762,1.418) (-0.725,1.441) (-0.688,1.471) (-0.654,1.507) (-0.626,1.551) (-0.608,1.600)};
+\addplot[porange, dashed, domain=0:360, samples=60] ({0.2449*cos(x)},{1+0.1732*sin(x)});
+\end{axis}
+\end{tikzpicture}
+\caption{Contours $\KL{\Normal(\mu_0,\sigma_0^2)}{\Normal(\mu,\sigma^2)}=0.03$ around nine base points. Each is nearly the ellipse of the Fisher metric $\diag(1/\sigma^2,2/\sigma^2)$, drawn dashed at $(0,1)$, and they grow in proportion to $\sigma$, so the same change of mean is easier to detect when the noise is small.}
+\label{fig:ch05:fisher}
+\end{figure}
+
 
 The bridge to the read operator comes from composing \eqref{eq:ch05:klquad} with a map. Suppose an observation channel reads the input $x$ only through a consumer, so that the output law is $\kappa(\cdot\mid C(x))$ with Fisher metric $F(y)$ in $y$. Substituting $\delta_y=J\delta+o(\norm\delta)$ into \eqref{eq:ch05:klquad} gives
 \begin{equation}\label{eq:ch05:bridge}
@@ -277,7 +349,23 @@ For the invariance take $A=\begin{pmatrix}1&1\\0&1\end{pmatrix}$. Then $AA\T=\be
 The geodesic midpoint of $S_1$ and $S_2$ is $S_1^{1/2}\big(S_1^{-1/2}S_2S_1^{-1/2}\big)^{1/2}S_1^{1/2}$, which for $I$ and $S_2$ is $\diag(2,\tfrac12)$, at distance $0.980$ from each end. Its determinant is $1$, the geometric mean of the two determinants. The arithmetic mean $\diag(2.125,0.625)$ is not the midpoint.
 \end{example}
 
-Two relatives are worth knowing. The \emph{log-Euclidean} distance $\norm{\log S_1-\log S_2}_F$ of Arsigny, Fillard, Pennec and Ayache~\cite{arsigny2007} maps the cone flat with the matrix logarithm. It equals $d_{AI}$ when $S_1$ and $S_2$ commute and differs otherwise, and it is cheaper because means have a closed form. The Fisher metric of the zero-mean Gaussian family $\Normal(0,S)$ is half of \eqref{eq:ch05:aimetric}, so that
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=0.9]
+\foreach \x/\a/\b [count=\i] in {0/1.000/1.000, 2.6/1.189/0.841, 5.2/1.414/0.707, 7.8/1.682/0.595, 10.4/2.000/0.500}
+  {\draw[thick,pgreen,fill=pgreen!10] (\x,0) ellipse ({0.5*\a} and {0.5*\b});}
+\foreach \x/\a/\b in {0/1.000/1.000, 2.6/1.323/0.901, 5.2/1.581/0.791, 7.8/1.803/0.661, 10.4/2.000/0.500}
+  {\draw[thick,pblue,fill=pblue!10] (\x,-1.6) ellipse ({0.5*\a} and {0.5*\b});}
+\foreach \x/\t in {0/0, 2.6/0.25, 5.2/0.5, 7.8/0.75, 10.4/1} {\node[lbl] at (\x,-2.5) {$t=\t$};}
+\node[lbl,pgreen,align=right,left] at (-0.9,0) {affine-invariant\\$\det=1$ throughout};
+\node[lbl,pblue,align=right,left] at (-0.9,-1.6) {Euclidean\\$\det$ up to $1.56$};
+\end{tikzpicture}
+\caption{Two paths from $I$ to $\diag(4,\tfrac14)$, drawn as covariance ellipses with semi-axes $\sqrt{\lambda_i}$. The affine-invariant geodesic keeps the determinant at one. The straight Euclidean path swells in the middle, where the determinant reaches $1.56$.}
+\label{fig:ch05:spd}
+\end{figure}
+
+
+Two relatives are worth knowing. The \emph{log-Euclidean} distance $\norm{\log S_1-\log S_2}_F$ of Arsigny, Fillard, Pennec and Ayache~\cite{arsigny2007} maps the cone flat with the matrix logarithm. It equals $d_{AI}$ when $S_1$ and $S_2$ commute and in general differs otherwise, and it is cheaper because means have a closed form. The Fisher metric of the zero-mean Gaussian family $\Normal(0,S)$ is half of \eqref{eq:ch05:aimetric}, so that
 \begin{equation}\label{eq:ch05:gausscov}
 \KL{\Normal(0,S)}{\Normal(0,S+\epsilon A)}=\tfrac14\,\epsilon^2\tr\big((S^{-1}A)^2\big)+o(\epsilon^2).
 \end{equation}
@@ -291,7 +379,7 @@ The affine-invariant geometry is therefore the information geometry of covarianc
 %======================================================================
 \section{Hyperbolic space has room for trees}\label{sec:ch05:hyperbolic}
 
-In the plane a circle of radius $\rho$ has circumference $2\pi\rho$. A balanced tree with branching factor $k$ has $k^\rho$ nodes at depth $\rho$. Polynomial room cannot hold exponentially many well-separated nodes, so a Euclidean embedding of a deep tree must crowd leaves together or stretch the tree. Hyperbolic space has exponential room. A circle of radius $\rho$ has circumference $2\pi\sinh\rho$, which for $\rho=3$ is $62.9$ against the Euclidean $18.8$.
+In the plane a circle of radius $\rho$ has circumference $2\pi\rho$. A balanced tree with branching factor $k$ has $k^\rho$ nodes at depth $\rho$. In a fixed dimension that room grows only polynomially, and polynomial room cannot hold exponentially many well-separated nodes, so a Euclidean embedding of a deep tree must crowd leaves together or stretch the tree. Hyperbolic space has exponential room. A circle of radius $\rho$ has circumference $2\pi\sinh\rho$, which for $\rho=3$ is $62.9$ against the Euclidean $18.8$.
 
 \begin{definition}[Poincar\'e disk]\label{def:ch05:poincare}
 The Poincar\'e disk is the open unit disk $\{x\in\R^2:\norm{x}<1\}$ with the metric
@@ -321,18 +409,62 @@ The path through the origin has length $2\ln19=5.889$, so the direct geodesic sa
 \centering
 \begin{tikzpicture}[scale=2.4]
 \draw[thick] (0,0) circle (1);
-\fill (0,0) circle (0.6pt) node[below left]{$0$};
-\draw[dashed,gray] (0.9,0)--(0,0)--(0,0.9);
-\draw[gray] (0.9,0)--(0,0.9);
-\draw[very thick,blue!60!black] ({1.00556+1.01106*cos(186.0)},{1.00556+1.01106*sin(186.0)}) arc[start angle=186.0,end angle=264.0,radius=1.01106];
-\fill (0.9,0) circle (0.8pt) node[right]{$x$};
-\fill (0,0.9) circle (0.8pt) node[above]{$y$};
+\draw[very thick,pblue] (0.900,0.000) -- (0.895,0.001) -- (0.890,0.001) -- (0.885,0.002) -- (0.879,0.002) -- (0.873,0.003) -- (0.867,0.004) -- (0.860,0.005) -- (0.853,0.006) -- (0.846,0.007) -- (0.838,0.008) -- (0.830,0.010) -- (0.821,0.011) -- (0.812,0.013) -- (0.802,0.015) -- (0.792,0.017) -- (0.781,0.020) -- (0.769,0.023) -- (0.756,0.026) -- (0.742,0.029) -- (0.727,0.033) -- (0.711,0.038) -- (0.694,0.044) -- (0.675,0.050) -- (0.655,0.057) -- (0.632,0.066) -- (0.607,0.076) -- (0.580,0.088) -- (0.551,0.103) -- (0.518,0.120) -- (0.481,0.141) -- (0.440,0.167) -- (0.395,0.200) -- (0.345,0.240) -- (0.290,0.292) -- (0.229,0.358) -- (0.165,0.444) -- (0.099,0.557) -- (0.040,0.706) -- (0.000,0.900);
+\draw[very thick,pblue] (-0.600,0.600) -- (-0.596,0.594) -- (-0.592,0.588) -- (-0.588,0.581) -- (-0.583,0.575) -- (-0.579,0.567) -- (-0.574,0.560) -- (-0.570,0.552) -- (-0.565,0.543) -- (-0.560,0.534) -- (-0.554,0.525) -- (-0.549,0.515) -- (-0.544,0.504) -- (-0.538,0.493) -- (-0.532,0.481) -- (-0.526,0.468) -- (-0.520,0.454) -- (-0.514,0.439) -- (-0.508,0.423) -- (-0.502,0.406) -- (-0.495,0.388) -- (-0.489,0.368) -- (-0.483,0.347) -- (-0.476,0.324) -- (-0.471,0.299) -- (-0.465,0.272) -- (-0.460,0.242) -- (-0.456,0.210) -- (-0.452,0.174) -- (-0.450,0.136) -- (-0.450,0.093) -- (-0.452,0.047) -- (-0.458,-0.004) -- (-0.467,-0.060) -- (-0.482,-0.122) -- (-0.503,-0.188) -- (-0.533,-0.260) -- (-0.574,-0.337) -- (-0.629,-0.418) -- (-0.700,-0.500);
+\draw[very thick,pblue] (0.200,-0.850) -- (0.200,-0.844) -- (0.201,-0.838) -- (0.201,-0.831) -- (0.202,-0.825) -- (0.203,-0.818) -- (0.204,-0.810) -- (0.205,-0.802) -- (0.206,-0.794) -- (0.208,-0.786) -- (0.209,-0.777) -- (0.211,-0.768) -- (0.214,-0.758) -- (0.216,-0.748) -- (0.219,-0.737) -- (0.223,-0.726) -- (0.227,-0.714) -- (0.231,-0.702) -- (0.236,-0.689) -- (0.242,-0.675) -- (0.249,-0.661) -- (0.256,-0.646) -- (0.265,-0.630) -- (0.275,-0.614) -- (0.286,-0.597) -- (0.299,-0.579) -- (0.314,-0.561) -- (0.331,-0.542) -- (0.350,-0.522) -- (0.372,-0.502) -- (0.397,-0.483) -- (0.425,-0.463) -- (0.457,-0.445) -- (0.493,-0.427) -- (0.534,-0.412) -- (0.579,-0.399) -- (0.628,-0.390) -- (0.682,-0.387) -- (0.740,-0.390) -- (0.800,-0.400);
+\draw[very thick,pblue] (-0.900,0.000) -- (-0.895,0.000) -- (-0.890,0.000) -- (-0.884,0.000) -- (-0.879,0.000) -- (-0.873,0.000) -- (-0.866,0.000) -- (-0.860,0.000) -- (-0.853,0.000) -- (-0.845,0.000) -- (-0.837,0.000) -- (-0.829,0.000) -- (-0.820,0.000) -- (-0.810,0.000) -- (-0.800,0.000) -- (-0.789,0.000) -- (-0.778,0.000) -- (-0.765,0.000) -- (-0.751,0.000) -- (-0.737,0.000) -- (-0.721,0.000) -- (-0.704,0.000) -- (-0.685,0.000) -- (-0.664,0.000) -- (-0.641,0.000) -- (-0.616,0.000) -- (-0.588,0.000) -- (-0.556,0.000) -- (-0.520,0.000) -- (-0.480,0.000) -- (-0.433,0.000) -- (-0.380,0.000) -- (-0.316,0.000) -- (-0.241,0.000) -- (-0.150,0.000) -- (-0.038,0.000) -- (0.103,0.000) -- (0.288,0.000) -- (0.539,0.000) -- (0.900,0.000);
+\draw[porange,thick] (0.000,0.000) circle (0.0700);
+\draw[porange,thick] (0.350,0.000) circle (0.0614);
+\draw[porange,thick] (0.175,0.303) circle (0.0614);
+\draw[porange,thick] (-0.175,0.303) circle (0.0614);
+\draw[porange,thick] (-0.350,0.000) circle (0.0614);
+\draw[porange,thick] (-0.175,-0.303) circle (0.0614);
+\draw[porange,thick] (0.175,-0.303) circle (0.0614);
+\draw[porange,thick] (0.600,0.000) circle (0.0448);
+\draw[porange,thick] (0.520,0.300) circle (0.0448);
+\draw[porange,thick] (0.300,0.520) circle (0.0448);
+\draw[porange,thick] (0.000,0.600) circle (0.0448);
+\draw[porange,thick] (-0.300,0.520) circle (0.0448);
+\draw[porange,thick] (-0.520,0.300) circle (0.0448);
+\draw[porange,thick] (-0.600,0.000) circle (0.0448);
+\draw[porange,thick] (-0.520,-0.300) circle (0.0448);
+\draw[porange,thick] (-0.300,-0.520) circle (0.0448);
+\draw[porange,thick] (-0.000,-0.600) circle (0.0448);
+\draw[porange,thick] (0.300,-0.520) circle (0.0448);
+\draw[porange,thick] (0.520,-0.300) circle (0.0448);
+\draw[porange,thick] (0.764,0.236) circle (0.0252);
+\draw[porange,thick] (0.544,0.587) circle (0.0252);
+\draw[porange,thick] (0.177,0.780) circle (0.0252);
+\draw[porange,thick] (-0.236,0.764) circle (0.0252);
+\draw[porange,thick] (-0.587,0.544) circle (0.0252);
+\draw[porange,thick] (-0.780,0.177) circle (0.0252);
+\draw[porange,thick] (-0.764,-0.236) circle (0.0252);
+\draw[porange,thick] (-0.544,-0.587) circle (0.0252);
+\draw[porange,thick] (-0.177,-0.780) circle (0.0252);
+\draw[porange,thick] (0.236,-0.764) circle (0.0252);
+\draw[porange,thick] (0.587,-0.544) circle (0.0252);
+\draw[porange,thick] (0.780,-0.177) circle (0.0252);
+\draw[porange,thick] (0.879,0.272) circle (0.0108);
+\draw[porange,thick] (0.625,0.675) circle (0.0108);
+\draw[porange,thick] (0.204,0.897) circle (0.0108);
+\draw[porange,thick] (-0.272,0.879) circle (0.0108);
+\draw[porange,thick] (-0.675,0.625) circle (0.0108);
+\draw[porange,thick] (-0.897,0.204) circle (0.0108);
+\draw[porange,thick] (-0.879,-0.272) circle (0.0108);
+\draw[porange,thick] (-0.625,-0.675) circle (0.0108);
+\draw[porange,thick] (-0.204,-0.897) circle (0.0108);
+\draw[porange,thick] (0.272,-0.879) circle (0.0108);
+\draw[porange,thick] (0.675,-0.625) circle (0.0108);
+\draw[porange,thick] (0.897,-0.204) circle (0.0108);
+\foreach \q in {(-0.6,0.6),(-0.7,-0.5),(0.2,-0.85),(0.8,-0.4),(-0.9,0)} {\fill[pblue] \q circle (0.5pt);}
+\fill (0.9,0) circle (0.7pt) node[right,lbl]{$x$};
+\fill (0,0.9) circle (0.7pt) node[above,lbl]{$y$};
 \end{tikzpicture}
-\caption{The hyperbolic geodesic from $x=(0.9,0)$ to $y=(0,0.9)$ in the Poincar\'e disk (thick arc). It is an arc of the circle with centre $(1.006,1.006)$ and radius $1.011$, which meets the rim at right angles. The Euclidean chord (thin) and the path through the origin (dashed) are shown for comparison.}
+\caption{Hyperbolic geodesics in the Poincar\'e disk are diameters and arcs that meet the rim at right angles (blue). The arc from $x=(0.9,0)$ to $y=(0,0.9)$ lies on the circle with centre $(1.006,1.006)$ and radius $1.011$, and it bends toward the centre. The small orange circles all have the same size in the metric \eqref{eq:ch05:poincare-metric}, so their Euclidean radius shrinks like $1-\norm{x}^2$ toward the rim.}
 \label{fig:ch05:poincare}
 \end{figure}
 
-Nickel and Kiela~\cite{nickel2017} train Poincar\'e-ball embeddings of hierarchies, such as the WordNet noun taxonomy, by gradient descent on \eqref{eq:ch05:poincare-dist}. General nodes settle near the centre and specific ones near the rim.
+Nickel and Kiela~\cite{nickel2017} train Poincar\'e-ball embeddings of hierarchies, such as the WordNet noun taxonomy, by gradient descent on \eqref{eq:ch05:poincare-dist}. In their experiments general nodes settle near the centre and specific ones near the rim.
 
 The hyperbolic picture is a tool with a scope. The Keep-the-Angle project tested whether its emergent geometries are better described as hyperbolic, with controls, and rejected that hypothesis. The rejection is recorded in \path{the-angular-observer/README.md} (``the hyperbolic-reframe hypothesis was tested with controls and rejected'', script \path{hyperbolic.py}). A hierarchy suggests hyperbolic space. A manifold-like graph does not.
 
@@ -356,7 +488,7 @@ The normalized Laplacian is $\mathcal L=I-D^{-1/2}WD^{-1/2}$, and Data Mining as
 
 For the path $1-2-3$ and $f=(0,1,3)$, \eqref{eq:ch05:laplacian} is $(0-1)^2+(1-3)^2=5$. The Laplacian there is $\begin{pmatrix}1&-1&0\\-1&2&-1\\0&-1&1\end{pmatrix}$, with eigenvalues $0,1,3$. The constant vector has eigenvalue $0$. A smooth function has a small quadratic form and a rough one a large form.
 
-Laplacian eigenmaps, due to Belkin and Niyogi~\cite{belkin2003}, turn this into coordinates. Seek points $y_i\in\R^m$, one per node, that keep joined nodes close, so that $\sum_{ij}w_{ij}\norm{y_i-y_j}^2$ is small. To rule out the trivial answer of all points equal, fix the scale with $Y\T DY=I$ and drop the constant solution. The minimizers are the next eigenvectors of the generalized problem
+Laplacian eigenmaps, due to Belkin and Niyogi~\cite{belkin2003}, turn this into coordinates. Seek points $y_i\in\R^m$, one per node, that keep joined nodes close, so that $\sum_{ij}w_{ij}\norm{y_i-y_j}^2$ is small. To rule out the trivial answer of all points equal, fix the scale with $Y\T DY=I$ and drop the constant solution. For a connected graph with every degree positive, the minimizers are the next eigenvectors of the generalized problem
 \begin{equation}\label{eq:ch05:eigenmap}
 L\,y=\lambda\,D\,y,\qquad 0=\lambda_1\le\lambda_2\le\cdots,
 \end{equation}
@@ -369,8 +501,46 @@ LY=DY\Lambda .
 Choosing a basis in which $\Lambda$ is diagonal turns \eqref{eq:ch05:eigenmap-kkt} into $m$ copies of \eqref{eq:ch05:eigenmap}, and the objective equals $\tr\Lambda$, the sum of the chosen eigenvalues. The smallest sum, with the constant solution excluded, takes the eigenvectors of the $m$ smallest nonzero eigenvalues. With $D$ replaced by $I$ the argument is the Rayleigh-quotient characterization of eigenvectors, and the pair $(L,D)$ is a matrix pencil in the sense of \cref{ch01}. Belkin and Niyogi motivate the construction by the Laplace--Beltrami operator of the manifold the data are sampled from, which the Laplacian of a neighbourhood graph approximates, so that the embedding is a picture of the manifold. Data Mining as Observation, section 0.10, covers the vocabulary, the commute-time scaling, and the path-graph example.
 
 \begin{example}[The six-cycle embeds as a hexagon]\label[example]{ex:ch05:cycle}
-The cycle $C_6$ has every degree $2$, so $\mathcal L=I-W/2$. Its eigenvalues are $1-\cos(2\pi k/6)$, namely $0,\ 0.5,\ 0.5,\ 1.5,\ 1.5,\ 2$. The eigenvalue $0.5$ has the eigenvectors $\cos(2\pi i/6)$ and $\sin(2\pi i/6)$. Using those as coordinates puts node $i$ at angle $60^\circ\cdot i$ on a circle. The angle between the embedded nodes $i$ and $j$ is $60^\circ$ times the hop distance $\min(\abs{i-j},6-\abs{i-j})$, exactly. Every node has the same radius. Any other orthonormal basis of the same eigenspace rotates the hexagon and leaves the angles unchanged.
+The cycle $C_6$ has every degree $2$, so $\mathcal L=I-W/2$. Its eigenvalues are $1-\cos(2\pi k/6)$, namely $0,\ 0.5,\ 0.5,\ 1.5,\ 1.5,\ 2$. The eigenvalue $0.5$ has the eigenvectors $\cos(2\pi i/6)$ and $\sin(2\pi i/6)$. Using those as coordinates puts node $i$ at angle $60^\circ\cdot i$ on a circle. The angle between the embedded nodes $i$ and $j$ is $60^\circ$ times the hop distance $\min(\abs{i-j},6-\abs{i-j})$, exactly. Every node has the same radius. Any other orthonormal basis of the same eigenspace rotates or reflects the hexagon and leaves the angles unchanged.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=1.25]
+\coordinate (s0) at (0.250,0.794);
+\coordinate (s1) at (0.551,-0.550);
+\coordinate (s2) at (-0.400,0.747);
+\coordinate (s3) at (-0.989,0.642);
+\coordinate (s4) at (0.594,-0.064);
+\coordinate (s5) at (-0.394,-0.443);
+\coordinate (s6) at (-0.490,-0.110);
+\coordinate (s7) at (0.009,0.107);
+\coordinate (s8) at (0.991,0.585);
+\coordinate (s9) at (0.244,0.978);
+\coordinate (s10) at (-0.569,-0.680);
+\coordinate (s11) at (0.225,-0.912);
+\coordinate (e0) at (4.700,0.000);
+\coordinate (e1) at (4.566,0.500);
+\coordinate (e2) at (4.200,0.866);
+\coordinate (e3) at (3.700,1.000);
+\coordinate (e4) at (3.200,0.866);
+\coordinate (e5) at (2.834,0.500);
+\coordinate (e6) at (2.700,0.000);
+\coordinate (e7) at (2.834,-0.500);
+\coordinate (e8) at (3.200,-0.866);
+\coordinate (e9) at (3.700,-1.000);
+\coordinate (e10) at (4.200,-0.866);
+\coordinate (e11) at (4.566,-0.500);
+\foreach \i [evaluate=\i as \j using {int(mod(\i+1,12))}] in {0,...,11} {\draw[pgray] (s\i) -- (s\j); \draw[pblue,thick] (e\i) -- (e\j);}
+\foreach \i in {0,...,11} {\fill[pblue] (s\i) circle (1.3pt); \fill[pblue] (e\i) circle (1.3pt);}
+\draw[flow,porange] (1.3,0) -- (2.4,0) node[midway,above,lbl] {eigenmap};
+\node[lbl] at (0,-1.35) {scrambled drawing};
+\node[lbl] at (3.7,-1.35) {eigenmap embedding};
+\end{tikzpicture}
+\caption{The twelve-node ring drawn at random positions (left) and embedded by the two eigenvectors of its smallest nonzero Laplacian eigenvalue (right). The embedding recovers the circle, and the angle between neighbours is $30^\circ$.}
+\label{fig:ch05:ring}
+\end{figure}
+
 
 In the cycle the angle is the geodesic and the radius says nothing, because every node has the same degree. On large, irregular graphs the same split happens for a reason that \cref{sec:ch05:angle} explains. We end this section with the effective resistance, which that argument needs. Treat each edge as a unit resistor. The effective resistance between nodes $i$ and $j$ is
 \begin{equation}\label{eq:ch05:resistance}
@@ -384,17 +554,17 @@ with $L^+$ the pseudoinverse. On $C_6$ two nodes $k$ hops apart are joined by pa
 \usedin{\Cref{sec:ch05:angle}, \cref{ch06} (the legibility results of Observation Theory).}
 
 %======================================================================
-\section{In a spectral embedding the angle carries geodesic distance and the radius carries density}\label{sec:ch05:angle}
+\section{In a spectral embedding of a large neighbourhood graph the radius carries density, and the angle can carry geodesic distance}\label{sec:ch05:angle}
 
 Write each embedded node as a radius times a direction, $\Psi_i=r_i\,\theta_i$ with $r_i=\norm{\Psi_i}$ and $\theta_i$ on the unit sphere, as in \cref{sec:ch05:riemann}. The question is which part carries the graph's geometry.
 
-The radius loses. Von Luxburg, Radl and Hein~\cite{vonluxburg2014} proved that on large random neighbourhood graphs sampled from a manifold, the resistance between distinct nodes converges to a function of their degrees alone,
+The radius loses. Von Luxburg, Radl and Hein~\cite{vonluxburg2014} proved that on large random neighbourhood graphs sampled from a manifold of intrinsic dimension at least three, with the neighbourhood size shrinking at the rates their theorems require, the resistance between distinct nodes converges to a function of their degrees alone,
 \begin{equation}\label{eq:ch05:degenerate}
 R(i,j)\;\approx\;\frac1{d_i}+\frac1{d_j}.
 \end{equation}
-The full commute distance forgets where the nodes are. Heuristically, squared distances of the form $1/d_i+1/d_j$ are those of nearly orthogonal vectors of lengths $1/\sqrt{d_i}$. The Keep-the-Angle project turns this into a statement about the radius, $r_i\to1/\sqrt{d_i}$. That is local density (sampling density sets the degree) and not position. The repository reports a rank correlation of $0.92$ to $0.99$ between radius and degree.
+Under those conditions the full commute distance forgets where the nodes are. On a small graph it need not. Every node of the six-cycle has degree $2$, so the formula predicts $1$ for every pair, while the resistances of the previous section are $5/6$, $4/3$ and $3/2$ and grow with hop distance. Heuristically, squared distances of the form $1/d_i+1/d_j$ are those of nearly orthogonal vectors of lengths $1/\sqrt{d_i}$. The Keep-the-Angle project turns this into a statement about the radius, $r_i\to1/\sqrt{d_i}$. That is local density (sampling density sets the degree) and not position. The repository reports a rank correlation of $0.92$ to $0.99$ between radius and degree. The high-dimensional side of this behaviour, concentration of distances and the formation of hubs and anti-hubs, is the subject of \cref{ch11}, and this chapter does not re-derive it.
 
-The angle wins in the low modes. Keep only the $m$ lowest nontrivial eigenvectors, normalize each node's vector to unit length, and measure the angle between nodes. On manifold-like graphs that angle tracks geodesic distance. Normalizing to the sphere is the Ng--Jordan--Weiss spectral clustering step~\cite{ng2002}. In the read-operator language of \cref{ex:ch05:normalize}, angle-only coarse-graining is the observer whose kernel contains the radial direction, and the radial direction is the one that carries degree.
+The angle wins in the low modes. Keep only the $m$ lowest nontrivial eigenvectors, normalize each node's vector to unit length, and measure the angle between nodes. On the manifold-like graphs the project tested, that angle tracks geodesic distance. That is an empirical finding with a partial proof, and the account of Paper I below lists what is proved, what is conditional and what is refuted. Normalizing to the sphere is the Ng--Jordan--Weiss spectral clustering step~\cite{ng2002}. In the read-operator language of \cref{ex:ch05:normalize}, angle-only coarse-graining is the observer whose kernel contains the radial direction, and the radial direction is the one that carries degree.
 The angular distance between two nodes is then
 \begin{equation}\label{eq:ch05:angle}
 \theta_i=\frac{\Psi^{(m)}_i}{\norm{\Psi^{(m)}_i}},\qquad d_{\angle}(i,j)=\arccos\big(\theta_i\T\theta_j\big).
@@ -468,4 +638,4 @@ Build the normalized Laplacian of the cycle $C_n$ for $n=12$. Embed with the two
 For $p=\mathrm{softmax}(l)$, check numerically that $\KL{\mathrm{softmax}(l)}{\mathrm{softmax}(l+\epsilon h)}\approx\tfrac12\epsilon^2h\T(\diag(p)-pp\T)h$ for small $\epsilon$, and that the approximation is exactly zero when $h$ is a multiple of $\mathbf 1$.
 \end{exercise}
 
-% checks/ch05_examples.py on Atlas: 123/123 PASS
+% checks/ch05_examples.py on Atlas (2026-10-07): 142/142 PASS

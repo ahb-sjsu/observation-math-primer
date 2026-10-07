@@ -1,1 +1,28 @@
 % Answers to selected exercises, chapter 07.
+
+\paragraph{Exercise~\ref{exr:ch07:1}}
+$\Delta=4/2^4=0.25$, so the mean squared error is $0.25^2/12=1/192\approx0.005208$. The input variance is $4^2/12=4/3$, the ratio is $(4/3)/(1/192)=256$, and the signal-to-noise ratio is $24.08$\,dB, four times $6.02$.
+
+\paragraph{Exercise~\ref{exr:ch07:2}}
+Each subspace index takes $8$ bits, so a vector costs $16$ bytes. In $32$-bit floats it costs $768\cdot4=3072$ bytes, a ratio of $192$. The codebooks are extra, but they are shared by all vectors.
+
+\paragraph{Exercise~\ref{exr:ch07:3}}
+A ranking compares scores pairwise, and $0.678s_1>0.678s_2$ exactly when $s_1>s_2$, so every comparison and every nearest neighbour is unchanged. A softmax computes $e^{s_i}/\sum_je^{s_j}$, and scaling every $s_i$ by $0.678$ divides the differences between logits by about $1.5$. The distribution becomes flatter, so the attention weights change even though their order does not.
+
+\paragraph{Exercise~\ref{exr:ch07:5}}
+The threshold is $0.5$ by symmetry, and each level is the centroid of its half, $0.25$ and $0.75$. The threshold is the midpoint of the levels and each level is the mean of its cell, so both conditions hold. The error is uniform on a cell of width $0.5$, with mean square $0.5^2/12=1/48\approx0.02083$.
+
+\paragraph{Exercise~\ref{exr:ch07:6}}
+The geometric mean of the variances is $3$, so $b_1=1+\tfrac12\log_23\approx1.792$ and $b_2=1-\tfrac12\log_23\approx0.208$. The distortions are $9\cdot2^{-3.585}=0.75$ and $1\cdot2^{-0.415}=0.75$, equal as \cref{eq:ch07:alloc} requires, for a total of $1.5$ in units of $c$. One bit each gives $9/4+1/4=2.5$. In practice the fractional bits must be rounded, and a $2$ and $0$ split gives $9/16+1\approx1.56$.
+
+\paragraph{Exercise~\ref{exr:ch07:7}}
+The pairs $(1,2)$ and $(4,5)$ are swapped and the other eight pairs agree. Then $\tau=(8-2)/10=0.6$.
+
+\paragraph{Exercise~\ref{exr:ch07:8}}
+By \cref{eq:ch07:centroid}, $\E[XQ(X)]=\E[Q(X)^2]=1-0.1175=0.8825$, so the shrinkage factor is $0.8825$. An unbiased rescaling in the sense of Proposition~\ref{prop:ch07:shrink} multiplies each reconstructed value by $1/0.8825\approx1.133$. The rescaling raises the mean squared error, because it moves the reconstruction away from the conditional mean.
+
+\paragraph{Exercise~\ref{exr:ch07:9}}
+With natural logarithms, $H(Q(X))\approx h(X)-\ln\Delta$ with $h(X)=\tfrac12\ln(2\pi e\sigma^2)$, and $R(D)=\tfrac12\ln(\sigma^2/D)$ at $D=\Delta^2/12$. The difference is $\tfrac12\ln(2\pi e\sigma^2)-\ln\Delta-\tfrac12\ln(12\sigma^2)+\ln\Delta=\tfrac12\ln(2\pi e/12)=\tfrac12\ln(\pi e/6)\approx0.176$ nats, which is $0.254$ bits.
+
+\paragraph{Exercise~\ref{exr:ch07:10}}
+Lloyd's iteration from evenly spaced starting levels reproduces the levels of Example~\ref{ex:ch07:lloyd} and gives mean squared errors $0.3634$, $0.1175$, $0.03454$ and $0.009497$ at one to four bits. These are the Lloyd--Max points of \cref{fig:ch07:snr}.

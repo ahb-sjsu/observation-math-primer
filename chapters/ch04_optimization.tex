@@ -1,2 +1,626 @@
-% Chapter 04 stub, replaced by the drafting agent.
-\chapter{TODO}\label{ch04}
+\chapter{Optimization finds the best description, and convexity makes the answer certain}\label{ch04}
+
+Every rate in \cref{ch03} was a minimum. The rate--distortion function minimizes a mutual information over test channels, the consumer-relative function $\RC(D)$ minimizes $\frac12\log\det\Sigma_x-\frac12\log\det\Sd$ over error covariances, and the leakage-optimal description of the programme's rate--leakage paper minimizes a second log determinant over the same set. This chapter supplies the tools that solve such problems and certify the answers. A calculus course found a minimum by setting a derivative to zero, and handled one equality constraint with a Lagrange multiplier. Here that method is extended to inequality constraints, which is what a distortion budget and a covariance cap are. The extension is the Karush--Kuhn--Tucker (KKT) conditions. For convex problems they are sufficient. Under Slater's condition they are also necessary, and the dual problem then gives a lower bound that meets the minimum. Water-filling falls out of the KKT conditions in a few lines. The chapter then shows that $\log\det$ is concave, which makes every rate in the programme a convex function of an error covariance, introduces semidefinite constraints, and ends with two iterative methods, majorization--minimization and projected gradient, that the programme uses when no closed form exists. The standard reference for the whole chapter is Boyd and Vandenberghe~\cite{boydvandenberghe2004}.
+
+Logarithms are natural unless the base is written, as in \cref{ch03}.
+
+\section{A convex function lies below its chords, and its Hessian certifies it}\label{sec:ch04:convex}
+
+A set is convex when the segment between any two of its points stays inside it. A function is convex when the segment between any two points of its graph lies on or above the graph. The pictures in \cref{fig:ch04:convex} carry the definitions. What makes convexity worth learning is one consequence. A convex function on a convex set has no local minima other than its global ones, so any point that looks best nearby is best everywhere, and a computer that finds such a point can stop. Both convexities are needed. The function $x^2$ on the set $[-3,-2]\cup[1,2]$ has a local minimum at $x=-2$, with value $4$, that is not the global minimum $1$ at $x=1$.
+
+\begin{definition}[Convex set and convex function]\label{def:ch04:convex}
+A set $\mathcal C\subseteq\R^d$ is convex if $\theta x+(1-\theta)y\in\mathcal C$ for all $x,y\in\mathcal C$ and $\theta\in[0,1]$. A function $f$ on a convex set is convex if
+\begin{equation}\label{eq:ch04:convex}
+f\bigl(\theta x+(1-\theta)y\bigr)\le\theta f(x)+(1-\theta)f(y)\qquad\text{for all }x,y,\ \theta\in[0,1],
+\end{equation}
+strictly convex if the inequality is strict whenever $x\ne y$ and $0<\theta<1$, and concave if $-f$ is convex.
+\end{definition}
+
+On an open convex domain the chord test has two equivalent forms that are easier to check, the first for a differentiable function and the second for a twice-differentiable one~\cite{boydvandenberghe2004}. The first says that the tangent plane at any point lies below the graph. The second says that the curvature is nonnegative in every direction, which for a function of several variables means that the Hessian matrix is positive semidefinite in the sense of \cref{ch01}.
+\begin{equation}\label{eq:ch04:tests}
+f(y)\ge f(x)+\nabla f(x)\T(y-x)\ \ \text{for all }x,y,
+\qquad\text{or}\qquad
+\nabla^2 f(x)\psd0\ \ \text{for all }x .
+\end{equation}
+The first-order test explains the remark about minima. If $\nabla f(x^\star)=0$, the tangent plane at $x^\star$ is flat, and the test says every $f(y)$ is at least $f(x^\star)$. Convexity survives the operations a modeler uses most. Sums of convex functions with nonnegative weights are convex, a convex function of an affine map $Ax+b$ is convex, and the pointwise maximum of convex functions is convex. Intersections of convex sets are convex, which is why a feasible set described by several convex constraints is convex.
+
+The functions of \cref{ch03} supply the examples. On $x>0$, $-\log x$ has second derivative $1/x^2>0$ and $x\log x$ has $1/x>0$, so both are convex, and $\log x$ is concave. A quadratic $x\T Ax$ is convex exactly when $A\psd0$. The set $\{\Sd:0\preceq\Sd\preceq\Sigma_x,\ \tr(\PC\Sd)\le D\}$ of \cref{ch03} is convex, because each of its three constraints is preserved by averaging two matrices.
+
+Two further facts are used constantly. A strictly convex function has at most one minimizer on a convex set, because the midpoint of two different minimizers would be strictly lower than both. This is how the programme's papers prove that an optimal error covariance is unique. The second fact is Jensen's inequality, the chord definition \eqref{eq:ch04:convex} extended from two points to an average.
+\begin{equation}\label{eq:ch04:jensen}
+f(\E X)\le\E f(X)\qquad\text{for convex }f .
+\end{equation}
+With $f(x)=x^2$ it says $\E X^2\ge(\E X)^2$, that is, a variance is nonnegative. With $f=-\log$ it gives Gibbs' inequality $\KL{p}{q}\ge0$ of \cref{ch03}, and with $f=R$, the convex rate--distortion function, it is the last step of the converse of the rate--distortion theorem, where the per-symbol distortions are averaged.
+
+For a constrained problem the zero-gradient test becomes a statement about directions. A point $x^\star$ of a convex set $\mathcal C$ minimizes a differentiable convex $f$ over $\mathcal C$ exactly when no feasible direction goes downhill.
+\begin{equation}\label{eq:ch04:vi}
+\nabla f(x^\star)\T(y-x^\star)\ge0\qquad\text{for all }y\in\mathcal C .
+\end{equation}
+At an interior point every direction is feasible, and the condition reduces to $\nabla f(x^\star)=0$. On the boundary the gradient may be nonzero, but it must point into the set, so that every move inside the set goes uphill. The KKT conditions of \cref{sec:ch04:kkt} are this condition written with multipliers, and the projections of \cref{sec:ch04:pgd} are characterized by it.
+
+\begin{example}[Two quadratics and a determinant]\label[example]{ex:ch04:hessian}
+The function $x^2+xy+y^2$ has Hessian $\begin{psmallmatrix}2&1\\1&2\end{psmallmatrix}$ with eigenvalues $1$ and $3$, so it is convex. Changing the cross term to $3xy$ gives $\begin{psmallmatrix}2&3\\3&2\end{psmallmatrix}$ with eigenvalues $-1$ and $5$, a saddle, and the function is not convex. The determinant itself is not concave, but its logarithm is, as \cref{sec:ch04:logdet} proves. For $A=\diag(1,4)$ and $B=\diag(4,1)$ the midpoint has $\log\det\frac{A+B}{2}=2\ln2.5=1.8326$, above the average $\frac12(\ln4+\ln4)=1.3863$, as concavity requires.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.36\linewidth, height=0.30\linewidth, xmin=-2.2, xmax=2.2, ymin=-0.3, ymax=4.2, xtick={-2,0,2}, ytick={0,2,4}, title={\small convex}]
+\addplot[pblue] coordinates {(-2,4) (-1.8,3.24) (-1.6,2.56) (-1.4,1.96) (-1.2,1.44) (-1,1) (-0.8,0.64) (-0.6,0.36) (-0.4,0.16) (-0.2,0.04) (0,0) (0.2,0.04) (0.4,0.16) (0.6,0.36) (0.8,0.64) (1,1) (1.2,1.44) (1.4,1.96) (1.6,2.56) (1.8,3.24) (2,4)}; % data:convexf
+\addplot[pgreen, mark=*, mark size=1.5pt] coordinates {(-1.5,2.25) (1,1)}; % data:convexchord
+\end{axis}
+\end{tikzpicture}\hspace{2mm}%
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.36\linewidth, height=0.30\linewidth, xmin=-2.2, xmax=2.2, ymin=-0.2, ymax=1.6, xtick={-2,0,2}, ytick={0,1}, title={\small not convex}]
+\addplot[pblue] coordinates {(-2.1,1.452) (-2,1) (-1.9,0.648) (-1.8,0.3844) (-1.7,0.198) (-1.6,0.0784) (-1.5,0.01562) (-1.4,0.0004) (-1.3,0.02402) (-1.2,0.0784) (-1.1,0.156) (-1,0.25) (-0.9,0.354) (-0.8,0.4624) (-0.7,0.57) (-0.6,0.6724) (-0.5,0.7656) (-0.4,0.8464) (-0.3,0.912) (-0.2,0.9604) (-0.1,0.99) (0,1) (0.1,0.99) (0.2,0.9604) (0.3,0.912) (0.4,0.8464) (0.5,0.7656) (0.6,0.6724) (0.7,0.57) (0.8,0.4624) (0.9,0.354) (1,0.25) (1.1,0.156) (1.2,0.0784) (1.3,0.02402) (1.4,0.0004) (1.5,0.01562) (1.6,0.0784) (1.7,0.198) (1.8,0.3844) (1.9,0.648) (2,1) (2.1,1.452)}; % data:nonconvexf
+\addplot[pred, mark=*, mark size=1.5pt] coordinates {(-1.4,0.0004) (1.4,0.0004)}; % data:nonconvexchord
+\end{axis}
+\end{tikzpicture}\hspace{2mm}%
+\begin{tikzpicture}[scale=0.62]
+  \fill[plight,draw=pblue,thick] (0,0) ellipse (1.1 and 0.75);
+  \draw[pgreen,thick] (-0.6,-0.35) -- (0.7,0.4);
+  \fill[pgreen] (-0.6,-0.35) circle (2pt) (0.7,0.4) circle (2pt);
+  \node[lbl] at (0,-1.15) {convex set};
+  \begin{scope}[xshift=3.0cm]
+  \fill[plight,draw=pblue,thick] (-0.9,-0.8) -- (0.9,-0.8) -- (0.9,0.8) -- (0.35,0.8) -- (0.35,-0.2) -- (-0.35,-0.2) -- (-0.35,0.8) -- (-0.9,0.8) -- cycle;
+  \draw[pred,thick] (-0.65,0.55) -- (0.65,0.55);
+  \fill[pred] (-0.65,0.55) circle (2pt) (0.65,0.55) circle (2pt);
+  \node[lbl] at (0,-1.15) {not convex};
+  \end{scope}
+\end{tikzpicture}
+\caption{A convex function lies on or below every chord, and a convex set contains every segment between its points. The parabola $x^2$ stays under the green chord. The function $x^4/4-x^2+1$ rises to $1$ at the origin while its red chord between $x=\pm1.4$ sits near $0$, so it is not convex and it has two separate local minima. The segment between two points of the notched set leaves the set.}
+\label{fig:ch04:convex}
+\end{figure}
+
+Without convexity three things go wrong, and each has a recognizable sign. The first is a second local minimum, as in the right panel of \cref{fig:ch04:convex}. A method that only looks downhill stops in whichever basin it starts in. The second is a saddle point. The function $x^2-y^2$ has zero gradient at the origin, and its Hessian $\diag(2,-2)$ has one positive and one negative eigenvalue, so the origin is a minimum along $x$ and a maximum along $y$. A zero gradient certifies nothing until the Hessian has been checked, and even a positive definite Hessian certifies only a local minimum unless the function is convex. The third is a feasible set that is not convex, and the programme's most common example is a rank constraint. Describing a source with at most $k$ numbers is the constraint $\rank\Sd'\le k$ on some matrix $\Sd'$, and that set is not convex. The matrices $\diag(1,0)$ and $\diag(0,1)$ each have rank one, and their average $\diag(\frac12,\frac12)$ has rank two. A budget written as a count of retained directions is a nonconvex constraint, while a budget written as a rate or a trace is a convex one, which is one reason the programme states budgets in bits.
+
+Each warning sign has the same remedy, which is a theorem. Before a numerical minimum is trusted, the objective and the feasible set should be shown convex, or the method should be shown to find the global minimum by some other argument. The programme's rate--leakage draft is organized around such a theorem. Its leakage is a difference of two log determinants, which looks nonconvex, and its Theorem \texttt{thm:convex} proves that it is nonetheless strictly convex in the error covariance (\cref{sec:ch04:logdet}). Everything after that theorem in the draft, the unique frontier point, the KKT certificate and the convergence of its iteration, rests on it.
+
+\buildson{Calculus (second derivatives, Taylor expansion). \cref{ch01} (positive semidefinite matrices).}
+\usedin{Every later section. \cref{ch03}, where convexity of $R(D)$ entered the converse of the rate--distortion theorem, depends on it, and so do \cref{ch06,ch07}.}
+
+\section{A Lagrange multiplier is the price of a constraint}\label{sec:ch04:lagrange}
+
+Calculus solved $\min f(x)$ subject to $h(x)=c$ by looking for points where the gradient of $f$ is parallel to the gradient of $h$. At such a point a level set of $f$ is tangent to the constraint surface, so moving along the constraint cannot lower $f$ to first order. The multiplier $\lambda$ is the factor of proportionality. Writing it as a stationary point of one function, the Lagrangian, makes the method mechanical.
+\begin{equation}\label{eq:ch04:lagrange}
+L(x,\lambda)=f(x)+\lambda\bigl(c-h(x)\bigr),\qquad
+\nabla f(x^\star)=\lambda\nabla h(x^\star),\qquad h(x^\star)=c .
+\end{equation}
+
+The multiplier has a meaning that the calculus course may not have stressed. Let $p^\star(c)$ be the optimal value as a function of the constraint level. Then, under smoothness conditions,
+\begin{equation}\label{eq:ch04:sensitivity}
+\frac{dp^\star}{dc}=\lambda .
+\end{equation}
+The multiplier is the marginal cost of tightening the constraint, a price. In \cref{ch03} the slope of $R(D)$ was $-1/(2\theta)$. \Cref{sec:ch04:water} shows that this slope is the multiplier of the distortion constraint, so the water level is a price. At the margin, each unit of distortion given up buys $1/(2\theta)$ nats of rate. The statement is first order. Because $R$ is convex, a whole unit buys at most that much.
+
+\begin{example}[An ellipse touching a line]\label[example]{ex:ch04:lagrange}
+Minimize $x^2+2y^2$ subject to $x+y=3$. Stationarity gives $2x=\lambda$ and $4y=\lambda$, so $x=2y$, and the constraint gives $y=1$, $x=2$, $\lambda=4$. The minimum is $4+2=6$. \Cref{fig:ch04:lagrange} shows the level set $x^2+2y^2=6$, an ellipse with semi-axes $\sqrt6=2.449$ and $\sqrt3=1.732$, touching the line at $(2,1)$, where the gradient $(4,4)$ is $4$ times the constraint normal $(1,1)$. For a general level $c$ the same steps give $(x,y)=(2c/3,c/3)$ and $p^\star(c)=2c^2/3$, whose derivative at $c=3$ is $4=\lambda$, as \eqref{eq:ch04:sensitivity} says.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=1.25]
+  \begin{scope}
+  \clip (-0.6,-0.6) rectangle (4.2,3.4);
+  \draw[guide] (0,0) ellipse ({sqrt(2)} and 1);
+  \draw[pblue,thick] (0,0) ellipse ({sqrt(6)} and {sqrt(3)});
+  \draw[guide] (0,0) ellipse ({sqrt(12)} and {sqrt(6)});
+  \draw[porange,thick] (-0.4,3.4) -- (3.4,-0.4);
+  \end{scope}
+  \draw[->,pgray] (-0.6,0) -- (4.2,0) node[below left,lbl] {$x$};
+  \draw[->,pgray] (0,-0.6) -- (0,3.4) node[below left,lbl] {$y$};
+  \fill[pgreen] (2,1) circle (2.2pt);
+  \draw[vec,pblue] (2,1) -- (2.6,1.6) node[above right,lbl] {$\nabla f=(4,4)$};
+  \draw[vec,porange] (2,1) -- (2.35,1.35);
+  \node[lbl,porange] at (3.55,0.25) {$x+y=3$};
+  \node[lbl,pblue] at (0.95,1.95) {$f=6$};
+  \node[lbl,pgreen,below left] at (2,1) {$(2,1)$};
+\end{tikzpicture}
+\caption{At the constrained minimum the level set of the objective is tangent to the constraint. The ellipse $x^2+2y^2=6$ touches the line $x+y=3$ at $(2,1)$, and there the objective's gradient is $\lambda=4$ times the constraint's gradient. The dashed ellipses are the levels $2$ and $12$, one missing the line and one crossing it.}
+\label{fig:ch04:lagrange}
+\end{figure}
+
+With several resources, the multipliers make the logic of allocation explicit. Suppose two independent Gaussian sources with variances $\sigma_1^2=4$ and $\sigma_2^2=1$ share a link of $R=2$ bits per symbol pair, and the goal is the smallest total squared error. Coded at its rate--distortion limit, source $i$ has $D_i=\sigma_i^22^{-2R_i}$ for $R_i\ge0$ (\cref{ch03}), so the problem is
+\begin{equation}\label{eq:ch04:two-sources}
+\min_{R_1,R_2}\ \sigma_1^22^{-2R_1}+\sigma_2^22^{-2R_2}\quad\text{subject to}\quad R_1+R_2=R .
+\end{equation}
+Stationarity says $2\ln2\cdot D_1=\lambda=2\ln2\cdot D_2$. The last bit given to either source must buy the same reduction in distortion, or moving it would help. So $D_1=D_2$, which with the budget gives $R_1=1.5$, $R_2=0.5$ and $D_1=D_2=0.5$, a total of $1$. The multiplier is $\lambda=2\ln2\cdot0.5=0.6931$ units of distortion per bit. Equal marginal returns is the principle, and water-filling is what it becomes when some source would need a negative rate.
+
+The price interpretation extends to inequality constraints, which is the form the programme's budgets take. Perturb the $i$th constraint of a convex problem to $f_i(x)\le u_i$ and let $p^\star(u)$ be the optimal value. Under Slater's condition (\cref{sec:ch04:dual}) and where $p^\star$ is differentiable,
+\begin{equation}\label{eq:ch04:envelope}
+\frac{\partial p^\star}{\partial u_i}\Big|_{u=0}=-\mu_i^\star .
+\end{equation}
+Loosening a binding constraint lowers the optimum at the rate $\mu_i^\star$, and loosening a slack one, with $\mu_i^\star=0$, does nothing to first order~\cite{boydvandenberghe2004}. For the half-plane example of \cref{sec:ch04:kkt}, where the multiplier will turn out to be $1$, the perturbed constraint $x+y\le2+u$ gives $p^\star(u)=(1-u)^2/2$. At $u=0$ the slope is $-1$, and loosening by $0.1$ lowers the optimum from $0.5$ to $0.405$.
+
+For the rate--distortion function the distortion budget is the constraint, so \eqref{eq:ch04:envelope} says $dR/dD=-\lambda$. With water level $\theta$ the multiplier is $\lambda=1/(2\theta)$ (\cref{sec:ch04:water}), and differentiating once more shows what happens when a component goes under water. While $k$ components are above water, $\theta$ grows at rate $1/k$ as $D$ grows, so
+\begin{equation}\label{eq:ch04:rd-curvature}
+\frac{dR}{dD}=-\frac{1}{2\theta},\qquad \frac{d^2R}{dD^2}=\frac{1}{2\theta^2k}\quad\text{nats}.
+\end{equation}
+For the variances $(4,2,1,0.25)$ of \cref{ch03}, the fourth column goes under water at $\theta=0.25$, which is $D=1$. The slope is $-2$ nats per unit on both sides, so the price is continuous. The curvature jumps from $1/(2\cdot0.25^2\cdot4)=2$ to $1/(2\cdot0.25^2\cdot3)=2.667$, because one fewer component now shares each extra unit of distortion. A curve that is smooth in its slope and kinked in its curvature is typical of a value function whose set of active constraints changes.
+
+\buildson{Calculus (Lagrange multipliers, gradients).}
+\usedin{\cref{sec:ch04:kkt,sec:ch04:water}. \cref{ch03} (the slope of $R(D)$).}
+
+\section{With inequality constraints, the KKT conditions say which constraints bind}\label{sec:ch04:kkt}
+
+A distortion budget is an inequality, $\E d\le D$, and so is a covariance cap, $\Sd\preceq\Sigma_x$. At the optimum an inequality constraint either binds, holding with equality, or is slack. If it is slack it can be ignored locally, and its multiplier is zero. If it binds it acts like an equality constraint, except that its multiplier must have the sign that says the constraint is pushing the solution back, not pulling it. Those two rules, written for the problem
+\begin{equation}\label{eq:ch04:problem}
+\min_x f_0(x)\quad\text{subject to}\quad f_i(x)\le0,\ i=1,\dots,m,\qquad h_j(x)=0,\ j=1,\dots,p,
+\end{equation}
+are the Karush--Kuhn--Tucker conditions.
+
+\begin{theorem}[KKT conditions~\cite{boydvandenberghe2004}]\label[theorem]{thm:ch04:kkt}
+Let $L(x,\mu,\nu)=f_0(x)+\sum_i\mu_if_i(x)+\sum_j\nu_jh_j(x)$. A point $x^\star$ with multipliers $\mu^\star,\nu^\star$ satisfies the KKT conditions when
+\begin{equation}\label{eq:ch04:kkt}
+\begin{gathered}
+f_i(x^\star)\le0,\quad h_j(x^\star)=0,\qquad \mu_i^\star\ge0,\qquad \mu_i^\star f_i(x^\star)=0,\\
+\nabla f_0(x^\star)+\sum_i\mu_i^\star\nabla f_i(x^\star)+\sum_j\nu_j^\star\nabla h_j(x^\star)=0 .
+\end{gathered}
+\end{equation}
+If the problem is convex and differentiable, meaning $f_0$ and every $f_i$ are convex and differentiable and every $h_j$ is affine, then any KKT point is a global minimizer. If in addition Slater's condition holds (\cref{sec:ch04:dual}), the KKT conditions are also necessary.
+\end{theorem}
+
+The four groups are primal feasibility, dual feasibility, complementary slackness and stationarity. Complementary slackness $\mu_if_i=0$ is the formal version of the two rules. A slack constraint has $f_i<0$ and so $\mu_i=0$, and a positive multiplier forces $f_i=0$. For a nonconvex problem the conditions are only necessary, under a regularity condition, and a KKT point can be a local minimum, a saddle or a maximum.
+
+Stationarity has a geometric reading. It says that $-\nabla f_0(x^\star)$, the direction of steepest descent, is a nonnegative combination of the outward normals $\nabla f_i(x^\star)$ of the binding constraints. Descent is blocked because every downhill direction leaves the feasible set through some binding constraint. A multiplier measures how hard its constraint pushes back, and a constraint that does not push has multiplier zero.
+
+A one-line example shows why convexity matters. Minimize $-x^2$ subject to $-1\le x\le1$. The point $x=0$ has zero gradient and both constraints slack, so it satisfies every condition in \eqref{eq:ch04:kkt} with zero multipliers, and yet it is the maximum of the objective on the interval. The minima are at $x=\pm1$, where one constraint binds with multiplier $2$. A solver that stops at the first KKT point it finds can therefore return the worst feasible point of a nonconvex problem. For a convex problem this cannot happen.
+
+\begin{example}[One active constraint and one inactive one]\label[example]{ex:ch04:kkt}
+Minimize $(x-2)^2+(y-1)^2$ subject to $x+y\le2$ and $x\ge0$. The unconstrained minimum $(2,1)$ has $x+y=3$ and is infeasible, so guess that $x+y\le2$ binds and $x\ge0$ does not. Stationarity with multiplier $\mu$ on the first constraint reads $2(x-2)+\mu=0$ and $2(y-1)+\mu=0$, so $x-2=y-1$. With $x+y=2$ this gives $(x,y)=(1.5,0.5)$ and $\mu=1\ge0$. The second constraint is slack, $1.5>0$, so its multiplier is $0$. Every condition in \eqref{eq:ch04:kkt} holds, the problem is convex, and the minimum value $0.25+0.25=0.5$ is global. \Cref{fig:ch04:kkt} shows the level circle of radius $\sqrt{0.5}=0.7071$ touching the boundary of the half-plane.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=1.45]
+  \begin{scope}
+  \clip (-0.6,-0.6) rectangle (3.4,2.6);
+  \fill[plight] (-0.6,2.6) -- (-0.6,-0.6) -- (2.6,-0.6) -- cycle;
+  \draw[porange,thick] (-0.6,2.6) -- (2.6,-0.6);
+  \draw[pblue,thick] (2,1) circle ({sqrt(0.5)});
+  \draw[guide] (2,1) circle ({sqrt(2)});
+  \end{scope}
+  \draw[->,pgray] (-0.6,0) -- (3.4,0) node[below left,lbl] {$x$};
+  \draw[->,pgray] (0,-0.6) -- (0,2.6) node[below left,lbl] {$y$};
+  \draw[pgray,dashed,thick] (0,-0.6) -- (0,2.6);
+  \node[lbl,pgray,align=left,anchor=west] at (0.05,2.35) {$x\ge0$ slack, $\mu_2=0$};
+  \fill[pred] (2,1) circle (2.2pt) node[above right,lbl] {unconstrained};
+  \fill[pgreen] (1.5,0.5) circle (2.2pt);
+  \node[lbl,pgreen,below left] at (1.5,0.5) {$(1.5,0.5)$};
+  \draw[vec,pgreen] (1.5,0.5) -- (2.0,1.0);
+  \node[lbl,pgreen,anchor=west] at (2.05,0.6) {$-\nabla f_0=\mu_1\nabla f_1$};
+  \node[lbl,porange] at (0.55,0.75) {feasible};
+  \node[lbl,porange,anchor=west] at (2.35,-0.35) {$x+y=2$, $\mu_1=1$};
+\end{tikzpicture}
+\caption{Complementary slackness at work. The constraint $x+y\le2$ binds and carries the multiplier $\mu_1=1$. The constraint $x\ge0$ is slack and carries none. At the optimum the level circle of the objective, radius $0.7071$, touches the feasible half-plane, and the descent direction $-\nabla f_0$ points straight out of it.}
+\label{fig:ch04:kkt}
+\end{figure}
+
+\buildson{\cref{sec:ch04:convex,sec:ch04:lagrange}.}
+\usedin{\cref{sec:ch04:water,sec:ch04:logdet}. \cref{ch03} (reverse water-filling). \cref{ch06}.}
+
+\section{The dual problem bounds the primal from below, and Slater's condition makes the bound exact}\label{sec:ch04:dual}
+
+Fix the multipliers and minimize the Lagrangian over $x$ with no constraints. The result is the dual function. For any $\mu\ge0$ and any feasible $x$, each penalty term $\mu_if_i(x)$ is nonpositive, so the Lagrangian is at most $f_0(x)$, and its minimum over $x$ is at most the constrained minimum $p^\star$.
+\begin{equation}\label{eq:ch04:dual}
+g(\mu,\nu)=\inf_x L(x,\mu,\nu),\qquad
+d^\star=\max_{\mu\ge0,\,\nu}g(\mu,\nu)\ \le\ p^\star .
+\end{equation}
+The inequality is weak duality, and it holds for every problem, convex or not. The dual function is concave in $(\mu,\nu)$ even when the primal is not convex, because it is a pointwise infimum of functions affine in the multipliers. So the dual problem is always a convex problem, and any dual-feasible $\mu$ gives a certified lower bound on $p^\star$. An algorithm can stop when its best feasible point is within a tolerance of its best dual bound.
+
+Strong duality, $d^\star=p^\star$, needs more. For a convex problem a sufficient condition is Slater's condition.
+\begin{equation}\label{eq:ch04:slater}
+\text{there is an }x\text{ with } f_i(x)<0\ \text{for all }i\ \text{and}\ h_j(x)=0\ \text{for all }j .
+\end{equation}
+A strictly feasible point is enough. Under Slater's condition a convex problem has $d^\star=p^\star$, the dual optimum is attained when $p^\star$ is finite, and a primal minimizer, when one exists, satisfies the KKT conditions~\cite{boydvandenberghe2004}. Slater's condition guarantees no primal minimizer. The problem of minimizing $e^x$ with no constraints has $p^\star=0$ and none. Every covariance program in this chapter has an obvious Slater point. For the max-det program of \cref{ch03}, $\Sd=\epsilon\Sigma_x$ with $\epsilon\tr(\PC\Sigma_x)<D$ satisfies both constraints strictly. Without convexity the difference $p^\star-d^\star$ can be positive.
+
+The dual also gives the rate--distortion function a second formula. For the reverse water-filling problem of \cref{sec:ch04:water}, minimizing the Lagrangian over each $D_i$ separately gives $D_i=\min(\gamma_i,1/(2\lambda))$, and the dual function is
+\begin{equation}\label{eq:ch04:rd-dual}
+g(\lambda)=\sum_{i:\,2\lambda\gamma_i>1}\Bigl(\tfrac12\log(2\lambda\gamma_i)+\tfrac12\Bigr)+\sum_{i:\,2\lambda\gamma_i\le1}\lambda\gamma_i-\lambda D,
+\qquad R(D)=\max_{\lambda\ge0}g(\lambda).
+\end{equation}
+Every $\lambda$ gives a lower bound on the rate, and the best one is exact. For $\gamma=(4,2,1,0.25)$ and $D=1.75$, the value $\lambda=1$ gives $g(1)=\frac12\ln64+1.5+0.25-1.75=2.0794$ nats, which is $3$ bits, the rate of \cref{ch03}. The value $\lambda=0.8$ gives $2.0447$ nats, or $2.9499$ bits, a valid but loose bound. A lower bound that any $\lambda$ certifies is how a numerical check can confirm that a computed rate is not too small.
+
+\begin{example}[The dual of \cref{ex:ch04:kkt}]\label[example]{ex:ch04:dual}
+Keep only the binding constraint. The Lagrangian $(x-2)^2+(y-1)^2+\mu(x+y-2)$ is minimized at $x=2-\mu/2$, $y=1-\mu/2$, and substituting gives
+\[
+g(\mu)=\mu-\tfrac12\mu^2 .
+\]
+At $\mu=0.5$ the bound is $g(0.5)=0.375$, below $p^\star=0.5$, as weak duality says. The dual function peaks at $\mu=1$ with $g(1)=0.5=p^\star$, so strong duality holds, and the maximizing $\mu$ is the KKT multiplier. The point $(0,0)$ satisfies $0+0<2$, so Slater's condition holds. \Cref{fig:ch04:dual} plots $g$.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=2.25, ymin=-0.25, ymax=0.65, xlabel={multiplier $\mu$}, ylabel={value}, xtick={0,0.5,1,1.5,2}, ytick={0,0.25,0.5}]
+\addplot[pblue] coordinates {(0,0) (0.1,0.095) (0.2,0.18) (0.3,0.255) (0.4,0.32) (0.5,0.375) (0.6,0.42) (0.7,0.455) (0.8,0.48) (0.9,0.495) (1,0.5) (1.1,0.495) (1.2,0.48) (1.3,0.455) (1.4,0.42) (1.5,0.375) (1.6,0.32) (1.7,0.255) (1.8,0.18) (1.9,0.095) (2,0) (2.1,-0.105) (2.2,-0.22)}; % data:dualg
+\addplot[pred, dashed, domain=0:2.25, samples=2] {0.5};
+\node[lbl,pred,anchor=south west] at (axis cs:1.35,0.5) {$p^\star=0.5$};
+\node[lbl,pblue,anchor=north west] at (axis cs:1.55,0.33) {$g(\mu)=\mu-\mu^2/2$};
+\addplot[pgreen, only marks, mark=*, mark size=2pt] coordinates {(1,0.5)};
+\addplot[porange, only marks, mark=*, mark size=2pt] coordinates {(0.5,0.375)};
+\node[lbl,porange,anchor=north west] at (axis cs:0.5,0.37) {bound $0.375$};
+\node[lbl,pgreen,anchor=south] at (axis cs:1,0.52) {$\mu^\star=1$};
+\end{axis}
+\end{tikzpicture}
+\caption{Every value of the dual function is a lower bound on the primal minimum, and for this convex problem with a strictly feasible point the best bound is exact. The curve $g(\mu)$ stays below the red line $p^\star=0.5$ and touches it at the KKT multiplier $\mu^\star=1$.}
+\label{fig:ch04:dual}
+\end{figure}
+
+\buildson{\cref{sec:ch04:kkt}.}
+\usedin{\cref{sec:ch04:water,sec:ch04:logdet,sec:ch04:lmi}. The programme's papers invoke Slater's condition every time they use KKT conditions for a covariance program.}
+
+\section{Water-filling is what KKT gives for a log objective}\label{sec:ch04:water}
+
+\cref{ch03} stated reverse water-filling. Here it is derived. The problem is to choose the distortions $D_i$ of independent Gaussian components with variances $\gamma_i$ so that the total is $D$ and the rate is smallest.
+\begin{equation}\label{eq:ch04:rwf-problem}
+\min_{D_1,\dots,D_d}\ \sum_{i=1}^d\tfrac12\log\frac{\gamma_i}{D_i}\quad\text{subject to}\quad\sum_iD_i\le D,\qquad 0<D_i\le\gamma_i .
+\end{equation}
+The objective is a sum of convex functions $-\frac12\log D_i$ plus a constant, the constraints are linear, and $D_i=\epsilon\gamma_i$ with small $\epsilon$ is a Slater point. So the KKT conditions characterize the solution.
+
+\begin{proposition}[Reverse water-filling from KKT]\label[proposition]{prop:ch04:rwf}
+The solution of \eqref{eq:ch04:rwf-problem} for $0<D<\sum_i\gamma_i$ is $D_i=\min(\theta,\gamma_i)$ with $\sum_i\min(\theta,\gamma_i)=D$. The multiplier of the budget is $\lambda=1/(2\theta)$, and the multiplier of the cap $D_i\le\gamma_i$ is $\mu_i=\frac{1}{2\gamma_i}-\frac1{2\theta}\ge0$ on the components under water and zero on the others.
+\end{proposition}
+\begin{proof}
+The Lagrangian is $\sum_i\frac12\log(\gamma_i/D_i)+\lambda(\sum_iD_i-D)+\sum_i\mu_i(D_i-\gamma_i)$. Stationarity in $D_i$ reads $-\frac1{2D_i}+\lambda+\mu_i=0$. If $D_i<\gamma_i$, complementary slackness gives $\mu_i=0$, so $D_i=1/(2\lambda)$. Call this common value $\theta$. If $D_i=\gamma_i$, then $\mu_i=\frac1{2\gamma_i}-\lambda\ge0$, which says $\gamma_i\le\theta$. So components with $\gamma_i>\theta$ keep $\theta$ and components with $\gamma_i\le\theta$ keep $\gamma_i$, that is, $D_i=\min(\theta,\gamma_i)$. If $\lambda$ were $0$, stationarity would be impossible for an uncapped component, so the budget binds and $\theta$ is fixed by $\sum_i\min(\theta,\gamma_i)=D$.
+\end{proof}
+
+The multiplier $\lambda=1/(2\theta)$ is the price of distortion of \eqref{eq:ch04:sensitivity}, and it equals minus the slope $dR/dD$ that \cref{ch03} computed. The water level is a price written upside down.
+
+Channel water-filling is the mirror problem. Parallel Gaussian channels with noise variances $N_i$ share a power budget $P$, and the goal is to maximize the total capacity.
+\begin{equation}\label{eq:ch04:cwf}
+\max_{P_i\ge0}\ \sum_i\tfrac12\log\Bigl(1+\frac{P_i}{N_i}\Bigr)\quad\text{subject to}\quad\sum_iP_i\le P,
+\qquad\text{solved by}\quad P_i=(\nu-N_i)^+ .
+\end{equation}
+The same steps give $\frac{1}{2(N_i+P_i)}=\lambda-\mu_i$, so every channel in use has $N_i+P_i=\nu$ with $\nu=1/(2\lambda)$, and a channel whose noise is above $\nu$ gets no power~\cite{coverthomas2006}. Power is poured over the noise floor until it reaches a common level, which is the vessel picture of \cref{fig:ch04:wf}. In reverse water-filling the water is the distortion kept, and in channel water-filling it is the power spent.
+
+\begin{example}[Three channels and four units of power]\label[example]{ex:ch04:cwf}
+Let $N=(1,2,4)$ and $P=4$. If all three channels were used, the level would be $\nu=(4+1+2+4)/3=3.667$, below $N_3=4$, which is a contradiction. With two channels, $\nu=(4+1+2)/2=3.5\le4$, so $P=(2.5,1.5,0)$, and the KKT conditions hold, with $N_3=4\ge\nu$ certifying that the third channel stays off. The capacity is $\frac12\log_2 3.5+\frac12\log_2 1.75=\frac12\log_2(3.5^2/2)=1.3074$ bits per use. Splitting the power equally, $4/3$ per channel, gives only $1.1871$ bits. The budget's multiplier is $1/(2\nu)=0.1429$ nats per unit of power.
+
+For reverse water-filling with $\gamma=(4,2,1,0.25)$ and $D=1.75$ (the four-component example of \cref{ch03}), $\theta=0.5$, so $\lambda=1$ nat per unit of distortion, and the fourth component, under water, has $\mu_4=\frac1{2\cdot0.25}-1=1\ge0$.
+\end{example}
+
+The same derivation works when the variable is a matrix, and it then gives the weighted function $\RC(D)$ of \cref{ch03} directly. In whitened coordinates the program is to minimize $-\frac12\log\det X$ subject to $\tr(\tilde PX)\le D$ and $X\preceq I$, where $\tilde P=\Sigma_x^{1/2}\PC\Sigma_x^{1/2}$. The cap $X\preceq I$ is a matrix inequality, so its multiplier is a matrix $\Theta\psd0$, and complementary slackness becomes the matrix product $\Theta(I-X)=0$. With the gradient $\nabla\log\det X=X^{-1}$ of \cref{sec:ch04:logdet}, the KKT conditions are
+\begin{equation}\label{eq:ch04:matrix-kkt}
+X^{-1}=2\nu\tilde P+2\Theta,\qquad \Theta\psd0,\qquad\Theta(I-X)=0,\qquad \nu\bigl(\tr(\tilde PX)-D\bigr)=0 .
+\end{equation}
+For $0<D<\tr(\PC\Sigma_x)$ the budget binds, so $\nu>0$. The condition $\Theta(I-X)=0$ makes $\Theta$ commute with $X$, and the first condition then makes $\tilde P$ commute with $X$, so the three matrices share eigenvectors. On the eigenvectors where $X<I$ the multiplier $\Theta$ vanishes and $X^{-1}=2\nu\tilde P$, so the eigenvalue of $X$ there is $\theta/\gamma_i$ with $\theta=1/(2\nu)$. On the others $X=I$. So $X$ shares the eigenvectors of $\tilde P$ and has eigenvalues $\min(1,\theta/\gamma_i)$, and the error kept in direction $i$ is $\gamma_i\min(1,\theta/\gamma_i)=\min(\gamma_i,\theta)$. That is reverse water-filling on the spectrum of the whitened read operator, now derived rather than reduced to the diagonal case by Hadamard's inequality.
+
+The derivation never assumed that $\PC$ and $\Sigma_x$ commute. When they do not, the optimal error covariance in the original coordinates, $\Sd^\star=\Sigma_x^{1/2}X\Sigma_x^{1/2}$, need not share eigenvectors with either of them. It can share them with $\PC$. If $\PC\pd0$ and every mode is above water, then $X=\theta\tilde P^{-1}$ and $\Sd^\star=\theta\PC^{-1}$, which commutes with $\PC$. Even then a coder that codes the eigen-coordinates of $\PC$ separately pays extra rate for the correlation it ignores, as the exercise on a non-commuting reader in \cref{ch03} shows. With a mode under water, as in the next example, $\Sd^\star$ commutes with neither matrix.
+
+\begin{example}[Matrix water-filling when the reader and the source disagree]\label[example]{ex:ch04:noncommute}
+Take $\Sigma_x=\begin{psmallmatrix}2&1\\1&2\end{psmallmatrix}$, $\PC=\diag(1,0.25)$ and $D=1$. The square root is $\Sigma_x^{1/2}=\begin{psmallmatrix}1.366&0.366\\0.366&1.366\end{psmallmatrix}$, and the whitened read operator is $\tilde P=\begin{psmallmatrix}1.8995&0.625\\0.625&0.6005\end{psmallmatrix}$, with eigenvalues $\gamma=(2.1514,0.3486)$. Both columns above water would need $2\theta=1$, so $\theta=0.5$, which exceeds $\gamma_2=0.3486$. So the second column is under water, and $\theta+0.3486=1$ gives $\theta=0.6514$. The rate is $\RC(1)=\frac12\log_2(2.1514/0.6514)=0.8617$ bits. Mapping back gives
+\[
+\Sd^\star=\begin{pmatrix}0.6260&0.1679\\0.1679&1.4962\end{pmatrix},
+\]
+with $\tr(\PC\Sd^\star)=1$, $\Sigma_x-\Sd^\star$ of rank one, and a nonzero off-diagonal entry, so $\Sd^\star$ does not commute with $\PC$. Its unequal diagonal entries mean that it does not commute with $\Sigma_x$ either. The KKT certificate \eqref{eq:ch04:matrix-kkt} is explicit. With $\nu=1/(2\theta)$, the multiplier $\Theta=\frac12(X^{-1}-2\nu\tilde P)$ is positive semidefinite of rank one, with eigenvalue $\frac12(1-0.3486/0.6514)=0.2324$ on the under-water direction, and $\Theta(I-X)=0$. A general max-det solver returns the same $\Sd^\star$.
+
+A coder that works coordinate by coordinate in the eigenbasis of $\PC$, which is the standard basis here, sees the products $\lambda_i\sigma_i^2=(2,0.5)$. Its own water-filling at $D=1$ puts the level at $0.5$, codes the first coordinate at $1$ bit and the second at none, and spends $1$ bit. That is $0.138$ bits more than $\RC(1)$ for the same consumer distortion. The excess has two sources. The coordinatewise coder ignores the correlation between the coordinates, and it describes a coordinate direction where the optimum describes the eigenvector of $\tilde P$.
+\end{example}
+
+The example is the case that the \texttt{allocate\_bits} routine of \texttt{turboquant-pro} does not cover exactly. It allocates against the products in the eigenbasis of $\PC$, which equal the $\gamma_i$ only when $\PC$ and $\Sigma_x$ commute. The exercise on a non-commuting reader in \cref{ch03} computed the excess at $D=0.5$, where both modes are active, and found that it equals the mutual information between the coordinates. At $D=1$ one mode is under water and the excess is no longer that simple. Whether the excess matters in practice depends on how far the measured $\PC$ and $\Sigma_x$ are from commuting, and the project files do not report that.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[x=1.6cm,y=0.85cm]
+  \foreach \i/\n/\p in {1/1/2.5, 2/2/1.5, 3/4/0}{
+    \fill[pgray!35] (\i-0.4,0) rectangle (\i+0.4,\n);
+    \draw[thick] (\i-0.4,0) rectangle (\i+0.4,\n);
+    \node[lbl,below] at (\i,0) {$N_{\i}=\n$};
+  }
+  \fill[pblue!35] (0.6,1) rectangle (1.4,3.5);
+  \fill[pblue!35] (1.6,2) rectangle (2.4,3.5);
+  \draw[pblue,thick,dashed] (0.4,3.5) -- (3.6,3.5) node[right,lbl] {$\nu=3.5$};
+  \node[lbl] at (1,2.25) {$P_1=2.5$};
+  \node[lbl] at (2,2.75) {$P_2=1.5$};
+  \node[lbl] at (3,4.3) {$P_3=0$};
+  \draw[->,pgray] (0.4,0) -- (3.7,0);
+  \draw[->,pgray] (0.4,0) -- (0.4,4.6) node[left,lbl] {level};
+\end{tikzpicture}
+\caption{Channel water-filling is the KKT solution drawn as a vessel. Gray columns are the noise levels $1$, $2$ and $4$. Four units of power, in blue, are poured in and settle at the common level $\nu=3.5$. The noisiest channel rises above the surface and receives nothing. The common level is what stationarity says, $N_i+P_i=1/(2\lambda)$ wherever $P_i>0$.}
+\label{fig:ch04:wf}
+\end{figure}
+
+\inproject{\nolinkurl{turboquant-pro/turboquant_pro/read_allocation.py}, function \texttt{allocate\_bits}, finds the water level by bisection on $\theta$ until the bits $\max(0,\frac12\log_2(w_i/\theta))$ sum to the budget, the one-dimensional search that \cref{prop:ch04:rwf} justifies. The rate--leakage draft, \nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex}, Remark \texttt{rem:solver}, finds its levels by nested bisections for the same reason.}
+
+\buildson{\cref{sec:ch04:kkt,sec:ch04:dual}. \cref{ch03} (reverse water-filling).}
+\usedin{\cref{ch03} (reverse water-filling and the weighted function $\RC(D)$). \cref{ch06,ch07}.}
+
+\section{Log det is concave on positive definite matrices, so rate is convex in the error covariance}\label{sec:ch04:logdet}
+
+The rates of \cref{ch03} are functions of a matrix, $r(\Sd)=\frac12\log\det\Sigma_x-\frac12\log\det\Sd$. To optimize over $\Sd$ with the tools above, the rate must be convex in $\Sd$. The key fact is one inequality about the log determinant.
+
+\begin{theorem}[Concavity of $\log\det$~\cite{boydvandenberghe2004}]\label[theorem]{thm:ch04:logdet}
+On the positive definite matrices, $X\mapsto\log\det X$ is strictly concave. Equivalently, for $X,Y\pd0$ and $\theta\in(0,1)$,
+\begin{equation}\label{eq:ch04:logdet}
+\log\det\bigl(\theta X+(1-\theta)Y\bigr)\ \ge\ \theta\log\det X+(1-\theta)\log\det Y,
+\end{equation}
+with equality only if $X=Y$. Its gradient is $\nabla\log\det X=X^{-1}$.
+\end{theorem}
+\begin{proof}
+A function is concave if and only if it is concave along every line. Restrict to $Z+tV$ with $Z\pd0$ and $V$ symmetric, and let $\lambda_1,\dots,\lambda_d$ be the eigenvalues of $Z^{-1/2}VZ^{-1/2}$. Then
+\[
+g(t)=\log\det(Z+tV)=\log\det Z+\sum_i\log(1+t\lambda_i),\qquad
+g''(t)=-\sum_i\frac{\lambda_i^2}{(1+t\lambda_i)^2}\le0,
+\]
+with equality only when every $\lambda_i=0$, that is, $V=0$. The gradient follows from $g'(0)=\sum_i\lambda_i=\tr(Z^{-1}V)$.
+\end{proof}
+
+The proof is the scalar fact that $\log$ is concave, applied to the eigenvalues along a line. \Cref{fig:ch04:logdet} shows the restriction for the matrices of \cref{ex:ch04:hessian}. Three consequences carry the programme's optimization.
+\begin{enumerate}[nosep]
+\item The rate $r(\Sd)=\frac12\log\det\Sigma_x-\frac12\log\det\Sd$ is strictly convex in $\Sd$, and the distortion $\tr(\PC\Sd)$ is linear. So $\RC(D)$ is a convex program with a unique minimizer, the max-det form of \cref{ch03}.
+\item The KKT conditions of that program, with the gradient $\Sd^{-1}$ and a multiplier matrix $\Theta\psd0$ for the cap $\Sd\preceq\Sigma_x$, give the water-filling of \cref{ch03} in the eigenbasis of the whitened read operator.
+\item The leakage $\ell(\Sd)$ of \cref{ch03} is also convex in $\Sd$, although it is a difference of log determinants. The posterior error covariance $(\Sd^{-1}+J)^{-1}$ is the pointwise minimum, in the Loewner order, of error covariances that are affine in $\Sd$, so it is matrix-concave, and $-\log\det$ is convex and decreasing.
+\end{enumerate}
+
+\begin{example}[A max-det program solved by hand]\label[example]{ex:ch04:maxdet}
+Let $\Sigma_x=I_2$, $\PC=\diag(4,1)$ and $D=1$. The whitened read operator is $\PC$ itself, with $\gamma=(4,1)$. Both columns stay above water at $\theta=0.5$, since $0.5+0.5=1=D$. The optimal error covariance is $\Sd^\star=\theta\PC^{-1}=\diag(0.125,0.5)$, which spends its error where the consumer reads least. It meets $\tr(\PC\Sd^\star)=0.5+0.5=1$ and costs $\frac12\log_2(1/\det\Sd^\star)=\frac12\log_2 16=2$ bits. The feasible alternative $\diag(0.2,0.2)$ also has $\tr(\PC\Sd)=1$ and costs $\frac12\log_2 25=2.3219$ bits. Along the segment between the two, the rate stays below its chord, as convexity requires.
+\end{example}
+
+Optimality in this example can be certified without solving anything, by the feasible-direction test \eqref{eq:ch04:vi}. The gradient of the rate is $\nabla r(\Sd)=-\frac12\Sd^{-1}$, which at $\Sd^\star=\theta\PC^{-1}$ equals $-\frac{1}{2\theta}\PC$. For any other feasible $\Sd$,
+\begin{equation}\label{eq:ch04:certificate}
+\tr\bigl(\nabla r(\Sd^\star)(\Sd-\Sd^\star)\bigr)=-\frac1{2\theta}\bigl(\tr(\PC\Sd)-D\bigr)\ \ge\ 0,
+\end{equation}
+because $\tr(\PC\Sd)\le D$ and $\tr(\PC\Sd^\star)=D$. So no feasible direction goes downhill, and by convexity $\Sd^\star$ is the global minimizer. The argument used the cap $\Sd\preceq\Sigma_x$ only to know that $\Sd^\star$ is feasible. When some direction is under water the cap binds there, and the certificate needs the matrix multiplier $\Theta$ of \eqref{eq:ch04:matrix-kkt} as well, as in \cref{ex:ch04:noncommute}. A certificate of this kind is worth more than a solver's output, because it can be checked by hand and it says why the answer is optimal.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=1, ymin=1.3, ymax=1.9, xlabel={$t$ along the segment from $A$ to $B$}, ylabel={$\log\det$}, xtick={0,0.5,1}, ytick={1.4,1.6,1.8}]
+\addplot[pblue] coordinates {(0,1.386) (0.05,1.488) (0.1,1.571) (0.15,1.639) (0.2,1.694) (0.25,1.738) (0.3,1.773) (0.35,1.8) (0.4,1.818) (0.45,1.829) (0.5,1.833) (0.55,1.829) (0.6,1.818) (0.65,1.8) (0.7,1.773) (0.75,1.738) (0.8,1.694) (0.85,1.639) (0.9,1.571) (0.95,1.488) (1,1.386)}; % data:logdetline
+\addplot[pred, dashed, domain=0:1, samples=2] {1.3863};
+\node[lbl,pred,anchor=south] at (axis cs:0.5,1.39) {chord, $\ln4=1.3863$};
+\node[lbl,pblue,anchor=south] at (axis cs:0.5,1.835) {midpoint $1.8326$};
+\end{axis}
+\end{tikzpicture}
+\caption{Log det is concave along every line of positive definite matrices. Between $A=\diag(1,4)$ and $B=\diag(4,1)$ the curve $\ln\bigl((1+3t)(4-3t)\bigr)$ bulges above the red chord, and at the midpoint it exceeds the average of the end values by $0.446$ nats.}
+\label{fig:ch04:logdet}
+\end{figure}
+
+\inproject{\nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex}, Section ``Convex Structure'', Theorem \texttt{thm:convex}, proves that both the rate and the leakage are strictly convex in the error covariance, with the pointwise-minimum argument of item 3, and gives the KKT conditions of the leakage endpoint as its equation \texttt{eq:kkt}. Its proof uses Slater's condition through the strictly feasible point $\epsilon\Sigma_T$. \nolinkurl{geometric-observation/paper/observation-theory.tex}, Lemma ``Gaussian optimum: max-det form and uniqueness'' (label \texttt{lem:maxdet}), uses the strict concavity of \cref{thm:ch04:logdet} for uniqueness.}
+
+\buildson{\cref{sec:ch04:convex,sec:ch04:kkt}. \cref{ch01} (eigenvalues, Loewner order). \cref{ch03} (the Gaussian $\RC(D)$).}
+\usedin{\cref{sec:ch04:lmi,sec:ch04:mm}. \cref{ch06}.}
+
+\section{A semidefinite constraint is convex, and a Schur complement makes it linear}\label{sec:ch04:lmi}
+
+The cap $\Sd\preceq\Sigma_x$ is a constraint that a matrix be positive semidefinite. The set of positive semidefinite matrices is a convex cone, so any constraint of the form ``an affine function of the variables is positive semidefinite'' defines a convex set. Such a constraint is a linear matrix inequality (LMI).
+\begin{equation}\label{eq:ch04:lmi}
+F(z)=F_0+z_1F_1+\dots+z_kF_k\ \psd\ 0,\qquad F_i\ \text{symmetric}.
+\end{equation}
+Many nonlinear matrix constraints become LMIs through the Schur complement of \cref{ch01}. For a block matrix with $C\pd0$,
+\begin{equation}\label{eq:ch04:schur-lmi}
+\begin{pmatrix}A&B\\B\T&C\end{pmatrix}\psd0\iff A-BC^{-1}B\T\psd0 .
+\end{equation}
+With $A=Z$, $B=I$ and $C=\Sigma$, the nonlinear constraint $Z\psd\Sigma^{-1}$ becomes a constraint linear in $(Z,\Sigma)$. A problem that maximizes $\log\det$ of an affine matrix function subject to LMIs is a determinant maximization, or max-det, problem. Vandenberghe, Boyd and Wu showed that it is a convex problem with an efficient interior-point solution and many applications in statistics and information theory~\cite{vandenberghe1998}. The max-det form of $\RC(D)$ in \cref{ch03} is one of them, with the LMI $\Sigma_x-\Sd\psd0$ and a linear trace constraint.
+
+The geometry of the cone is visible in two dimensions. A symmetric matrix $\begin{psmallmatrix}a&b\\b&c\end{psmallmatrix}$ is positive semidefinite exactly when $a\ge0$, $c\ge0$ and $ac\ge b^2$. In the coordinates $(a,b,c)$ that set is a solid cone around the direction $(1,0,1)$, the identity matrix. Its boundary is the set of singular matrices, and the optimum of a max-det problem never lies on that boundary, because $\log\det$ falls to $-\infty$ there. This is why the programme's optimal error covariances are positive definite whenever the budget leaves room.
+
+\begin{example}[An LMI at its boundary]\label[example]{ex:ch04:lmi}
+Let $\Sigma=\diag(2,0.5)$ and $Z=\Sigma^{-1}=\diag(0.5,2)$. The $4\times4$ block matrix of \eqref{eq:ch04:schur-lmi} with $A=Z$, $B=I$, $C=\Sigma$ is positive semidefinite with rank $2$, because the Schur complement $Z-\Sigma^{-1}$ is zero. Shrinking to $Z=0.9\,\Sigma^{-1}$ gives a negative eigenvalue, so that $Z$ violates $Z\psd\Sigma^{-1}$, as it should.
+\end{example}
+
+In software the max-det program is a few lines. With the Python package \texttt{cvxpy} the program for $\RC(D)$ reads \texttt{Maximize(log\_det(S))} subject to \texttt{Sx - S >> 0} and \texttt{trace(P @ S) <= D}. Exercise~\ref{exr:ch04:cvx} asks for it and compares the answer with water-filling. A general solver is the right tool for checking a closed form, not for replacing one. The solver returns a number to a tolerance, while water-filling returns the structure of the answer, which directions are described and at what level. When the two agree on a small instance, the closed form has been tested on that instance. When they disagree by more than the solver's tolerance, one of them has a bug or the two are solving different problems. The programme's rate--leakage draft uses an independent determinant program in exactly this role for its MM iteration.
+
+\inproject{\nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex}, Theorem \texttt{thm:convex}(b), writes the minimum leakage as a max-det program and turns its nonlinear constraint $\tr(Qh(\Sigma_e))\le D$ into the LMI of its equation \texttt{eq:lmi} by exactly the Schur-complement step \eqref{eq:ch04:schur-lmi}, citing Boyd and Vandenberghe. It cites Vandenberghe, Boyd and Wu for max-det programs.}
+
+\buildson{\cref{ch01} (Schur complements, Loewner order). \cref{sec:ch04:logdet}.}
+\usedin{\cref{sec:ch04:mm}. \cref{ch06}.}
+
+\section{A surrogate that touches from above gives a descent method}\label{sec:ch04:mm}
+
+Some programs have no closed form, but they split into a part that is easy to minimize and a part that is not. Majorization--minimization (MM) replaces the hard function $f$ at the current point $x_t$ by a surrogate $g(\cdot\mid x_t)$ that lies above $f$ everywhere and touches it at $x_t$, and then minimizes the surrogate~\cite{hunterlange2004,sun2017}.
+\begin{equation}\label{eq:ch04:mm}
+g(x\mid x_t)\ge f(x)\ \text{for all }x,\qquad g(x_t\mid x_t)=f(x_t),\qquad x_{t+1}=\argmin_x g(x\mid x_t).
+\end{equation}
+The descent property follows in one line, $f(x_{t+1})\le g(x_{t+1}\mid x_t)\le g(x_t\mid x_t)=f(x_t)$. The first step uses that $g$ lies above $f$, and the second uses that $x_{t+1}$ minimizes $g$. The cost never increases, whatever $f$ is. Convergence of the iterates to a minimizer needs more, such as strict convexity of the surrogate and a compact set of iterates, and the programme's papers prove it case by case.
+
+The surrogate the programme uses comes from concavity. If $f=u+v$ with $u$ convex and $v$ concave, the tangent of $v$ at $x_t$ lies above $v$, by the first-order test \eqref{eq:ch04:tests} applied to $-v$. Replacing $v$ by its tangent gives a convex surrogate that touches $f$ at $x_t$.
+\begin{equation}\label{eq:ch04:ccp}
+g(x\mid x_t)=u(x)+v(x_t)+\nabla v(x_t)\T(x-x_t)\ \ge\ f(x).
+\end{equation}
+This is the convex--concave procedure. In the rate--leakage problem, $u$ is $-\frac12\log\det$ of the error covariance and $v$ is a concave $+\log\det$ term, and the minimizer of each surrogate is a reverse water-filling.
+
+\begin{example}[MM on a scalar convex-plus-concave cost]\label[example]{ex:ch04:mm}
+Minimize $f(x)=-\ln x+\ln(1+x)+x/4$ on $x>0$. The term $\ln(1+x)$ is concave. Its tangent at $x_t$ gives the surrogate $g(x\mid x_t)=-\ln x+\frac{x}{1+x_t}+\frac x4+\text{const}$, and setting its derivative to zero gives the update
+\[
+x_{t+1}=\frac{4(1+x_t)}{5+x_t}.
+\]
+From $x_0=1$ the iterates are $x_1=4/3=1.3333$, $x_2=1.4737$, $x_3=1.5285$, with costs $f=0.9431$, $0.8930$, $0.8864$, $0.8855$, decreasing as promised. The fixed point solves $x^2+x-4=0$, so $x^\star=(\sqrt{17}-1)/2=1.5616$, where $f'(x^\star)=0$ and $f(x^\star)=0.8853$. Near it the error shrinks by the factor $16/(5+x^\star)^2=0.3717$ per step. \Cref{fig:ch04:mm} shows the first two surrogates.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0.5, xmax=2.6, ymin=0.86, ymax=1.2, xlabel={$x$}, ylabel={cost}, xtick={0.5,1,1.5,2,2.5}, ytick={0.9,1,1.1}]
+\addplot[pblue] coordinates {(0.5,1.224) (0.6,1.131) (0.7,1.062) (0.8,1.011) (0.9,0.9722) (1,0.9431) (1.1,0.9216) (1.2,0.9061) (1.3,0.8955) (1.4,0.889) (1.5,0.8858) (1.6,0.8855) (1.7,0.8876) (1.8,0.8918) (1.9,0.8979) (2,0.9055) (2.1,0.9145) (2.2,0.9247) (2.3,0.936) (2.4,0.9483) (2.5,0.9615) (2.6,0.9754)}; % data:mmf
+\addplot[porange, dashed] coordinates {(0.5,1.261) (0.6,1.154) (0.7,1.075) (0.8,1.016) (0.9,0.9735) (1,0.9431) (1.1,0.9228) (1.2,0.9108) (1.3,0.9058) (1.4,0.9067) (1.5,0.9127) (1.6,0.9231) (1.7,0.9375) (1.8,0.9554) (1.9,0.9763) (2,1) (2.1,1.026) (2.2,1.055) (2.3,1.085) (2.4,1.118) (2.5,1.152) (2.6,1.188)}; % data:mmg0
+\addplot[porange] coordinates {(0.5,1.308) (0.6,1.194) (0.7,1.108) (0.8,1.042) (0.9,0.9919) (1,0.9544) (1.1,0.927) (1.2,0.9078) (1.3,0.8956) (1.4,0.8894) (1.5,0.8883) (1.6,0.8916) (1.7,0.8988) (1.8,0.9095) (1.9,0.9233) (2,0.9399) (2.1,0.9589) (2.2,0.9803) (2.3,1.004) (2.4,1.029) (2.5,1.056) (2.6,1.085)}; % data:mmg1
+\addplot[pgreen, only marks, mark=*, mark size=2pt] coordinates {(1,0.9431) (1.333,0.8929) (1.474,0.8864) (1.528,0.8855)}; % data:mmiter
+\node[lbl,pblue,anchor=west] at (axis cs:2.1,0.9) {$f$};
+\node[lbl,porange,anchor=west] at (axis cs:2.05,1.03) {$g(\cdot\mid x_0)$};
+\node[lbl,porange,anchor=west] at (axis cs:2.32,0.985) {$g(\cdot\mid x_1)$};
+\node[lbl,pgreen,anchor=south east] at (axis cs:1,0.95) {$x_0$};
+\node[lbl,pgreen,anchor=south] at (axis cs:1.333,0.905) {$x_1$};
+\end{axis}
+\end{tikzpicture}
+\caption{Majorization--minimization descends by minimizing surrogates that touch the cost from above. The dashed surrogate touches $f$ at $x_0=1$ and is smallest at $x_1=4/3$. The solid surrogate touches at $x_1$ and is smallest at $x_2=1.474$. The green iterates walk down $f$ toward $x^\star=1.562$ and never go uphill.}
+\label{fig:ch04:mm}
+\end{figure}
+
+The Blahut--Arimoto algorithm, which computes channel capacity and the rate--distortion function of a discrete source, is the prototype of such iterations~\cite{blahut1972,arimoto1972}. It writes capacity as a double maximization, $C=\max_p\max_r\sum_{x,y}p(x)W(y\mid x)\log\frac{r(x\mid y)}{p(x)}$, in which each maximization has a closed form, and it alternates between them. The combined update for the input distribution $p$, with $q_t=\sum_xp_t(x)W(\cdot\mid x)$ the output distribution, and the two-sided bound that certifies it, are
+\begin{equation}\label{eq:ch04:ba}
+p_{t+1}(x)=\frac{p_t(x)\,e^{\KL{W(\cdot\mid x)}{q_t}}}{\sum_{x'}p_t(x')\,e^{\KL{W(\cdot\mid x')}{q_t}}},
+\qquad
+\MI{p_t}{W}\le C\le\max_x\KL{W(\cdot\mid x)}{q_t}.
+\end{equation}
+Each step cannot lower the mutual information, and the bounds close as $t$ grows.
+
+The rate--distortion version alternates between a test channel and an output distribution $q$ on the reproduction alphabet. At a fixed slope parameter $\beta>0$ the two updates are
+\begin{equation}\label{eq:ch04:ba-rd}
+p_{t+1}(\hat x\mid x)=\frac{q_t(\hat x)\,e^{-\beta d(x,\hat x)}}{\sum_{\hat x'}q_t(\hat x')\,e^{-\beta d(x,\hat x')}},\qquad
+q_{t+1}(\hat x)=\sum_xp(x)\,p_{t+1}(\hat x\mid x),
+\end{equation}
+and the limit is the point of the $R(D)$ curve at which the slope is $-\beta$ in nats per unit of distortion~\cite{blahut1972}. The parameter $\beta$ is the Lagrange multiplier of the distortion constraint, the same price $1/(2\theta)$ that water-filling found for a Gaussian. Sweeping $\beta$ traces the whole curve. Exercise~\ref{exr:ch04:bard} runs it for a fair bit.
+
+Blahut and Arimoto proved that both iterations converge to the optimum from any starting distribution with full support~\cite{blahut1972,arimoto1972}. Each step costs one pass over the channel or distortion matrix and needs no general convex solver. The programme's MM iteration shares the second property. Each of its steps is an eigendecomposition and a scalar search, with no general semidefinite solver in the loop.
+
+\begin{example}[Blahut--Arimoto on a Z-channel]\label[example]{ex:ch04:ba}
+Let input $0$ always arrive as $0$, and input $1$ arrive as $0$ or $1$ with probability $\frac12$ each. Start from $p_0=(\frac12,\frac12)$, so $q_0=(0.75,0.25)$. The two relative entropies are $\ln\frac43=0.2877$ nats for input $0$ and $\frac12\ln\frac23+\frac12\ln2=0.1438$ nats for input $1$. The update gives $p_1(1)=e^{0.1438}/(e^{0.2877}+e^{0.1438})=0.4641$, which moves weight to the reliable input. The mutual information rises from $0.3113$ to $0.3175$ bits. The capacity is $\log_2\frac54=0.3219$ bits at $p(1)=0.4$, and \cref{fig:ch04:ba} shows the lower and upper bounds of \eqref{eq:ch04:ba} closing on it. After eight steps $p(1)=0.4025$, so the input converges more slowly than the value.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=8, ymin=0.3, ymax=0.425, xlabel={iteration $t$}, ylabel={bits}, xtick={0,2,4,6,8}, ytick={0.3,0.35,0.4}, yticklabel style={/pgf/number format/fixed}]
+\addplot[pblue, mark=*, mark size=1.3pt] coordinates {(0,0.3113) (1,0.3175) (2,0.3201) (3,0.3212) (4,0.3216) (5,0.3218) (6,0.3219) (7,0.3219) (8,0.3219)}; % data:balow
+\addplot[porange, mark=*, mark size=1.3pt] coordinates {(0,0.415) (1,0.3809) (2,0.359) (3,0.3452) (4,0.3365) (5,0.331) (6,0.3276) (7,0.3255) (8,0.3242)}; % data:baup
+\addplot[pgreen, dashed, domain=0:8, samples=2] {0.3219};
+\node[lbl,pblue,anchor=north] at (axis cs:4,0.318) {lower bound $I(p_t)$};
+\node[lbl,porange,anchor=south west] at (axis cs:2.1,0.36) {upper bound $\max_x D$};
+\node[lbl,pgreen,anchor=south] at (axis cs:6.8,0.3225) {$C=0.3219$};
+\end{axis}
+\end{tikzpicture}
+\caption{Blahut--Arimoto certifies its own progress. For the Z-channel the mutual information of the current input, in blue, rises at every step, and the largest relative entropy, in orange, falls. The capacity $\log_2(5/4)$ lies between them at every step, so the distance between the two curves bounds the error.}
+\label{fig:ch04:ba}
+\end{figure}
+
+\inproject{\nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex}, Section ``Water-Filling on a Tilted Weight'', Proposition \texttt{prop:mm}, is the convex--concave step \eqref{eq:ch04:ccp} applied to the leakage. Each step is a reverse water-filling $X_{t+1}=\Phi(2\nu_t\tilde Q+T_t)$ on a weight tilted by the holder, the cost is nonincreasing, and the iterates converge to the frontier point. The draft compares it with a Blahut--Arimoto update and cites the MM literature, including Hunter--Lange and Sun--Babu--Palomar.}
+
+\buildson{\cref{sec:ch04:convex} (first-order test), \cref{sec:ch04:logdet}. \cref{ch03} (relative entropy, capacity).}
+\usedin{\cref{ch06}. \cref{ch07}, where iterative allocation and quantizer design appear.}
+
+\section{Gradient methods converge at a rate set by conditioning, and projection handles a constraint}\label{sec:ch04:pgd}
+
+The simplest method for an unconstrained smooth problem is gradient descent, $x_{t+1}=x_t-\eta\nabla f(x_t)$. Two numbers govern it. The gradient is $L$-Lipschitz when $\nabla^2f\preceq LI$, and $f$ is $m$-strongly convex when $\nabla^2f\psd mI$ with $m>0$. Their ratio $\kappa=L/m$ is the condition number. With the step $\eta=1/L$ the cost decreases at every step, and for a strongly convex $f$ the distance to the minimizer contracts geometrically~\cite{boydvandenberghe2004}. On a quadratic $f(x)=\frac12x\T Ax$ the error in each eigendirection of $A$ is multiplied by $1-\eta a_i$ at every step, and the best fixed step, $\eta=2/(L+m)$, gives
+\begin{equation}\label{eq:ch04:gd-rate}
+\norm{x_t-x^\star}\le\Bigl(\frac{\kappa-1}{\kappa+1}\Bigr)^t\norm{x_0-x^\star}.
+\end{equation}
+The number of steps grows in proportion to $\kappa$. A well-conditioned problem converges in a handful of steps and an ill-conditioned one crawls, because a step size safe for the steep direction is far too small for the flat one.
+
+Newton's method removes the dependence on conditioning by rescaling the step with the inverse Hessian, $x_{t+1}=x_t-\nabla^2f(x_t)^{-1}\nabla f(x_t)$. It minimizes a quadratic in one step, and near the minimizer of a smooth strongly convex function the error is roughly squared at each step, which is quadratic convergence. The price is a linear solve with the Hessian at every step. The fast convergence is local. Far from the minimizer a full Newton step can overshoot, and practical codes shorten it with a line search. Whitening, which the programme uses throughout, is the same idea applied once and for all. In the coordinates $\Sigma_x^{-1/2}x$ the source covariance is the identity, and the water-filling of \cref{sec:ch04:water} runs on a well-scaled problem.
+
+\begin{example}[Zig-zag, and a Newton step]\label[example]{ex:ch04:gd}
+Let $f(x,y)=\frac12(x^2+10y^2)$, so $m=1$, $L=10$ and $\kappa=10$. The best fixed step is $\eta=2/11$, and both coordinates are multiplied by $\pm9/11=\pm0.8182$ per step, the $y$ coordinate with a sign change. From $(9,1.5)$ the first step goes to $(7.364,-1.227)$, and the path zig-zags across the narrow valley, as the upper panel of \cref{fig:ch04:pgd} shows. Shrinking the error by a factor of $10^6$ takes $69$ steps at $\kappa=10$ and $6908$ steps at $\kappa=1000$. Newton's step from $(9,1.5)$ divides the gradient $(9,15)$ by the curvatures $(1,10)$ and lands on the minimizer at once. For the scalar $f(x)=x-\ln x$, with minimum at $x=1$, the Newton update is $x_{t+1}=2x_t-x_t^2$, so $1-x_{t+1}=(1-x_t)^2$ exactly. From $x_0=0.5$ the iterates are $0.75$, $0.9375$, $0.99609$ and $0.9999847$, with the number of correct digits doubling each step. From $x_0=2$ the same update gives $x_1=0$, which is outside the domain $x>0$, and from $x_0=3$ it gives $x_1=-3$. Quadratic convergence holds only once the iterate is close enough, here for $0<x_0<2$.
+\end{example}
+
+When the objective is an average over data, $f(x)=\E_\mu[\ell(x;z)]$, the gradient is an average too, and stochastic gradient descent replaces it with the gradient on a small random batch. The batch gradient is unbiased, so with a small enough step the method descends in expectation. With a fixed step the iterates hover in a noisy neighbourhood of the minimizer, so convergence to the minimizer needs a decreasing step size, and it is slower than \eqref{eq:ch04:gd-rate}. The read operator $\bar P_{C,\mu}=\E_\mu[P_C(x)]$ of the programme is an average of the same kind, which is why it can be estimated from a sample of the workload.
+
+When the problem has a constraint and the feasible set $\mathcal C$ is convex and easy to project onto, a gradient step can be followed by a move to the nearest feasible point. This is projected gradient.
+\begin{equation}\label{eq:ch04:pgd}
+x_{t+1}=\Pi_{\mathcal C}\bigl(x_t-\eta\nabla f(x_t)\bigr),\qquad \Pi_{\mathcal C}(z)=\argmin_{x\in\mathcal C}\norm{x-z}.
+\end{equation}
+Projected gradient is itself an MM method. If $\nabla f$ is $L$-Lipschitz, then $f(x)\le f(x_t)+\nabla f(x_t)\T(x-x_t)+\frac L2\norm{x-x_t}^2$, so the right side is a surrogate that touches $f$ at $x_t$. Minimizing it over $\mathcal C$ gives exactly \eqref{eq:ch04:pgd} with $\eta=1/L$, and the descent property of \cref{sec:ch04:mm} applies. Useful projections have closed forms. For a half-plane $a\T x\le b$, subtract $\frac{(a\T z-b)^+}{\norm a^2}a$. For a box, clip each coordinate. For the positive semidefinite cone, take the eigendecomposition and set negative eigenvalues to zero. The last one is how a numerical routine repairs a covariance estimate that has lost positive semidefiniteness.
+
+The step size matters. The MM argument above guarantees descent for $\eta\le1/L$, and a slightly longer argument from the projection property extends the guarantee to every $\eta<2/L$. At $\eta=2/L$ the iteration can cycle, and beyond $2/L$ it can diverge even on a quadratic. The example below shows both a good step and the cycle.
+
+Projection connects back to water-filling. The set $\{X:0\preceq X\preceq I\}$ of whitened error covariances is convex, and the projection of a symmetric matrix onto it keeps the eigenvectors and clips each eigenvalue to the interval $[0,1]$. A projected gradient method for the max-det program of \cref{sec:ch04:logdet} therefore alternates a gradient step with an eigenvalue clip, a spectral operation of the same kind as the map $\Phi$ that sets eigenvalues to $\min\{1,1/\lambda\}$ in the programme's MM iteration. Both methods do their work in an eigenbasis and touch only the spectrum.
+
+\begin{example}[Three steps to a half-plane]\label[example]{ex:ch04:pgd}
+Return to \cref{ex:ch04:kkt}, keeping only $x+y\le2$. The gradient of $(x-2)^2+(y-1)^2$ is $2$-Lipschitz, so take $\eta=1/4$, below $1/L=1/2$. From $(0,0)$ the gradient is $(-4,-2)$ and the step lands at $(1,0.5)$, which is feasible. The next step lands at $(1.5,0.75)$, where $x+y=2.25$, and the projection subtracts $0.125$ from each coordinate, giving $(1.375,0.625)$. The next gives $(1.4375,0.5625)$. Once on the boundary, the distance to the optimum $(1.5,0.5)$ halves at every step, as \cref{fig:ch04:pgd} shows. With $\eta=1=2/L$ instead, the same start gives $(4,2)$, projected to $(2,0)$, then $(2,2)$, projected to $(1,1)$, then $(3,1)$, projected back to $(2,0)$, and the iterates cycle between $(2,0)$ and $(1,1)$ forever without reaching $(1.5,0.5)$. For the PSD cone, the matrix $\begin{psmallmatrix}1&2\\2&1\end{psmallmatrix}$ has eigenvalues $3$ and $-1$, and its projection keeps the first, $\begin{psmallmatrix}1.5&1.5\\1.5&1.5\end{psmallmatrix}$, at Frobenius distance $1$.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.7\linewidth, height=0.36\linewidth, xmin=-1, xmax=10.5, ymin=-1.9, ymax=1.9, xtick={0,3,6,9}, ytick={-1,0,1}, xlabel={$x$}, ylabel={$y$}]
+\addplot[pgray, dashed, thin, domain=0:360, samples=91] ({sqrt(103.5)*cos(x)},{sqrt(10.35)*sin(x)});
+\addplot[pgray, dashed, thin, domain=0:360, samples=91] ({sqrt(30)*cos(x)},{sqrt(3)*sin(x)});
+\addplot[pgray, dashed, thin, domain=0:360, samples=91] ({sqrt(8)*cos(x)},{sqrt(0.8)*sin(x)});
+\addplot[pblue, mark=*, mark size=1.2pt] coordinates {(9,1.5) (7.364,-1.227) (6.025,1.004) (4.929,-0.8216) (4.033,0.6722) (3.3,-0.55) (2.7,0.45) (2.209,-0.3682) (1.807,0.3012)}; % data:zigzag
+\addplot[pgreen, ->, thick] coordinates {(9,1.5) (0.15,0.03)};
+\addplot[pgreen, only marks, mark=*, mark size=2pt] coordinates {(0,0)};
+\node[lbl,pblue,anchor=south] at (axis cs:6.0,1.1) {gradient steps};
+\node[lbl,pgreen,anchor=south east] at (axis cs:1.2,0.3) {Newton};
+\end{axis}
+\end{tikzpicture}
+
+\medskip
+\begin{tikzpicture}[scale=2.0]
+  \begin{scope}
+  \clip (-0.3,-0.3) rectangle (2.6,1.6);
+  \fill[plight] (-0.3,2.3) -- (-0.3,-0.3) -- (2.3,-0.3) -- cycle;
+  \draw[porange,thick] (-0.3,2.3) -- (2.3,-0.3);
+  \draw[guide] (2,1) circle ({sqrt(0.5)});
+  \draw[guide] (2,1) circle ({sqrt(2)});
+  \draw[guide] (2,1) circle ({sqrt(5)});
+  \end{scope}
+  \draw[->,pgray] (-0.3,0) -- (2.6,0) node[below left,lbl] {$x$};
+  \draw[->,pgray] (0,-0.3) -- (0,1.6) node[below left,lbl] {$y$};
+  \draw[pblue,thick] plot coordinates {(0,0) (1,0.5) (1.375,0.625) (1.438,0.5625) (1.469,0.5312) (1.484,0.5156)}; % data:pgdpath
+  \foreach \p in {(0,0),(1,0.5),(1.375,0.625),(1.438,0.5625),(1.469,0.5312)} \fill[pblue] \p circle (1.1pt);
+  \draw[pred,dashed] plot[mark=o,mark size=1.1pt] coordinates {(1.5,0.75) (1.688,0.8125) (1.719,0.7812)}; % data:pgdraw
+  \draw[pred,->] (1.5,0.75) -- (1.385,0.635);
+  \draw[pred,->] (1.688,0.8125) -- (1.445,0.57);
+  \fill[pgreen] (1.5,0.5) circle (1.5pt);
+  \node[lbl,pgreen,anchor=north] at (1.5,0.47) {optimum};
+  \node[lbl,pred,anchor=south west] at (1.6,0.82) {raw steps};
+  \node[lbl,porange,anchor=west] at (0.75,1.45) {$x+y=2$};
+  \fill[pred] (2,1) circle (1.1pt);
+\end{tikzpicture}
+\caption{Gradient steps zig-zag when the problem is badly conditioned, and projection keeps them feasible. Above, the best fixed step on $\frac12(x^2+10y^2)$ shrinks the error by only $9/11$ per step and crosses the valley each time, while one Newton step lands on the minimum. Below, projected gradient on a half-plane. The blue path starts at the origin. Raw steps that leave the half-plane, red circles, are moved straight back to its edge, and along the edge the distance to the optimum $(1.5,0.5)$ halves at each step. Dashed circles are level sets of the objective centred on its unconstrained minimum $(2,1)$.}
+\label{fig:ch04:pgd}
+\end{figure}
+
+\buildson{\cref{sec:ch04:convex,sec:ch04:mm}.}
+\usedin{\cref{ch07} (iterative methods in quantization). Any program in this book whose feasible set has an easy projection, and every whitening step, which is a fixed Newton-like rescaling.}
+
+\section*{Exercises}
+
+\subsection*{Warm-up}
+
+\begin{exercise}\label{exr:ch04:which}
+Which of these are convex on the stated domain? (a) $e^x+x^2$ on $\R$. (b) $-\sqrt x$ on $x>0$. (c) $x^3$ on $\R$. Use the second-order test.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch04:ellipsoid}
+Show that $\{x:x\T Ax\le1\}$ is convex when $A\psd0$, and that the feasible set $\{\Sd:0\preceq\Sd\preceq\Sigma_x,\ \tr(\PC\Sd)\le D\}$ of \cref{ch03} is convex.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch04:slack}
+In \cref{ex:ch04:kkt}, replace the constraint $x+y\le2$ by $x+y\le4$. Which constraints bind, and what are the multipliers?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch04:halfspace}
+Solve $\min\norm x^2$ subject to $a\T x\ge1$ with the KKT conditions, and evaluate the solution and the multiplier for $a=(1,2)$.
+\end{exercise}
+
+\subsection*{By hand}
+
+\begin{exercise}\label{exr:ch04:cwf}
+Water-fill a power budget $P=1$ over two channels with noise $N=(1,3)$. Give the level, the powers and the capacity in bits.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch04:eqdual}
+Find the dual function of the equality-constrained problem of \cref{ex:ch04:lagrange} and show that its maximum is $p^\star=6$, attained at $\lambda=4$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch04:mmfix}
+Derive the update of \cref{ex:ch04:mm} from the surrogate, show that its fixed point is the stationary point of $f$, and compute the rate $16/(5+x^\star)^2$ at which the error shrinks.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch04:bastep}
+Carry out the first Blahut--Arimoto step of \cref{ex:ch04:ba} by hand and confirm $p_1=(0.5359,0.4641)$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch04:schur}
+Show with \eqref{eq:ch04:schur-lmi} that for $\Sigma\pd0$ the constraint $Z\psd\Sigma^{-1}$ is equivalent to $\begin{psmallmatrix}Z&I\\I&\Sigma\end{psmallmatrix}\psd0$, and explain why the second form is convex in the pair $(Z,\Sigma)$ while the first is not obviously so.
+\end{exercise}
+
+\subsection*{Programming}
+
+\begin{exercise}\label{exr:ch04:cvx}
+With \texttt{cvxpy}, solve $\max\log\det\Sd$ subject to $\Sigma_x-\Sd\psd0$ and $\tr(\PC\Sd)\le0.5$ for $\Sigma_x=\begin{psmallmatrix}2&1\\1&2\end{psmallmatrix}$ and $\PC=\diag(1,0.25)$. Convert to $\RC(0.5)$ in bits and compare with water-filling on the whitened read operator (the exercise on a non-commuting read operator in \cref{ch03}). Repeat with $\PC=I$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch04:bard}
+Implement Blahut--Arimoto for the rate--distortion function of a fair bit with Hamming distortion. At slope parameter $\beta=\ln9$ the iteration should reach $D=0.1$ and $R=1-h_2(0.1)$ bits. Check both.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch04:simplex}
+Write the projection onto the probability simplex $\{p\ge0,\sum_ip_i=1\}$ and use projected gradient to maximize $\sum_ip_i\log(a_i/p_i)$ for a positive vector $a$. Compare with the closed-form answer $p_i=a_i/\sum_ja_j$.
+\end{exercise}
+
+
+% Verification: checks/ch04_examples.py run on Atlas.
+% Atlas, 2026-10-07: 168/168 PASS

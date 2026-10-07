@@ -1,34 +1,34 @@
 % Answers to selected exercises, chapter 09.
 % Every number here is checked in checks/ch09_examples.py.
 
-\paragraph{Exercise 9.1}
+\paragraph{Exercise~\ref{exr:ch09:words}}
 The estimand is the median latency over the population of requests the service will handle, under the conditions the report is about. The estimator is the sample median of the $200$ measured latencies. The estimate is $41$\,ms. A quiet change of estimand is to measure only successful requests, or only requests in one time window, so that the number answers a question about a different population.
 
-\paragraph{Exercise 9.2}
+\paragraph{Exercise~\ref{exr:ch09:bonf}}
 The probability of at least one false rejection is $1-0.95^{10}=0.401$. Bonferroni tests each hypothesis at $0.05/10=0.005$.
 
-\paragraph{Exercise 9.3}
+\paragraph{Exercise~\ref{exr:ch09:tags}}
 (a) \texttt{[exploratory]}, since no registration governed it. (b) \texttt{[predicted]}, since it was registered in advance and graded on data that did not exist when it was sealed. The protocol's further requirements for that class, such as blinding where feasible, still apply. (c) \texttt{[refuted]}, reported with the same prominence a pass would have had.
 
-\paragraph{Exercise 9.4}
+\paragraph{Exercise~\ref{exr:ch09:minp}}
 There are $2^4=16$ sign assignments, and the observed one and its mirror image are always at least as extreme as the observation. The smallest two-sided p-value is therefore $2/16=0.125$, and the test can never reject at $0.05$. The design decided this before any data arrived.
 
-\paragraph{Exercise 9.5}
-Bonferroni tests at $0.01$ and rejects $0.004$ and $0.01$, two hypotheses. Holm's thresholds are $0.01,\ 0.0125,\ 0.0167,\dots$. The first two p-values pass and $0.02>0.0167$ stops the procedure, so Holm also rejects two. Benjamini--Hochberg's thresholds are $0.01,\ 0.02,\ 0.03,\ 0.04,\ 0.05$. The largest $k$ with $p_{(k)}\le k\alpha/5$ is $k=4$, since $0.03\le0.04$ and $0.30>0.05$, so it rejects four.
+\paragraph{Exercise~\ref{exr:ch09:holmbh}}
+Bonferroni tests at $0.01$ and rejects $0.004$ and $0.01$, two hypotheses. Holm's thresholds are $0.01$, $0.0125$, $0.0167$ and so on. The first two p-values pass and $0.02>0.0167$ stops the procedure, so Holm also rejects two. Benjamini--Hochberg's thresholds are $0.01$, $0.02$, $0.03$, $0.04$ and $0.05$. The largest $k$ with $p_{(k)}\le k\alpha/5$ is $k=4$, since $0.03\le0.04$ and $0.30>0.05$, so it rejects four.
 
-\paragraph{Exercise 9.6}
+\paragraph{Exercise~\ref{exr:ch09:tost}}
 $z_1=(-0.004+0.01)/0.003=2$ and $z_2=(-0.004-0.01)/0.003=-4.67$. Then $p_{\text{TOST}}=\max(1-\Phi(2),\ \Phi(-4.67))=0.023$. The $90$ percent interval is $-0.004\pm1.645\times0.003=(-0.0089,\ 0.0009)$, which lies inside $(-0.01,\ 0.01)$. Equivalence is shown at $0.05$.
 
-\paragraph{Exercise 9.7}
+\paragraph{Exercise~\ref{exr:ch09:de}}
 With $\rho_x=1$ the factor is $1+19\times0.05=1.95$. The standard error grows by $\sqrt{1.95}=1.40$, and the $600$ rows carry about $600/1.95\approx308$ independent rows' worth of information about this coefficient.
 
-\paragraph{Exercise 9.8}
+\paragraph{Exercise~\ref{exr:ch09:atten}}
 The slope converges to $0.75\times0.8=0.6$. The true slope clears the bar of $0.7$ and the attenuated one does not, so here attenuation biases the test toward failing, and the failure is at least visible as a miss. In the scale case the attenuated quantity is the denominator of every bar, so attenuation lowers the bars and biases the study toward passing, which no miss will reveal.
 
-\paragraph{Exercise 9.9}
+\paragraph{Exercise~\ref{exr:ch09:power}}
 By \eqref{eq:ch09:mde}, $n=(2.802/0.25)^2=125.6$, so $126$ units. At $n=126$ the bar $\hat\delta\ge0.3$ passes with probability $\Phi((0.25-0.3)\sqrt{126})=0.29$. The sample was sized for the ordinary test, and it does not buy the effect-size bar.
 
-\paragraph{Exercise 9.11}
+\paragraph{Exercise~\ref{exr:ch09:mccode}}
 One implementation sorts once and maps back to the original order.
 \begin{verbatim}
 import numpy as np

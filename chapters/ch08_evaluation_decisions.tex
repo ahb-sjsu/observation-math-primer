@@ -1,2 +1,540 @@
-% Chapter 08 stub, replaced by the drafting agent.
-\chapter{TODO}\label{ch08}
+\chapter{Evaluation is a distance to an ideal, read at a finite resolution}\label{ch08}
+
+% Standalone-build stubs for cross-chapter labels. Active only when this chapter is
+% compiled alone through drivers/ch08.tex (jobname ch08), never in main.tex.
+\makeatletter
+\ifdefined\pdfstrcmp\ifnum\pdfstrcmp{\jobname}{ch08}=0
+  \begingroup
+  \def\omp@stub#1#2{\setcounter{chapter}{#2}\addtocounter{chapter}{-1}\refstepcounter{chapter}\label{#1}}
+  \omp@stub{ch01}{1}\omp@stub{ch02}{2}\omp@stub{ch03}{3}\omp@stub{ch04}{4}
+  \omp@stub{ch05}{5}\omp@stub{ch06}{6}\omp@stub{ch07}{7}\omp@stub{ch11}{11}
+  \endgroup
+  \setcounter{chapter}{8}
+\fi\fi
+\makeatother
+\chaptermark{Evaluation and decisions}
+
+Engineers choose all the time. Among designs, among codes, among operating points. The classical theory of choice starts from an ordering of the alternatives and builds a utility function to represent it. The Geometric series and Geometric Evaluation Theory start one step earlier. An evaluator maps actions to consequences, measures consequences by a metric from an ideal point, and does so at a finite resolution. Preference and choice are then derived.
+
+This chapter walks from the classical objects to that construction. Weak orders and utility representations come first, then expected utility. Evaluation as distance to an ideal point under a metric is next, where the geometry of \cref{ch05} enters, and then Pareto optimality and scalarization. With those in hand we state the evaluation object of Geometric Evaluation Theory exactly as its source defines it and place it against the decision geometry of Dawid and Lauritzen. The last three sections treat stochastic choice. Random utility models and the Luce rule obey a property called regularity. An observer whose budget selects what it reads from the menu in front of it violates regularity, and a three-option example with computed probabilities shows how. The chapter closes with Nash equilibrium and its existence theorem.
+
+%======================================================================
+\section{A preference is a weak order, and a utility is any function that sorts it}\label{sec:ch08:weakorder}
+
+A preference relation compares alternatives two at a time. Write $a\succsim b$ for ``$a$ is at least as good as $b$''. Its strict part is $a\succ b$, meaning $a\succsim b$ and not $b\succsim a$. Its indifference part is $a\sim b$, meaning both hold.
+
+\begin{definition}[Weak order and utility representation]\label{def:ch08:weakorder}
+A relation $\succsim$ on a set $A$ is a weak order when it is complete and transitive,
+\begin{equation}\label{eq:ch08:weakorder}
+a\succsim b\ \text{or}\ b\succsim a\ \ \text{for all }a,b,\qquad a\succsim b,\ b\succsim c\ \Rightarrow\ a\succsim c .
+\end{equation}
+A function $u:A\to\R$ represents $\succsim$ when
+\begin{equation}\label{eq:ch08:represent}
+a\succsim b\iff u(a)\ge u(b).
+\end{equation}
+\end{definition}
+
+\begin{theorem}[Finite representation]\label[theorem]{thm:ch08:finite}
+Every weak order on a finite set has a utility representation, for example the counting utility $u(a)=\#\{b\in A:a\succsim b\}$. If $u$ represents $\succsim$, then so does $\varphi\circ u$ for every strictly increasing $\varphi$, and every representation has this form.
+\end{theorem}
+
+\begin{proof}
+If $a\succsim b$ and $b\succsim c$ then $a\succsim c$, so every alternative below $b$ is below $a$ and $u(a)\ge u(b)$. If not $a\succsim b$, completeness gives $b\succ a$, so $b$ is counted for $b$ and not for $a$, and every $c$ below $a$ is below $b$. Then $u(b)>u(a)$. The second claim holds because a strictly increasing map preserves every comparison, and any two representations induce the same order of values, so one is an increasing function of the other on the values taken.
+\end{proof}
+
+The second sentence of the theorem is the important caveat. A utility in this sense is \emph{ordinal}. The statement $u(a)=2u(b)$ has no meaning, because $u^3$ represents the same order. On infinite sets a representation can fail to exist, as for the lexicographic order on $\R^2$, which is a weak order that no real function represents. Debreu's theorem is the standard way out. A continuous weak order on a subset of $\R^n$ has a continuous utility representation, and the reader can take this on trust here.
+
+\begin{example}[Counting utility and indifference curves]\label[example]{ex:ch08:counting}
+Four designs are ranked $w\succ x\sim y\succ z$. The counting utility is $u=(4,3,3,1)$ for $(w,x,y,z)$, and it represents the order. So does $(10,5,5,0)$.
+
+On a continuum the level sets of a utility are its \emph{indifference curves}. For two goods with $u(x_1,x_2)=\sqrt{x_1x_2}$, the curve $u=k$ is $x_2=k^2/x_1$. The bundles $(1,4)$ and $(2,2)$ both have $u=2$ and are indifferent, and $(3,3)$ with $u=3$ is preferred to both. \Cref{fig:ch08:indiff} draws three curves.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=5, ymin=0, ymax=5, xlabel={$x_1$}, ylabel={$x_2$}, samples=100]
+\addplot[pgray, domain=0.2:5] {1/x} node[pos=0.95, above, lbl] {$u=1$};
+\addplot[pblue, domain=0.8:5] {4/x} node[pos=0.95, above, lbl] {$u=2$};
+\addplot[pgreen, domain=1.8:5] {9/x} node[pos=0.95, above, lbl] {$u=3$};
+\addplot[only marks, mark=*, pblue] coordinates {(1,4) (2,2)};
+\addplot[only marks, mark=*, pgreen] coordinates {(3,3)};
+\node[lbl, right] at (axis cs:1,4) {$(1,4)$};
+\node[lbl, below left] at (axis cs:2,2) {$(2,2)$};
+\node[lbl, right] at (axis cs:3,3) {$(3,3)$};
+\end{axis}
+\end{tikzpicture}
+\caption{Indifference curves of $u=\sqrt{x_1x_2}$. The two blue bundles lie on one curve and are indifferent, and the green bundle lies on a higher curve and is preferred to both.}
+\label{fig:ch08:indiff}
+\end{figure}
+
+A weaker structure appears whenever an evaluator cannot resolve small differences. Luce~\cite{luce1956} called it a semiorder. Strict preference requires a margin, $a\succ b\iff u(a)>u(b)+\varepsilon$, and indifference is everything else.
+\begin{equation}\label{eq:ch08:semiorder}
+a\succ b\iff u(a)>u(b)+\varepsilon,\qquad a\sim b\iff \abs{u(a)-u(b)}\le\varepsilon .
+\end{equation}
+Preferences are rarely observed directly. What is observed is choice. A choice function assigns to each menu $M\subseteq A$ a nonempty set $\mathrm{ch}(M)\subseteq M$ of chosen alternatives. If a weak order generates it, by choosing the best elements of each menu, then it satisfies the weak axiom of revealed preference,
+\begin{equation}\label{eq:ch08:warp}
+a,b\in M\cap M',\quad a\in\mathrm{ch}(M),\quad b\in\mathrm{ch}(M')\ \Longrightarrow\ a\in\mathrm{ch}(M').
+\end{equation}
+In words, if $a$ is chosen when $b$ is available, then whenever $b$ is chosen with $a$ available, $a$ must be chosen too. On a finite set, and when the choice function is observed on every nonempty menu, the converse also holds, so the weak axiom is then exactly the test of whether some preference rationalizes the choices. With fewer menus observed it is not enough. Choices $a$ from $\{a,b\}$, $b$ from $\{b,c\}$ and $c$ from $\{a,c\}$ never put two alternatives together in two menus, so they satisfy the weak axiom vacuously, yet they form a cycle that no weak order produces. \Cref{sec:ch08:get} shows an evaluation object whose choices fail it.
+
+The semiorder is the other structure an evaluator with limited resolution produces. With $\varepsilon=1$ and values $0$, $0.6$ and $1.2$ for $a$, $b$ and $c$, we get $a\sim b$ and $b\sim c$ but $c\succ a$. Indifference is not transitive. This is the coffee-with-sugar phenomenon. Each added grain is unnoticeable and many grains are not. \Cref{sec:ch08:get} shows that Geometric Evaluation Theory derives exactly this structure for an evaluator with a length budget, with $\varepsilon$ equal to that budget.
+
+\buildson{Relations and functions from a first course, Data Mining as Observation section 0.8 (rankings).}
+\usedin{\Cref{sec:ch08:ideal}, \cref{sec:ch08:get}.}
+
+%======================================================================
+\section{Expected utility is linear in the probabilities}\label{sec:ch08:eu}
+
+When alternatives are lotteries, probability distributions over outcomes, the order must say how risk is handled. Von Neumann and Morgenstern~\cite{vonneumann1944} gave axioms under which the answer is an expectation. Write $L=(p_1,\ldots,p_n)$ for a lottery over outcomes $x_1,\ldots,x_n$, and $\alpha L+(1-\alpha)M$ for the compound lottery that plays $L$ with probability $\alpha$ and $M$ otherwise.
+
+\begin{theorem}[Expected utility]\label[theorem]{thm:ch08:vnm}
+Suppose $\succsim$ on lotteries is a weak order that is continuous (if $L\succ M\succ N$ there is $\alpha\in(0,1)$ with $M\sim\alpha L+(1-\alpha)N$) and satisfies independence (for every $N$ and $\alpha\in(0,1]$, $L\succsim M\iff\alpha L+(1-\alpha)N\succsim\alpha M+(1-\alpha)N$). Then there are numbers $u(x_i)$ with
+\begin{equation}\label{eq:ch08:eu}
+L\succsim M\iff \sum_ip_i\,u(x_i)\ \ge\ \sum_iq_i\,u(x_i),
+\end{equation}
+and $u$ is unique up to a positive affine transformation $u\mapsto\alpha u+\beta$ with $\alpha>0$.
+\end{theorem}
+
+The utility over outcomes is now \emph{cardinal} in a limited sense. Ratios of utility differences are meaningful, and only an affine change preserves \eqref{eq:ch08:eu}. A concave $u$ expresses risk aversion. By Jensen's inequality, $\E u(X)\le u(\E X)$, so a sure payment of the mean is at least as good as the gamble, and strictly better when $u$ is strictly concave and $X$ is not constant.
+
+\begin{example}[Risk aversion with a square-root utility]\label[example]{ex:ch08:eu}
+Let $u(x)=\sqrt x$ in dollars. A coin flip between $\$0$ and $\$100$ has expected utility $\tfrac12\cdot0+\tfrac12\cdot10=5$. A sure $\$40$ has utility $\sqrt{40}=6.32$ and is preferred, although its expected value is lower. The \emph{certainty equivalent} of the gamble, the sure amount with the same utility, is $5^2=\$25$, and the risk premium is $50-25=\$25$. Replacing $u$ by $3u+7$ changes no choice. \Cref{fig:ch08:eu} shows the chord of the gamble lying below the concave curve.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=105, ymin=0, ymax=11, xlabel={wealth $x$ (dollars)}, ylabel={$u(x)=\sqrt x$}, samples=200]
+\addplot[pblue, domain=0:100] {sqrt(x)} node[pos=0.85, above left, lbl] {$u$};
+\addplot[porange, mark=*] coordinates {(0,0) (100,10)};
+\addplot[only marks, mark=*, pred] coordinates {(50,5)};
+\addplot[only marks, mark=*, pgreen] coordinates {(25,5)};
+\draw[guide] (axis cs:25,5) -- (axis cs:50,5);
+\draw[guide] (axis cs:25,0) -- (axis cs:25,5);
+\node[lbl, below right] at (axis cs:50,5) {gamble, $\E u=5$};
+\node[lbl, below right, align=left] at (axis cs:25,2.2) {certainty\\equivalent \$25};
+\end{axis}
+\end{tikzpicture}
+\caption{The gamble's expected utility lies on the chord, below the concave utility curve. The sure amount with the same utility is \$25, half the gamble's expected value.}
+\label{fig:ch08:eu}
+\end{figure}
+
+Expected utility is the first special case that Geometric Evaluation Theory recovers. Its table of classical models writes it as a one-dimensional evaluation whose consequence is $\E_\mu v(o(a,X))$, with an ideal above every attainable value, so that distance to the ideal decreases as expected utility increases. The independence axiom is the one the Allais paradox challenges, and \cref{sec:ch08:budget} shows another, structural, way a choice rule can leave the expected-utility and random-utility families.
+
+\buildson{Expectation and Jensen's inequality from a first probability course.}
+\usedin{\Cref{sec:ch08:get} (the expected-utility row of the classical table), \cref{sec:ch08:nash} (mixed strategies).}
+
+%======================================================================
+\section{Evaluation as distance to an ideal point puts a metric under the utility}\label{sec:ch08:ideal}
+
+Many evaluations have the form ``how far is this from what I want''. An alternative $a$ has a consequence vector $y_a\in\R^m$, the evaluator has an ideal $t\in\R^m$, and the evaluator prices deviations with a positive semidefinite matrix $G$. This is the Mahalanobis distance of \cref{ch05} used as a cost.
+\begin{equation}\label{eq:ch08:ideal}
+c(a)=(y_a-t)\T G\,(y_a-t),\qquad u(a)=-\sqrt{c(a)},\qquad a\succsim b\iff c(a)\le c(b).
+\end{equation}
+Ideal-point models are old. Coombs's unfolding models in psychometrics and the spatial theory of voting of Davis, Hinich and Ordeshook~\cite{davis1970} score a policy by weighted distance from a voter's ideal, with a weight matrix that is exactly a constant $G$. The indifference curves of \eqref{eq:ch08:ideal} are the ellipses $c=\text{const}$ centred at $t$.
+
+\begin{example}[The metric decides the ranking]\label[example]{ex:ch08:ideal}
+Let $t=(0,0)$, $y_a=(2,0)$ and $y_b=(0,1.5)$. With $G=I$, $c(a)=4$ and $c(b)=2.25$, so $b$ is preferred. With $G=\diag(1,4)$, which treats a unit deviation in the second attribute as twice as far, $\sqrt{c(a)}=2$ and $\sqrt{c(b)}=\sqrt{4\cdot2.25}=3$, so $a$ is preferred. Same consequences, same ideal, opposite ranking. \Cref{fig:ch08:ideal} draws the two families of level sets.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=0.95]
+\draw[->,pgray] (-3.4,0)--(3.6,0) node[right,lbl]{$y_1$};
+\draw[->,pgray] (0,-2.0)--(0,2.2) node[above,lbl]{$y_2$};
+\draw[guide] (0,0) circle (1.5);
+\draw[guide] (0,0) circle (2);
+\draw[thick,porange] (0,0) ellipse (2 and 1);
+\draw[thick,porange] (0,0) ellipse (3 and 1.5);
+\fill[pgreen] (0,0) circle (2pt) node[below left,lbl]{$t$};
+\fill[pblue] (2,0) circle (2pt) node[below right,lbl]{$y_a$};
+\fill[pblue] (0,1.5) circle (2pt) node[above right,lbl]{$y_b$};
+\node[lbl,porange] at (2.75,1.35) {$d_G=3$};
+\node[lbl,porange] at (-1.75,0.78) {$d_G=2$};
+\end{tikzpicture}
+\caption{Level sets of distance to the ideal $t$. Under the Euclidean metric (dashed circles) $y_b$ is closer. Under $G=\diag(1,4)$ (orange ellipses) $y_a$ lies on the inner ellipse and is preferred.}
+\label{fig:ch08:ideal}
+\end{figure}
+
+A metric under the utility constrains which orders are possible. Since $c$ is convex, no alternative can be strictly worse than every alternative whose consequences surround it. Geometric Evaluation Theory calls this the hull law.
+
+\begin{proposition}[Hull law]\label[theorem]{prop:ch08:hull}
+If $\succsim$ is represented by \eqref{eq:ch08:ideal} with $G\psd0$, and $y_a=\sum_{s\in S}\lambda_sy_s$ with $\lambda_s\ge0$ and $\sum_s\lambda_s=1$, then $a\succsim s$ for some $s\in S$.
+\end{proposition}
+
+\begin{proof}
+$c$ is a convex quadratic, so $c(y_a)\le\sum_s\lambda_sc(y_s)\le\max_sc(y_s)$. The maximizing $s$ is weakly worse than $a$.
+\end{proof}
+
+On a line the hull law says that preferences are single-peaked. With consequences at positions $0$, $1$ and $2$ on a line, the middle one can never be strictly last. With the ideal at $0.8$ and $G=1$ the squared distances are $0.64$, $0.04$ and $1.44$, giving the order $1\succ0\succ2$. A scalar utility on $A$ can rank the middle option last, and an evaluator of the form \eqref{eq:ch08:ideal} cannot. The law rests on the convexity of $c$ in the consequence. A non-constant Riemannian metric in two or more dimensions can have balls that are not convex in the coordinates, and then the law can fail. The law is checkable whenever the consequence map is known.
+
+\inproject{\path{geometric-evaluation-theory/paper/geometric-evaluation-theory.tex}, Theorem ``Representation for a fixed world'', part (b) is the hull law, and part (d) is single-peakedness on a line. \path{geometric-methods/chapters/chapter-02-mahalanobis-distance.md}, section 2.7, turns Mahalanobis distance into a decision rule.}
+
+\buildson{\Cref{ch05} (Mahalanobis distance), \cref{ch04} (convexity), \cref{sec:ch08:weakorder}.}
+\usedin{\Cref{sec:ch08:get}, \cref{sec:ch08:budget}.}
+
+%======================================================================
+\section{Pareto optimality needs no weights, and scalarization picks points from the front}\label{sec:ch08:pareto}
+
+When there are several objectives $f_1,\ldots,f_m$ to minimize and no agreed way to combine them, one order survives without any weights. Alternative $a$ \emph{dominates} $b$ when it is no worse in every objective and better in one.
+
+\begin{definition}[Dominance and the Pareto set]\label{def:ch08:pareto}
+\begin{equation}\label{eq:ch08:dominance}
+a\prec b\iff f_i(a)\le f_i(b)\ \text{for all }i\ \text{and}\ f_j(a)<f_j(b)\ \text{for some }j.
+\end{equation}
+The Pareto set is $\{a:\text{no }b\text{ satisfies }b\prec a\}$, and its image in objective space is the Pareto front.
+\end{definition}
+
+Dominance is a partial order, not a weak order. Two Pareto-optimal alternatives are simply incomparable. To pick one, a method must add information. The two standard ways are the weighted sum and the distance to an ideal.
+\begin{equation}\label{eq:ch08:scalar}
+\min_a\sum_iw_if_i(a)\quad(w_i>0),\qquad\qquad \min_a\max_i\,w_i\big(f_i(a)-t_i\big)\quad(w_i>0).
+\end{equation}
+The second is the weighted Chebyshev distance to an ideal point $t$ below every attainable value.
+
+\begin{theorem}[What scalarization reaches]\label[theorem]{thm:ch08:scalar}
+A minimizer of the weighted sum with all $w_i>0$ is Pareto optimal. When the attainable objective set is convex, every Pareto-optimal point minimizes a weighted sum for some nonzero $w\ge0$. Without convexity, weighted sums reach only the points on the boundary of the convex hull of the attainable set, while every Pareto-optimal point minimizes a weighted Chebyshev distance for some weights, provided the ideal $t$ lies strictly below every attainable value in every coordinate.
+\end{theorem}
+
+The first claim takes one line. If $b\prec a$ then $\sum w_if_i(b)<\sum w_if_i(a)$, so $a$ was not a minimizer. The convex converse is a separating-hyperplane argument in Boyd and Vandenberghe~\cite[section~4.7]{boyd2004}, and the Chebyshev statement is in Miettinen~\cite{miettinen1998}. The Chebyshev statement runs in one direction only. A Chebyshev minimizer is guaranteed to be only weakly Pareto optimal, because the maximum ignores every coordinate but the worst. With equal weights and $t=(0,0)$, the points $(2,1)$ and $(2,0)$ both score $2$, and the first is dominated by the second.
+
+\begin{example}[A Pareto point no weighted sum can find]\label[example]{ex:ch08:pareto}
+Four alternatives have objective vectors $A=(0,4)$, $B=(4,0)$, $C=(2.2,2.2)$ and $D=(3,3)$. $C$ dominates $D$, and $A$, $B$, $C$ are Pareto optimal. A weighted sum with $w_1+w_2=1$ scores $A$ as $4w_2$, $B$ as $4w_1$ and $C$ as $2.2$. Since $\min(4w_1,4w_2)\le2<2.2$ for every $w$, no weighted sum ever selects $C$. The Chebyshev distance to the ideal $(0,0)$ with equal weights scores $A$ and $B$ at $4$ and $C$ at $2.2$, and selects $C$. With weights $(1,0.01)$ it selects $A$. \Cref{fig:ch08:pareto} shows the geometry. $C$ sits in a dent of the front, behind the line $f_1+f_2=4$ through $A$ and $B$.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=0.85]
+\draw[->,pgray] (-0.3,0)--(5,0) node[right,lbl]{$f_1$};
+\draw[->,pgray] (0,-0.3)--(0,5) node[above,lbl]{$f_2$};
+\fill[plight] (0,4)--(0,5)--(5,5)--(5,0)--(4,0)--(4,2.2)--(2.2,2.2)--(2.2,4)--cycle;
+\draw[thick,pgray] (0,4)--(2.2,4)--(2.2,2.2)--(4,2.2)--(4,0);
+\draw[thick,porange] (-0.2,4.2)--(4.2,-0.2) node[pos=0.22,below left,lbl]{$f_1+f_2=4$};
+\draw[thick,pgreen,dashed] (2.2,0)--(2.2,2.2)--(0,2.2);
+\fill[pgreen] (0,4) circle (2.2pt) node[left,lbl]{$A$};
+\fill[pgreen] (4,0) circle (2.2pt) node[below,lbl]{$B$};
+\fill[pgreen] (2.2,2.2) circle (2.2pt) node[above right,lbl]{$C$};
+\fill[pred] (3,3) circle (2.2pt) node[above right,lbl]{$D$};
+\fill (0,0) circle (1.5pt) node[below left,lbl]{$t$};
+\end{tikzpicture}
+\caption{The shaded region is dominated by at least one of $A$, $B$, $C$, so $D$ is inside it. The weighted-sum line through $A$ and $B$ passes below $C$, so no weighted sum selects $C$. The Chebyshev level set $\max(f_1,f_2)=2.2$ (dashed) touches $C$ first.}
+\label{fig:ch08:pareto}
+\end{figure}
+
+The Geometric series takes the Pareto side of this choice in its methods book, and the evaluation theory below takes the ideal-point side. They add different things. The front is weight-free. A distance to an ideal adds a metric and an ideal, and Geometric Evaluation Theory says whose they are.
+
+\inproject{\path{geometric-methods/chapters/chapter-08-pareto-optimization.md}, sections 8.1 and 8.2, defines dominance and argues that weighted sums reach only the convex hull of the front.}
+
+\buildson{\Cref{ch04} (convexity and separating hyperplanes), \cref{sec:ch08:ideal}.}
+\usedin{\Cref{sec:ch08:get}.}
+
+%======================================================================
+\section{Geometric Evaluation Theory separates what the world supplies from what the evaluator owns}\label{sec:ch08:get}
+
+Geometric Evaluation Theory, written GET only after it has been spelled out, makes the ideal-point construction precise and adds a budget. Its primitive object is the following, quoted from the source with its notation.
+
+\begin{definition}[Evaluation object, after Bond's GET paper]\label{def:ch08:get}
+An evaluation object is a six-tuple
+\begin{equation}\label{eq:ch08:getobject}
+\mathcal E=(X,A,C,G,B,\mathcal K)
+\end{equation}
+in which
+\begin{enumerate}[label=(\roman*)]
+\item $X$ is a set of states carrying a probability law $\mu$, the evaluator's belief, which may be a point mass when there is no uncertainty,
+\item $A$ is a set of actions or alternatives,
+\item $C:A\times X\to\mathcal Y$ is the evaluator, a map into a consequence space $\mathcal Y$ that is a $C^1$ manifold, with $C(a,\cdot)$ measurable for each $a$,
+\item $G$ is the metric of evaluation, a pointed geometry on $\mathcal Y$ consisting of a continuous Riemannian metric, also written $G$, and an ideal point $t\in\mathcal Y$,
+\item $B$ is the resolution budget, one of a rank cap $k$, a length $\varepsilon\ge0$, or a rate $R$ in bits, with $B=\infty$ for the unbudgeted case,
+\item $\mathcal K\subseteq A$ is the set of admissible actions, which may depend on the state and on the menu presented.
+\end{enumerate}
+The world supplies $(X,A,C)$. The evaluator supplies $(G,B,\mathcal K)$.
+\end{definition}
+
+The split in the last line is the theory's foundational commitment. If the evaluator could also choose $C$, any weak order with a utility representation would be an evaluation object, because a one-dimensional consequence $C(a)=t-d(a)$ represents any function $d$. With $C$ fixed by the world, which orders an evaluator can hold becomes a representation theorem, and what its choices reveal becomes an identification theorem. \Cref{fig:ch08:get} draws the split.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[node distance=6mm and 9mm]
+\node[block] (X) {states $X$\\belief $\mu$};
+\node[block, below=of X] (A) {actions $A$};
+\node[block, right=12mm of $(X)!0.5!(A)$, fill=white] (C) {evaluator map\\$C:A\times X\to\mathcal Y$};
+\node[block, right=12mm of C, fill=porange!15] (G) {metric $G$\\ideal $t$};
+\node[block, above=of G, fill=porange!15] (B) {budget $B$};
+\node[block, below=of G, fill=porange!15] (K) {admissible $\mathcal K$};
+\node[block, right=12mm of G, fill=pgreen!15] (P) {preference\\and choice};
+\draw[flow] (X) -- (C);
+\draw[flow] (A) -- (C);
+\draw[flow] (C) -- node[above,lbl]{$y$} (G);
+\draw[flow] (B) -- (G);
+\draw[flow] (G) -- node[above,lbl]{$d_B$} (P);
+\draw[flow] (K) -| (P);
+\begin{scope}[on background layer]
+\node[draw=pblue, dashed, rounded corners, fit=(X)(A)(C), inner sep=4pt, label={[lbl,pblue]above:world supplies}] {};
+\node[draw=porange, dashed, rounded corners, fit=(B)(G)(K), inner sep=4pt, label={[lbl,porange]below:evaluator owns}] {};
+\end{scope}
+\end{tikzpicture}
+\caption{The evaluation object. The world supplies states, actions and the consequence map. The evaluator owns its metric with an ideal, its budget and its admissible set, and preference and choice are derived from both.}
+\label{fig:ch08:get}
+\end{figure}
+
+The evaluation distance of an action is the expected geodesic distance of its consequence from the ideal, $d(a)=\big(\E_\mu[d_G(C(a,X),t)^2]\big)^{1/2}$. Under a rank cap $k$ with a constant $G$ on $\mathcal Y=\R^m$, the evaluator keeps only the top-$k$ eigenspace of the second moment of consequences over a workload $\omega$ that it habitually evaluates,
+\begin{equation}\label{eq:ch08:budgeted}
+M_\omega=\E_\omega\big[G^{1/2}(C-t)(C-t)\T G^{1/2}\big],\qquad d_k(a)=\Big(\E_\mu\big\|\Pi_kG^{1/2}\big(C(a,X)-t\big)\big\|^2\Big)^{1/2},
+\end{equation}
+with $\Pi_k$ the orthogonal projector onto that eigenspace. This is the read-operator construction of \cref{ch06} applied to evaluation. An evaluator is an observer whose output is scored from an ideal point. Under a length budget $\varepsilon$, preference is the semiorder \eqref{eq:ch08:semiorder} with $u=-d$, so the threshold of the semiorder is the budget and not a free constant. Choice from a menu $M$ is the set of admissible actions in $M$ that no admissible action in $M$ strictly beats.
+
+\begin{example}[A budget reverses a preference]\label[example]{ex:ch08:reversal}
+This is the GET paper's proof of its Theorem ``Resolution reversal''. Let $\mathcal Y=\R^2$, $G=I$, $t=0$, a single state, and a workload with $M_\omega=\diag(4,1)$, whose top eigenvector is $e_1$. Let $C(a)=(1,0)$ and $C(b)=(0.9,2)$. Under rank cap $1$, $d_1(a)=1$ and $d_1(b)=0.9$, so $b\succ_1a$. Under rank cap $2$, $d_2(a)=1$ and $d_2(b)=\sqrt{0.81+4}=2.193$, so $a\succ_2b$. The evaluator, its metric and its ideal did not change. What changed is how many directions it can afford to resolve. No single function on $A$ represents both preferences.
+\end{example}
+
+\paragraph{Position against Dawid and Lauritzen.} Dawid and Lauritzen's ``The geometry of decision theory''~\cite{dawid2005}, with Dawid's journal paper~\cite{dawid2007}, derives a geometry on the space of probability distributions from a proper scoring rule and its Bayes act. When $H$ is differentiable, the divergence of a proper scoring rule $S$ with generalized entropy $H$ is the Bregman divergence of the convex function $-H$. When $H$ is twice differentiable, to second order it is the quadratic form of the Hessian,
+\begin{equation}\label{eq:ch08:dl}
+D(P,P+\delta)=\tfrac12\,\delta\T\nabla^2(-H)(P)\,\delta+o(\norm\delta^2).
+\end{equation}
+In the GET paper this is a row of the table of classical models. The consequence space is the probability simplex, $C$ is the identity, $G=\nabla^2(-H)$, the ideal $t$ is the true distribution, and $B=\infty$. Dawid--Lauritzen decision geometry is therefore the unbudgeted, identity-evaluator special case of the evaluation object. What GET adds to it is the evaluator map, the budget and the admissible set. The GET repository insists that the decision geometry of Dawid and Lauritzen and the decision theory of the economics book are different objects from GET, and this book keeps the three names apart.
+
+\begin{example}[Two scoring rules, two geometries]\label[example]{ex:ch08:dl}
+For the logarithmic score, $H$ is the Shannon entropy, $\nabla^2(-H)=\diag(1/p)$, and $D(P,Q)=\KL{P}{Q}$. With $P=(0.2,0.3,0.5)$ and $\delta=(0.05,-0.05,0)$, the exact divergence is $0.01007$ and \eqref{eq:ch08:dl} gives $\tfrac12(0.0025/0.2+0.0025/0.3)=0.01042$. For the Brier score, $H(p)=1-\sum p_i^2$, $\nabla^2(-H)=2I$, and the divergence is exactly $\norm{\delta}^2=0.005$. At this $P$ the same displacement costs about twice as much under the log score. That ratio means little on its own, since multiplying a scoring rule by a constant multiplies its divergence. The comparison that carries meaning is the shape. The log score's metric weights each coordinate by $1/p_i$, and the Brier metric is flat. This is the Fisher metric of \cref{ch05} for the log score and a Euclidean metric for Brier.
+\end{example}
+
+The GET paper also places expected utility, mean--variance evaluation, additive multi-attribute value, satisficing and Nash equilibrium as special cases, each with its conditions, and it proves that menu-dependent admissibility can violate the weak axiom of revealed preference \eqref{eq:ch08:warp}, which is Sen's observation~\cite{sen1971} written for evaluation objects. It need not. An obligation that removes only actions that would not have been chosen anyway leaves every choice, and so the weak axiom, intact.
+
+\begin{example}[An obligation is not a preference]\label[example]{ex:ch08:admiss}
+This is the GET paper's proof of its Theorem ``Menu-dependent admissibility violates revealed preference''. Let $A=\{a,b,p\}$ with evaluation distances $d(a)=1<d(b)=2<d(p)=3$. On the menu $\{a,b\}$ both actions are admissible, and $\mathrm{ch}(\{a,b\})=\{a\}$. When $p$ is available it places $a$ under an obligation that removes it, so $\mathcal K(\{a,b,p\})=\{b,p\}$ and $\mathrm{ch}(\{a,b,p\})=\{b\}$. Now $a$ was chosen over $b$, and $b$ is chosen while $a$ is on the menu, which breaks \eqref{eq:ch08:warp}. No weak order on $A$ rationalizes these choices, and no penalty term in the cost does either, because a fixed penalty cannot depend on which other actions are present. The paper reads this as the formal content of the claim that the theory does not reduce morality to preference maximization. In that reading, promises, consent and roles create obligations of this menu-dependent kind.
+\end{example} The status of these statements in the repository is ``proved''. Its predictions, such as the threshold of the semiorder tracking a manipulated budget, are registered gates, and the README records which have passed and which are indeterminate.
+
+\inproject{\path{geometric-evaluation-theory/paper/geometric-evaluation-theory.tex}, Definitions ``Evaluation object'', ``World and evaluator'' and ``Budgeted distance'', Table ``Classical models as evaluation objects'', Proposition ``Recoveries'' part (f). \path{geometric-evaluation-theory/PRIOR-ART.md} lists the neighbours and what GET adds to each.}
+
+\buildson{\Cref{sec:ch08:weakorder}, \cref{sec:ch08:ideal}, \cref{ch05} (pullback and Fisher metric), \cref{ch06} (observers and budgets).}
+\usedin{\Cref{sec:ch08:budget}, \cref{sec:ch08:nash}.}
+
+%======================================================================
+\section{Random utility models obey regularity, and the Luce rule is the logit case}\label{sec:ch08:rum}
+
+People and programs do not choose the same option every time. A stochastic choice rule gives a probability $p(a\mid A)$ of choosing $a$ from each menu $A$. The dominant model in econometrics is random utility, developed by McFadden~\cite{mcfadden1974,mcfadden2001}.
+
+\begin{definition}[Random utility model]\label{def:ch08:rum}
+Each alternative has a random utility $U_a=v_a+\epsilon_a$, with $(\epsilon_a)$ jointly distributed, one joint law used for every menu, and ties of probability zero, and the chooser picks the largest,
+\begin{equation}\label{eq:ch08:rum}
+p(a\mid A)=\Pr\big(U_a\ge U_b\ \text{for all }b\in A\big).
+\end{equation}
+\end{definition}
+
+\begin{theorem}[Regularity]\label[theorem]{thm:ch08:regularity}
+Every random utility model satisfies regularity. If $A\subseteq A'$ and $a\in A$, then
+\begin{equation}\label{eq:ch08:regularity}
+p(a\mid A')\ \le\ p(a\mid A).
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The event that $U_a$ is the largest among $A'$ is contained in the event that it is the largest among the smaller set $A$, because $A'$ has more competitors. Probability is monotone under containment.
+\end{proof}
+
+Regularity is the formal version of a plain intuition. In a random utility model, adding an option can take share away from $a$, but it cannot give $a$ share. The proof uses the hypothesis that the law of the utilities does not depend on the menu, and \cref{sec:ch08:budget} shows what happens without it. The Luce rule~\cite{luce1959} is the best-known member of the family. Each alternative has a positive weight $w_a$, and
+\begin{equation}\label{eq:ch08:luce}
+p(a\mid A)=\frac{w_a}{\sum_{b\in A}w_b}.
+\end{equation}
+Ratios $p(a\mid A)/p(b\mid A)=w_a/w_b$ do not depend on the menu, which is the property called independence of irrelevant alternatives. The Luce rule is the random utility model with independent standard Gumbel noise and $v_a=\ln w_a$. This is the multinomial logit, $p(a\mid A)\propto e^{v_a}$, and McFadden's 1974 paper~\cite{mcfadden1974} derives it from the Gumbel assumption. A cost-based version with temperature $T$ is $p(a\mid A)\propto\exp(-c(a)/T)$.
+
+\begin{example}[Luce probabilities]\label[example]{ex:ch08:luce}
+Let $w=(3,2,1)$ for $(a,b,c)$. Then $p(a\mid\{a,b\})=0.6$ and $p(a\mid\{a,b,c\})=0.5$. The share of $a$ fell when $c$ arrived, as regularity requires, and the ratio $p(a)/p(b)=1.5$ is the same in both menus. A simulation of the Gumbel random utility model with $v=\ln w$ reproduces the probabilities $(0.5,0.333,0.167)$ on the three-option menu to within $0.005$ with $4\times10^5$ draws.
+\end{example}
+
+Independence of irrelevant alternatives is a strong property, and it fails when options are close substitutes. In the standard illustration a commuter chooses between a car and a red bus with weights $1$ and $1$, so each has probability $\tfrac12$. Add a blue bus identical to the red one. The Luce rule gives each option $\tfrac13$, so the car's share falls to $\tfrac13$. A commuter who only cares about car versus bus would keep the car at $\tfrac12$ and split the bus share, $\tfrac14$ each. Random utility models with correlated noise, such as nested logit, are built to allow this. Nested logit is a random utility model when its dissimilarity parameter lies in $(0,1]$, and then it still obeys regularity. The car's share may fall less, but it cannot rise.
+
+Regularity matters because it is \emph{testable} and because many plausible models cannot escape it. Any choice rule that comes from maximizing a fixed random utility over the menu obeys it, whatever the noise distribution. A rule that violates it is outside the entire random-utility class. The converse fails. Regularity is necessary for a random utility model but not sufficient in general. Empirical violations exist. Huber, Payne and Puto~\cite{huber1982} added an option dominated by one alternative and not by the other, and the dominating alternative's share went up. This is the attraction effect.
+
+\buildson{Probability of events and containment, \cref{sec:ch08:weakorder}.}
+\usedin{\Cref{sec:ch08:budget}.}
+
+%======================================================================
+\section{A budgeted observer that reads the menu violates regularity}\label{sec:ch08:budget}
+
+The rank-cap distance \eqref{eq:ch08:budgeted} uses a workload fixed in advance. Suppose instead that the evaluator picks the directions it reads from the menu in front of it. That is a natural model of limited attention. The evaluator looks along the direction in which the options differ most. The observer-representation paper of Observation Theory defines it as follows.
+
+\begin{definition}[Budgeted menu-relative choice]\label{def:ch08:budgeted}
+Let $x_0\in\R^d$ be a reference point, and let a menu $A$ have encodings $x_a\in\R^d$. Let $M(A)=\sum_{a\in A}(x_a-x_0)(x_a-x_0)\T$ and let $\Pi_B(A)$ be the orthogonal projector onto a top-$B$ eigenspace of $M(A)$. The budgeted observer chooses
+\begin{equation}\label{eq:ch08:budgetedchoice}
+p(a\mid A)=\frac{\exp\big(-\norm{\Pi_B(A)(x_a-x_0)}^2\big)}{\sum_{b\in A}\exp\big(-\norm{\Pi_B(A)(x_b-x_0)}^2\big)}.
+\end{equation}
+\end{definition}
+
+For a fixed projector this is a Luce rule with weights $e^{-\text{cost}}$, and it obeys regularity. The projector, however, depends on the menu.
+
+\begin{example}[Adding an option raises another option's share]\label[example]{ex:ch08:decoy}
+Take $d=2$, $B=1$, $x_0=0$, $x_a=(2,0)$, $x_b=(0,1)$ and $x_c=(0,3)$. These are the numbers of the non-reducibility theorem in the observer-representation paper, recomputed in the chapter's check script.
+
+On the menu $\{a,b\}$, $M=\diag(4,1)$ and the top eigenvector is $e_1$. The observer reads only the first coordinate. The projected costs are $4$ for $a$ and $0$ for $b$, and
+\[
+p(a\mid\{a,b\})=\frac{e^{-4}}{e^{-4}+1}=0.0180 .
+\]
+On the menu $\{a,b,c\}$, $M=\diag(4,1+9)=\diag(4,10)$ and the top eigenvector is now $e_2$. The observer reads only the second coordinate. The costs are $0$, $1$ and $9$, and
+\[
+p(a\mid\{a,b,c\})=\frac{1}{1+e^{-1}+e^{-9}}=0.7310 .
+\]
+Adding $c$ raised the probability of $a$ from $0.018$ to $0.731$, which violates \eqref{eq:ch08:regularity}. So the budgeted observer is not a random utility model, and in particular not a Luce or logit model for any utility and temperature. Meanwhile $b$ falls from $0.982$ to $0.269$, and $c$ itself is chosen with probability $9.0\times10^{-5}$. \Cref{fig:ch08:decoy} shows the configuration and the probabilities.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=0.8]
+\draw[->,pgray] (-0.4,0)--(3,0) node[right,lbl]{$x_1$};
+\draw[->,pgray] (0,-0.4)--(0,3.6) node[above,lbl]{$x_2$};
+\fill (0,0) circle (1.6pt) node[below left,lbl]{$x_0$};
+\fill[pblue] (2,0) circle (2.5pt) node[below,lbl]{$a$};
+\fill[pblue] (0,1) circle (2.5pt) node[left,lbl]{$b$};
+\fill[pred] (0,3) circle (2.5pt) node[left,lbl]{$c$};
+\draw[vec,porange] (1.0,1.5)--(2.0,1.5) node[right,lbl,align=left]{read $e_1$\\without $c$};
+\draw[vec,porange] (1.0,1.5)--(1.0,2.5) node[right,lbl,align=left]{read $e_2$\\with $c$};
+\end{tikzpicture}
+\hspace{6mm}
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.5\linewidth, height=0.38\linewidth, ybar, bar width=9pt, ymin=0, ymax=1.05,
+  symbolic x coords={a,b,c}, xtick=data, ylabel={choice probability}, enlarge x limits=0.3,
+  legend style={at={(0.98,0.98)}, anchor=north east}]
+\addplot[fill=pgray!40, draw=pgray] coordinates {(a,0.0180) (b,0.9820) (c,0)};
+\addplot[fill=porange!70, draw=porange] coordinates {(a,0.7310) (b,0.2689) (c,0.00009)};
+\legend{{menu $\{a,b\}$},{menu $\{a,b,c\}$}}
+\end{axis}
+\end{tikzpicture}
+\caption{Adding $c$ turns the observer's single read direction from $e_1$ to $e_2$. Along $e_2$ the option $a$ costs nothing, so its share rises from $0.018$ to $0.731$, which no random utility model allows.}
+\label{fig:ch08:decoy}
+\end{figure}
+
+The mechanism is visible in \eqref{eq:ch08:budgetedchoice}. The extra option changes the second moment $M(A)$ of the menu and so changes which direction the observer reads. In the second menu the direction in which $a$ is far from the reference is no longer read. The jump is sharp because the eigenvector switches when one eigenvalue overtakes the other. With $x_c=(0,s)$ the second-coordinate eigenvalue is $1+s^2$, which passes $4$ at $s=\sqrt3=1.732$. \Cref{fig:ch08:jump} plots $p(a\mid\{a,b,c\})$ as $c$ moves out.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=3.1, ymin=0, ymax=0.8, xlabel={position $s$ of the added option $c=(0,s)$}, ylabel={$p(a\mid\{a,b,c\})$}]
+\addplot[pblue, mark=none, const plot] coordinates {(0.10,0.0091) (0.20,0.0091) (0.30,0.0091) (0.40,0.0091) (0.50,0.0091) (0.60,0.0091) (0.70,0.0091) (0.80,0.0091) (0.90,0.0091) (1.00,0.0091) (1.10,0.0091) (1.20,0.0091) (1.30,0.0091) (1.40,0.0091) (1.50,0.0091) (1.60,0.0091) (1.70,0.0091)};
+\addplot[pblue, mark=none] coordinates {(1.80,0.7107) (1.90,0.7169) (2.00,0.7214) (2.10,0.7246) (2.20,0.7269) (2.30,0.7284) (2.40,0.7294) (2.50,0.7300) (2.60,0.7304) (2.70,0.7307) (2.80,0.7308) (2.90,0.7309) (3.00,0.7310)};
+\addplot[pgray, dashed, domain=0:3.1] {0.0180} node[pos=0.75, above, lbl] {$p(a\mid\{a,b\})=0.018$};
+\draw[guide] (axis cs:1.732,0) -- (axis cs:1.732,0.75);
+\node[lbl, left] at (axis cs:1.732,0.4) {$s=\sqrt3$};
+\end{axis}
+\end{tikzpicture}
+\caption{The share of $a$ jumps when the added option passes $s=\sqrt3$, where the menu's leading direction switches from $e_1$ to $e_2$. Below the switch the added option only takes share from $a$, as a random utility model would.}
+\label{fig:ch08:jump}
+\end{figure}
+
+Three cautions belong with this result. First, it is a theorem about the model \eqref{eq:ch08:budgetedchoice}, not a finding about people. Whether human readers of menus behave like the budgeted observer is an open empirical question that the observer-representation paper states as a designed experiment. Second, the pattern is not the attraction effect of Huber, Payne and Puto. There the added option is dominated by the target, and the target gains. Here $c$ is no closer to the reference than $b$ in either coordinate and farther in one, so it is dominated by $b$, and it is $a$ that gains. Both are regularity violations of the same formal kind. Third, an observer with a fixed read operator obeys regularity. With $\Pi=I$ the costs are $4$, $1$ and $9$, and $p(a)$ is $0.0474$ to four places on both menus, slightly lower on the larger one. The violation comes entirely from reading the menu.
+
+\inproject{\path{geometric-observation/paper/observer-representation.tex}, Definition ``Budgeted menu-relative choice'' and Theorem ``Non-reducibility'', with the remark that follows it. \path{geometric-evaluation-theory/paper/geometric-evaluation-theory.tex}, Proposition ``Regularity'', imports the result into GET.}
+
+\buildson{\Cref{sec:ch08:rum}, \cref{sec:ch08:get}, \cref{ch01} (eigenvectors of a sum of outer products).}
+\usedin{\Cref{ch06} (budgets and observers).}
+
+%======================================================================
+\section{A Nash equilibrium is a fixed point of best responses}\label{sec:ch08:nash}
+
+With several decision makers, each one's payoff depends on what the others do. Player $i$ chooses a strategy $s_i\in S_i$ and receives $u_i(s_i,s_{-i})$, where $s_{-i}$ lists everyone else's strategies.
+
+\begin{definition}[Nash equilibrium]\label{def:ch08:nash}
+A profile $s^*$ is a Nash equilibrium when no player gains by deviating alone,
+\begin{equation}\label{eq:ch08:nash}
+u_i(s_i^*,s_{-i}^*)\ \ge\ u_i(s_i,s_{-i}^*)\qquad\text{for all }i\text{ and all }s_i\in S_i .
+\end{equation}
+Equivalently $s_i^*\in\beta_i(s^*_{-i})$ for every $i$, where $\beta_i(s_{-i})=\argmax_{s_i}u_i(s_i,s_{-i})$ is the best-response set.
+\end{definition}
+
+So an equilibrium is a fixed point of the best-response correspondence $\beta=\prod_i\beta_i$. Existence is a fixed-point theorem.
+
+\begin{theorem}[Debreu, Glicksberg, Fan]\label[theorem]{thm:ch08:existence}
+Suppose a game has finitely many players, every $S_i$ is a nonempty, compact, convex subset of a Euclidean space, every $u_i$ is continuous on $S=\prod_iS_i$, and every $u_i(\cdot,s_{-i})$ is quasiconcave in the player's own strategy. Then a Nash equilibrium in pure strategies exists.
+\end{theorem}
+
+The proof applies Kakutani's fixed-point theorem~\cite{kakutani1941} to $\beta$. Compactness and continuity make each $\beta_i(s_{-i})$ nonempty with a closed graph, and quasiconcavity makes it convex. The theorem is due independently to Debreu~\cite{debreu1952}, Glicksberg~\cite{glicksberg1952} and Fan~\cite{fan1952}. Nash's original theorem~\cite{nash1950} is the special case of a finite game played in mixed strategies. A mixed strategy is a probability vector on a simplex, which is compact and convex, and expected payoff is continuous and linear, hence quasiconcave, in one's own mixture. Each hypothesis does work. Matching pennies in pure strategies has finite strategy sets, which are not convex, and no equilibrium. A single player who picks $s$ in the open interval $(0,1)$ and receives $s$ has no best response at all, because the interval is not compact.
+
+\begin{example}[Pure and mixed equilibria]\label[example]{ex:ch08:bos}
+In the coordination game with row payoffs $\begin{pmatrix}2&0\\0&1\end{pmatrix}$ and column payoffs $\begin{pmatrix}1&0\\0&2\end{pmatrix}$, both players prefer to match and disagree about where. The pure equilibria are (top, left) and (bottom, right). There is also a mixed equilibrium. If the row player plays top with probability $p$, the column player is indifferent when $p\cdot1=(1-p)\cdot2$, so $p=2/3$. If the column player plays left with probability $q$, the row player is indifferent when $2q=1-q$, so $q=1/3$. Each player's expected payoff is then $2/3$. Matching pennies, in contrast, has no pure equilibrium, and Nash's theorem guarantees the mixed one.
+\end{example}
+
+The Observation Theory programme defines a game in its own terms. In the behavioral game of the observer-representation paper, player $i$ is an observer $O_i=(C_i,G_i,B_i)$ with a target $t_i(s_{-i})$ that depends only on the others, and minimizes the projected pullback distance
+\begin{equation}\label{eq:ch08:bgcost}
+c_i(a_i;s_{-i})=\big(C_i(a_i,s_{-i})-t_i(s_{-i})\big)\T\Pi_i\T G_i\Pi_i\big(C_i(a_i,s_{-i})-t_i(s_{-i})\big).
+\end{equation}
+A behavioral game equilibrium (BGE) is a profile in which every player's action minimizes its own cost given the others. The target must be exogenous to the candidate equilibrium, because a target equal to the candidate makes every profile an equilibrium. Existence is \cref{thm:ch08:existence} applied to $-c_i$. That needs compact convex action sets and $C_i$ and $t_i$ continuous, and then $-c_i$ is concave, hence quasiconcave, when $C_i$ is affine in the player's own action. The paper proves that the BGE coincide with the Nash equilibria of the game with utilities $u_i=K_i(s_{-i})-c_i(a_i;s_{-i})$, and that every concave quadratic game is a behavioral game with $G_i$ the negative own-strategy Hessian. The geometric-economics book uses the same initials for its ``Bond Geodesic Equilibrium'', a path-cost equilibrium on decision graphs, and its README labels that volume a posited framework.
+
+\begin{example}[A quadratic game]\label[example]{ex:ch08:quadgame}
+Two players choose $a_1,a_2\in[0,2]$ with costs $c_1=(a_1-(\tfrac12a_2+1))^2$ and $c_2=(a_2-\tfrac12a_1)^2$. Here $C_i(a)=a_i$, $G_i=1$, and the targets are $t_1=\tfrac12a_2+1$ and $t_2=\tfrac12a_1$. Each best response hits its target, so the equilibrium solves $a_1=\tfrac12a_2+1$ and $a_2=\tfrac12a_1$, giving $(a_1,a_2)=(4/3,2/3)$. It lies inside $[0,2]^2$. Iterating best responses from $(0,0)$, with the players updating in turn, converges to it, because each round of two updates shrinks the error by a factor of $4$. \Cref{fig:ch08:br} draws the two best-response lines crossing at the equilibrium.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.5\linewidth, height=0.5\linewidth, xmin=0, xmax=2.1, ymin=0, ymax=2.1, xlabel={$a_1$}, ylabel={$a_2$}]
+\addplot[pblue] coordinates {(1,0) (2,2)} node[pos=0.75, left, lbl] {$a_1=\tfrac12a_2+1$};
+\addplot[porange] coordinates {(0,0) (2,1)} node[pos=0.55, above left, lbl] {$a_2=\tfrac12a_1$};
+\addplot[only marks, mark=*, pgreen] coordinates {(1.3333,0.6667)};
+\node[lbl, below right] at (axis cs:1.3333,0.6667) {$(4/3,\,2/3)$};
+\end{axis}
+\end{tikzpicture}
+\caption{The best-response lines of the two players cross once, at the Nash equilibrium. Each line is where one player's cost is zero given the other's action.}
+\label{fig:ch08:br}
+\end{figure}
+
+\inproject{\path{geometric-observation/paper/observer-representation.tex}, Definition ``Behavioral game'', Theorems ``Existence'' (the Debreu, Glicksberg and Fan argument) and ``Nash correspondence''. \path{geometric-methods/chapters/chapter-07-equilibrium-on-manifolds.md}, section 7.5, states a reduction of its path-cost equilibrium to Nash when only the monetary dimension is weighted.}
+
+\buildson{\Cref{sec:ch08:eu} (mixed strategies as lotteries), \cref{ch04} (convexity and optimality conditions).}
+\usedin{The multi-agent branch of Geometric Evaluation Theory.}
+
+%======================================================================
+\section*{Exercises}
+
+\subsection*{Warm-up}
+
+\begin{exercise}\label{exr:ch08:counting}
+Five options are ranked $p\succ q\sim r\sim s\succ t$. Write the counting utility of \cref{thm:ch08:finite}. Give a second utility that represents the same order and is not an affine function of the first.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch08:paretoset}
+Find the Pareto set, for minimization, of the objective vectors $(1,5)$, $(2,3)$, $(3,3)$, $(4,1)$ and $(2,4)$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch08:luce}
+With Luce weights $w=(3,2,1)$, compute $p(b\mid\{b,c\})$ and $p(b\mid\{a,b,c\})$ and confirm regularity and the constant ratio $p(b)/p(c)$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch08:pennies}
+Show that matching pennies, with row payoffs $\begin{pmatrix}1&-1\\-1&1\end{pmatrix}$ and column payoffs their negatives, has no pure Nash equilibrium. Find the mixed one.
+\end{exercise}
+
+\subsection*{By hand}
+
+\begin{exercise}\label{exr:ch08:hull}
+Three options have consequences $(0,0)$, $(1,0)$ and $(2,0)$. Show that the order in which $(1,0)$ is strictly worst is not representable by \eqref{eq:ch08:ideal} for any $G\psd0$ and $t$. Which of the remaining weak orders on these three options are representable?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch08:reversal}
+In \cref{ex:ch08:reversal} replace $C(b)$ by $(0.5,1.5)$. Compute $d_1$ and $d_2$ for both actions and say which is preferred at each budget.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch08:fixed}
+In \cref{ex:ch08:decoy} replace the menu-selected projector by $\Pi=I$ on every menu. Compute $p(a\mid\{a,b\})$ and $p(a\mid\{a,b,c\})$ and verify regularity.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch08:sym}
+Two players choose $a_1,a_2$ with costs $(a_1-(\tfrac12a_2+1))^2$ and $(a_2-(\tfrac12a_1+1))^2$. Find the equilibrium. Show that iterated best response converges to it from any starting point.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch08:brier}
+For the Brier score, show that the Bregman divergence of $\phi(p)=\sum_ip_i^2-1$ is $\norm{q-p}^2$ exactly. Why is the second-order expansion \eqref{eq:ch08:dl} exact here and not for the log score?
+\end{exercise}
+
+\subsection*{Programming}
+
+\begin{exercise}\label{exr:ch08:code-decoy}
+Implement \eqref{eq:ch08:budgetedchoice} in numpy. Move the third option along $c=(0,s)$ for $s\in(0,3]$ and plot $p(a\mid\{a,b,c\})$. Locate the jump and explain it from the eigenvalues of $M(A)$. Report $p(a)$ at $s=1.8$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch08:code-rum}
+Simulate a random utility model with normal noise of unequal variances on three options and estimate $p(a\mid\{a,b\})$ and $p(a\mid\{a,b,c\})$. Confirm regularity, and confirm that the constant-ratio property of the Luce rule fails for this model.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch08:code-hull}
+Draw random $G=MM\T$ and random ideals $t$ and check the hull law on three collinear consequences. Then search for a weak order on four points in the plane that violates the hull law, and confirm that no sampled $(G,t)$ represents it.
+\end{exercise}
+
+% checks/ch08_examples.py on Atlas (2026-10-07): 87/87 PASS

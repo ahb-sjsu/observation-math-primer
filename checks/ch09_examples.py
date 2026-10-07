@@ -143,6 +143,8 @@ check("bar 0.5, true 0.45, n=40: power 0.38", close(vals[(0.45, 40)], 0.38, 5e-3
 check("bar 0.5, true 0.45, n=640: power 0.10", close(vals[(0.45, 640)], 0.10, 5e-3))
 check("bar 0.5, true 0.55, n=40: power 0.62", close(vals[(0.55, 40)], 0.62, 5e-3))
 check("bar 0.5, true 0.55, n=640: power 0.90", close(vals[(0.55, 640)], 0.90, 5e-3))
+check("true 0.55 above the bar still misses w.p. 0.38 at n=40", close(1 - vals[(0.55, 40)], 0.38, 5e-3))
+check("true 0.55 above the bar still misses w.p. 0.10 at n=640", close(1 - vals[(0.55, 640)], 0.10, 5e-3))
 check("bar exactly at true effect: power 0.5 at any n", close(power_bar(0.5, 0.5, 999), 0.5, 1e-12))
 # SE-unit bar: estimate beyond 2 SE, true 0.45: power rises with n
 pse = [Phi(0.45 * math.sqrt(nn) - 2) for nn in (40, 640)]
@@ -356,8 +358,10 @@ ci3 = (est3 - z90 * se3, est3 + z90 * se3)
 check("present case 90% CI (0.0234, 0.0366) wholly outside the band",
       close(ci3[0], 0.0234, 5e-5) and close(ci3[1], 0.0366, 5e-5) and ci3[0] > Delta, ci3)
 fig["tost"] = [(round(est, 4), 3), (round(est2, 4), 2), (round(est3, 4), 1)]
-fig["tostlo"] = [(round(ci[0], 4), 3), (round(ci2[0], 4), 2), (round(ci3[0], 4), 1)]
-fig["tosthi"] = [(round(ci[1], 4), 3), (round(ci2[1], 4), 2), (round(ci3[1], 4), 1)]
+for nm, (lo_, hi_), yv in (("tost1", ci, 3), ("tost2", ci2, 2), ("tost3", ci3, 1)):
+    fig[nm] = [(round(lo_, 4), yv), (round(hi_, 4), yv)]
+fig["permext"] = [(k_, dist[k_]) for k_ in sorted(dist) if abs(k_) >= 23]
+fig["holm"] = [(i + 1, round(alpha / (m - i), 5)) for i in range(m)]
 # F7 Moulton factor at the example point
 fig["moulton"] = [(50, round(1 + 49 * 0.1, 2)), (50, round(1 + 49 * 0.03, 2))]
 check("Moulton factor at m=50 with rho_x rho_u = 0.03 is 2.47", close(1 + 49 * 0.03, 2.47, 1e-12))
@@ -374,6 +378,49 @@ print("attenuation sample slopes", bx, bw40)
 check("40-point sample: slope on x above slope on w", bx > bw40, (bx, bw40))
 check("40-point sample slopes 2.37 and 1.36", close(bx, 2.37, 5e-3) and close(bw40, 1.36, 5e-3), (bx, bw40))
 
+# ---------------------------------------------------------------------------
+# Hypothesis-discipline additions (2026-10-07)
+def t_cdf(x, nu, grid=400001):
+    lo = -60.0
+    xs = np.linspace(lo, x, grid)
+    c = math.exp(math.lgamma((nu + 1) / 2) - math.lgamma(nu / 2)) / math.sqrt(nu * math.pi)
+    f = c * (1 + xs ** 2 / nu) ** (-(nu + 1) / 2)
+    return float(np.trapezoid(f, xs)) if hasattr(np, "trapezoid") else float(np.trapz(f, xs))
+
+
+t7 = 2.3646
+check("t quantile t_{7,0.975} = 2.3646", close(t_cdf(t7, 7), 0.975, 2e-5), t_cdf(t7, 7))
+lo_t, hi_t = dbar - t7 * se_pair, dbar + t7 * se_pair
+check("t interval for the mean paired difference (0.0112, 0.0463)",
+      close(lo_t, 0.0112, 5e-5) and close(hi_t, 0.0463, 5e-5), (lo_t, hi_t))
+check("normal 95% interval (0.0142, 0.0433) is narrower than the t interval",
+      close(dbar - 1.96 * se_pair, 0.0142, 5e-5) and close(dbar + 1.96 * se_pair, 0.0433, 5e-5) and hi_t - lo_t > 3.92 * se_pair)
+check("power formula at delta=0 gives 0.025, true two-sided rate 0.05",
+      close(Phi(-Z.inv_cdf(0.975)), 0.025, 1e-9) and close(2 * Phi(-Z.inv_cdf(0.975)), 0.05, 1e-9))
+check("opposite tail negligible once delta sqrt(n)/sigma >= 1: Phi(-1-1.96) < 0.002",
+      Phi(-1 - Z.inv_cdf(0.975)) < 0.002, Phi(-1 - Z.inv_cdf(0.975)))
+
+
+def nct_nvar(delta, nn):
+    nu = nn - 1
+    lam = delta * math.sqrt(nn)
+    m1 = lam * math.sqrt(nu / 2) * math.exp(math.lgamma((nu - 1) / 2) - math.lgamma(nu / 2))
+    m2 = nu * (1 + lam ** 2) / (nu - 2)
+    return m2 - m1 ** 2  # = n Var(delta_hat), since delta_hat = t / sqrt(n)
+
+
+check("estimated-sigma standardized effect: n Var -> 1 + delta^2/2 = 1.125 at delta=0.5 (n=640)",
+      close(nct_nvar(0.5, 640), 1.125, 0.01), nct_nvar(0.5, 640))
+check("estimated sigma flattens but does not move the step: n Var > 1 at n=40",
+      nct_nvar(0.5, 40) > 1.0, nct_nvar(0.5, 40))
+_rng = np.random.default_rng(99)
+_x = _rng.standard_normal((100000, 40)) + 0.5
+_dh = _x.mean(1) / _x.std(1, ddof=1)
+check("Monte Carlo n Var(delta_hat) at n=40 matches the noncentral-t value",
+      close(40 * _dh.var(), nct_nvar(0.5, 40), 0.03), (40 * _dh.var(), nct_nvar(0.5, 40)))
+check("union bound for K forks min(1, 0.05K) is at least the independent value 1-0.95^K",
+      all(min(1, 0.05 * K) >= 1 - 0.95 ** K - 1e-12 for K in range(1, 50)))
+
 
 def fmt(pts):
     return " ".join(f"({a},{b})" for a, b in pts)
@@ -386,7 +433,8 @@ texf = "ch09_registration_statistics.tex"
 if os.path.exists(texf):
     tex = open(texf, encoding="utf8").read()
     found = re.findall(r"coordinates\s*\{([^}]*)\}\s*;\s*%\s*data:(\w+)", tex)
-    check("figure data blocks found in chapter (>= 12)", len(found) >= 12, len(found))
+    check("every figure data set is pasted in the chapter exactly once",
+          sorted(nm for _, nm in found) == sorted(fig), sorted(nm for _, nm in found))
     for body, name in found:
         pts = [tuple(float(t) for t in p.split(",")) for p in re.findall(r"\(([^)]*)\)", body)]
         ref = fig.get(name)

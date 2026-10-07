@@ -33,5 +33,9 @@
 
 \backmatter
 \bibliographystyle{plainnat}
-\bibliography{refs/ch01,refs/ch13,refs/ch02,refs/ch12,refs/ch11,refs/ch03,refs/ch04,refs/ch05,refs/ch06,refs/ch07,refs/ch08,refs/ch09,refs/ch10}
+% refs/all.bib is generated from refs/chNN.bib by tools/merge_bib.py, which
+% removes keys repeated across chapters. The order below sets the merge order.
+% refs/ch01 refs/ch13 refs/ch02 refs/ch12 refs/ch11 refs/ch03 refs/ch04
+% refs/ch05 refs/ch06 refs/ch07 refs/ch08 refs/ch09 refs/ch10
+\bibliography{refs/all}
 \end{document}

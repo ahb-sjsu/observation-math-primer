@@ -1,35 +1,35 @@
 % Answers to selected exercises, chapter 01.
 
-\paragraph{Exercise 1.1}
+\paragraph{Exercise~\ref{exr:ch01:rank}}
 An orthogonal projector is symmetric, so it has an orthonormal eigenbasis. From
 $\Pi^2=\Pi$, every eigenvalue satisfies $\lambda^2=\lambda$, so it is $0$ or
 $1$. The trace is the number of eigenvalues equal to $1$, which is the dimension
-of the range, the rank. For the projector of \cref{ex:ch01:gproj} in $\R^3$ the
+of the range, the rank. For the projector of Example~\ref{ex:ch01:gproj} in $\R^3$ the
 diagonal is $(\tfrac12,\tfrac12,1)$, with sum $2$, and the range is spanned by
 $q_1$ and $q_2$.
 
-\paragraph{Exercise 1.2}
+\paragraph{Exercise~\ref{exr:ch01:oblique}}
 $\Pi^2=\begin{pmatrix}1&1\\0&0\end{pmatrix}=\Pi$, so it is a projector. It is not
 symmetric, so it is not an orthogonal projector. Its range is spanned by $e_1$
 and its kernel by $(1,-1)\T$. The angle between them is $45^\circ$, since
 $e_1\cdot(1,-1)\T/\sqrt2=1/\sqrt2$. An orthogonal projector would have a
 $90^\circ$ angle.
 
-\paragraph{Exercise 1.3}
+\paragraph{Exercise~\ref{exr:ch01:incomparable}}
 $A-B=\begin{pmatrix}1&-1\\-1&-1\end{pmatrix}$ has determinant $-2<0$, so one
 eigenvalue is positive and one negative. Neither $A\psd B$ nor $B\psd A$ holds.
 
-\paragraph{Exercise 1.4}
+\paragraph{Exercise~\ref{exr:ch01:cyclic}}
 Take $A=\begin{pmatrix}1&0\\0&0\end{pmatrix}$, $B=\begin{pmatrix}0&1\\0&0\end{pmatrix}$
 and $C=\begin{pmatrix}0&0\\1&0\end{pmatrix}$. Then $BC=\diag(1,0)$, so
 $\tr(ABC)=1$. And $CB=\diag(0,1)$, so $ACB=0$ and $\tr(ACB)=0$.
 
-\paragraph{Exercise 1.5}
+\paragraph{Exercise~\ref{exr:ch01:whiten}}
 $\Sigma_x^{1/2}g=(2,-1)\T$, so $\tilde P=(2,-1)\T(2,-1)=\begin{pmatrix}4&-2\\-2&1\end{pmatrix}$.
 It has rank one, with eigenvalue $4+1=5$ along $(2,-1)\T/\sqrt5$. And
 $\tr(P\Sigma_x)=g\T\Sigma_xg=4+1=5$, equal to $\tr\tilde P$.
 
-\paragraph{Exercise 1.6}
+\paragraph{Exercise~\ref{exr:ch01:pencil}}
 $\det(A-\mu B)=(1-2\mu)(-\mu)-\mu^2=\mu^2-\mu$, so $\mu=0$ or $\mu=1$. For
 $\mu=0$, $Av=0$ gives $v=(0,1)\T$. For $\mu=1$, $(A-B)v=0$ with
 $A-B=\begin{pmatrix}-1&-1\\-1&-1\end{pmatrix}$ gives $v=(1,-1)\T$. The two are
@@ -37,27 +37,30 @@ $B$-orthogonal, since $B(1,-1)\T=(1,0)\T$ and $(0,1)\cdot(1,0)=0$. The maximum
 of $x\T Ax/x\T Bx$ is $1$, at $x=(1,-1)\T$, where the numerator is $1$ and the
 denominator is $2-2+1=1$.
 
-\paragraph{Exercise 1.7}
+\paragraph{Exercise~\ref{exr:ch01:schur}}
 With $A=2$ and $B=(1,1)$, $S=\begin{pmatrix}2&1\\1&2\end{pmatrix}-\tfrac12\begin{pmatrix}1&1\\1&1\end{pmatrix}
 =\begin{pmatrix}1.5&0.5\\0.5&1.5\end{pmatrix}$. Its trace is $3$ and its
 determinant is $2$, so it is positive definite, and $M\pd0$ by
-\cref{thm:ch01:schurpsd}. Then $\det M=2\cdot2=4$. The eigenvalues of $M$ are
+Theorem~\ref{thm:ch01:schurpsd}. Then $\det M=2\cdot2=4$. The eigenvalues of $M$ are
 $4,1,1$, whose product is also $4$.
 
-\paragraph{Exercise 1.8}
+\paragraph{Exercise~\ref{exr:ch01:signperm}}
 A sign flip sends $e_j$ to $s_je_j$, and a permutation sends that to $s_je_{\pi(j)}$,
 a signed coordinate vector. All of its energy stays on one coordinate. For the
 randomized Hadamard matrix, $D_se_j=s_je_j$ and $H_d(s_je_j)$ is $s_j$ times the
 $j$-th column of $H_d$, whose entries are all $\pm1$. Dividing by $\sqrt d$ gives
-coordinates of magnitude $1/\sqrt d$.
+coordinates of magnitude $1/\sqrt d$. For the two windows, $m\le d<2m$ because $m$
+is the largest power of two not above $d$. So $d-m<m$, and the windows
+$[0,m)$ and $[d-m,d)$ overlap on $[d-m,m)$ and together give $[0,d)$. For
+$d=6144$, $m=4096$ and the windows are $[0,4096)$ and $[2048,6144)$.
 
-\paragraph{Exercise 1.9}
+\paragraph{Exercise~\ref{exr:ch01:logdet}}
 $\det(X+H)=8-0.01=7.99$, so the exact change is $\log(7.99/8)\approx-0.00125078$.
 The first-order term is $\tr(X^{-1}H)=0$, because $X^{-1}H$ has a zero diagonal.
 The second-order term is $-\tfrac12\tr(X^{-1}HX^{-1}H)=-\tfrac12\cdot2\cdot\tfrac{0.01}{8}=-0.00125$,
 which agrees with the exact change to about $8\times10^{-7}$.
 
-\paragraph{Exercise 1.10}
+\paragraph{Exercise~\ref{exr:ch01:mc}}
 A sketch in numpy.
 \begin{verbatim}
 import numpy as np

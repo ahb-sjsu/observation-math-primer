@@ -1,1 +1,633 @@
-\chapter{Tail bounds}\label{ch12}
+\chapter{A tail bound turns an average into a guarantee}\label{ch12}\chaptermark{Tail bounds and concentration}
+% Standalone build (jobname ch12) only. The other chapters are not in this build,
+% so their chapter labels are given plain numbers here to keep \cref{chNN}
+% resolvable (numbers as main.tex prints them). In main.tex the real labels are
+% used and this block does nothing.
+\makeatletter
+\providecommand\omp@stubchapter[2]{%
+  \@ifundefined{r@#1}{%
+    \global\@namedef{r@#1}{{#2}{}{}{}{}}%
+    \global\@namedef{r@#1@cref}{{[chapter][#2][]#2}{}{}{}{}}}{}}
+\edef\omp@jobA{\jobname}\edef\omp@jobB{\detokenize{ch12}}
+\ifx\omp@jobA\omp@jobB
+  \omp@stubchapter{ch01}{1}\omp@stubchapter{ch02}{3}\omp@stubchapter{ch11}{5}%
+  \omp@stubchapter{ch03}{6}\omp@stubchapter{ch06}{9}\omp@stubchapter{ch07}{10}%
+  \omp@stubchapter{ch09}{12}%
+\fi
+\makeatother
+% Short running heads. The standard \sectionmark is saved here and restored at
+% the end of the chapter.
+\let\ompSavedSectionmarkXII\sectionmark
+\providecommand{\ompnexthead}[1]{\def\ompheadtext{#1}%
+  \renewcommand{\sectionmark}[1]{\markright{\MakeUppercase{\thesection.\ \ompheadtext}}}}
+% Gaussian upper tail and density, used throughout this chapter.
+\providecommand{\Qf}{Q}
+\providecommand{\stdpdf}{\varphi}
+
+The first course gives a confidence interval as an estimate plus or minus $1.96$ standard errors. That interval rests on the central limit theorem, which describes what happens as $n$ grows without bound. It says nothing exact about a sample of $50$, a failure rate near zero, or the largest of a thousand test statistics. The programme needs statements of a different kind. A gate admits a job only if the chance that it breaks a budget is below one percent. A rank certificate promises a floor on Kendall's $\tau$. A registered prediction fixes a bar that must hold whatever the data turn out to be. Each of these is a \emph{tail bound}, an inequality of the form
+\begin{equation}
+\Pr\big[\,\abs{\bar X_n-\mu}\ge\epsilon\,\big]\ \le\ \delta(n,\epsilon),
+\label{eq:ch12:generic}
+\end{equation}
+which holds for every $n$, not only in a limit, and which can be solved for $n$, for $\epsilon$ or for $\delta$.
+
+The chapter builds these bounds in order of how much they assume. Markov's inequality uses only a mean. Chebyshev's adds a variance. The Chernoff method uses the whole moment generating function and turns polynomial bounds into exponential ones. Hoeffding's inequality needs only that each variable lives in a known interval, and Bernstein's inequality does better when the variance is small. The same exponential tails explain why the largest of $n$ Gaussians grows like $\sqrt{2\log n}$, and why a union bound over $n$ events costs only a logarithm. The last three sections turn to exact and distribution-free statements, the Clopper--Pearson interval with its rule of three, guarantees from order statistics, and the sample size needed for a stated precision. Natural logarithms are used throughout. Every number in the worked examples and every plotted point is recomputed by \texttt{checks/ch12\_examples.py}.
+
+The chapter starts where Primer~S of \emph{Data Mining as Observation} stops. Section~S.2 there gives expectation and variance, section~S.3 the binomial and the normal, section~S.4 the standard error, and section~S.8 the Bonferroni correction and the union bound behind it. The material on Markov, Chebyshev and Chernoff also appears in the chapter on high-dimensional space and the probability appendix of \citet{blum2020}, and the book-length treatments are \citet{boucheron2013} and \citet{vershynin2018}.
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Markov and Chebyshev}
+\section{Markov and Chebyshev bound a tail with one or two moments, and pay for it}\label{sec:ch12:markov}
+
+A nonnegative random variable with a small mean cannot often be large. If more than a fraction $\mu/a$ of its mass sat at or above $a$, that mass alone would push the mean above $\mu$. This is Markov's inequality, and it is the root of every bound in the chapter.
+
+\begin{theorem}[Markov]\label{thm:ch12:markov}
+If $X\ge0$ and $a>0$, then
+\begin{equation}
+\Pr[X\ge a]\ \le\ \frac{\E[X]}{a}.
+\label{eq:ch12:markov}
+\end{equation}
+\end{theorem}
+\begin{proof}
+The indicator $\mathbf 1[X\ge a]$ satisfies $a\,\mathbf 1[X\ge a]\le X$ pointwise, because the left side is $0$ when $X<a$ and $a\le X$ otherwise. Take expectations of both sides.
+\end{proof}
+
+The proof shows when the bound is attained. Equality needs $a\,\mathbf 1[X\ge a]=X$, so $X$ must take only the values $0$ and $a$. For that two-point law, with $\Pr[X=a]=\mu/a$, the bound is exact. Markov's inequality therefore cannot be improved without more information than the mean.
+
+Chebyshev's inequality is Markov applied to the squared deviation $(X-\mu)^2$, whose mean is the variance.
+\begin{theorem}[Chebyshev]\label{thm:ch12:chebyshev}
+If $X$ has mean $\mu$ and variance $\sigma^2$, then for $t>0$
+\begin{equation}
+\Pr\big[\abs{X-\mu}\ge t\big]\ \le\ \frac{\sigma^2}{t^2},
+\qquad\text{equivalently}\qquad
+\Pr\big[\abs{X-\mu}\ge k\sigma\big]\le\frac1{k^2}.
+\label{eq:ch12:chebyshev}
+\end{equation}
+\end{theorem}
+Applied to the mean $\bar X_n$ of $n$ independent copies, whose variance is $\sigma^2/n$ (Primer~S, section~S.4), it gives the weak law of large numbers in a form with a rate,
+\begin{equation}
+\Pr\big[\abs{\bar X_n-\mu}\ge\epsilon\big]\ \le\ \frac{\sigma^2}{n\epsilon^2}.
+\label{eq:ch12:wlln}
+\end{equation}
+Chebyshev is also attained. The law that puts mass $1/(2k^2)$ at each of $\pm k$ and the rest at $0$ has variance $1$ and $\Pr[\abs X\ge k]=1/k^2$. A bound that uses only two moments must be this weak in the worst case.
+
+\begin{example}[One hundred fair coins]\label{ex:ch12:coins}
+Let $S$ count heads in $n=100$ fair flips, so $\E S=50$ and $\Var S=25$. Markov's inequality gives $\Pr[S\ge60]\le 50/60=0.833$. Chebyshev with $t=10$ gives $\Pr[\abs{S-50}\ge10]\le25/100=0.25$, and this also bounds the one-sided event $S\ge60$. The exact binomial values are $\Pr[S\ge60]=0.0284$ and $\Pr[\abs{S-50}\ge10]=0.0569$. Markov is off by a factor of $29$ and Chebyshev by a factor of $4.4$ on the two-sided event.
+\end{example}
+
+\Cref{fig:ch12:ladder} extends the example to every threshold from $52$ to $80$, on a logarithmic scale. Markov falls like $1/k$ and Chebyshev like $1/(k-50)^2$, while the true tail falls faster than any power. At $k=70$ the true probability is $3.93\times10^{-5}$, Chebyshev says $0.0625$ and Markov says $0.714$. The Chernoff curve in the same figure is the subject of the next section. It falls at the same exponential rate as the truth and stays within a factor of about $10$ of it across the whole range shown.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.75\linewidth, height=0.5\linewidth,
+  ymode=log, xmin=51, xmax=81, ymin=1e-10, ymax=3,
+  xlabel={threshold $k$}, ylabel={$\Pr[S\ge k]$ and its bounds},
+  ytick={1,1e-2,1e-4,1e-6,1e-8,1e-10}]
+\addplot[pgray, thick] coordinates {(52,0.961538) (54,0.925926) (56,0.892857) (58,0.862069) (60,0.833333) (62,0.806452) (64,0.78125) (66,0.757576) (68,0.735294) (70,0.714286) (72,0.694444) (74,0.675676) (76,0.657895) (78,0.641026) (80,0.625)}
+  node[pos=0.8, above, lbl] {Markov};
+\addplot[porange, thick] coordinates {(52,1) (54,1) (56,0.694444) (58,0.390625) (60,0.25) (62,0.173611) (64,0.127551) (66,0.0976562) (68,0.0771605) (70,0.0625) (72,0.0516529) (74,0.0434028) (76,0.0369822) (78,0.0318878) (80,0.0277778)}
+  node[pos=0.8, below, lbl] {Chebyshev};
+\addplot[pgreen, thick] coordinates {(52,0.923097) (54,0.725901) (56,0.485907) (58,0.276507) (60,0.133514) (62,0.0545681) (64,0.0188188) (66,0.00545529) (68,0.00132311) (70,0.000266993) (72,4.45283e-05) (74,6.089e-06) (76,6.76235e-07) (78,6.03007e-08) (80,4.25796e-09)}
+  node[pos=0.62, above right, lbl] {Chernoff};
+\addplot[pblue, very thick] coordinates {(52,0.382177) (54,0.242059) (56,0.135627) (58,0.0666053) (60,0.028444) (62,0.0104894) (64,0.00331856) (66,0.000894965) (68,0.000204389) (70,3.92507e-05) (72,6.28958e-06) (74,8.33681e-07) (76,9.05001e-08) (78,7.95266e-09) (80,5.57954e-10)}
+  node[pos=0.7, below left, lbl] {exact binomial};
+\end{axis}
+\end{tikzpicture}
+\caption{The more a bound knows about the variable the closer it tracks the true tail. Markov uses the mean and Chebyshev the variance, and both fall polynomially. The Chernoff bound uses the moment generating function and falls at the same exponential rate as the exact tail of one hundred fair coins.}
+\label{fig:ch12:ladder}
+\end{figure}
+
+The lesson of the figure is the reason for the rest of the chapter. A bound that is valid but loose by a factor of a thousand is useless for setting a bar, and for a variable with exponentially small tails, like this binomial, the looseness of Markov and Chebyshev grows without limit as the threshold moves out. For a heavy-tailed variable it need not. The three-point law above attains Chebyshev's bound exactly at its own threshold.
+
+\buildson{Primer~S, sections~S.2 to S.4, expectation, variance and the standard error of a mean.}
+\usedin{\Cref{sec:ch12:chernoff}, where Markov is applied to $e^{\lambda X}$. \Cref{ch11}, where Chebyshev shows that the length of a random vector concentrates.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{The Chernoff method}
+\section{The moment generating function turns Markov's inequality into an exponential bound}\label{sec:ch12:chernoff}
+
+Markov's inequality applies to any nonnegative function of $X$ that increases with $X$. The choice that gives exponential tails is $e^{\lambda X}$ for $\lambda>0$. Its mean is the moment generating function $M_X(\lambda)=\E[e^{\lambda X}]$, and for every $\lambda>0$
+\begin{equation}
+\Pr[X\ge a]=\Pr\big[e^{\lambda X}\ge e^{\lambda a}\big]\ \le\ e^{-\lambda a}M_X(\lambda)
+\quad\Longrightarrow\quad
+\Pr[X\ge a]\ \le\ \inf_{\lambda>0}\,e^{-\lambda a}M_X(\lambda).
+\label{eq:ch12:chernoff}
+\end{equation}
+This is the Chernoff method, after \citet{chernoff1952}, who used it to compare the efficiency of tests. Two facts make it powerful. The parameter $\lambda$ is free, so it can be tuned to the threshold. And for a sum of independent variables the moment generating function factorizes, $M_{X_1+\dots+X_n}(\lambda)=\prod_i M_{X_i}(\lambda)$, so a bound for one variable becomes a bound for a sum with the exponent multiplied by $n$.
+
+For a Gaussian $X\sim\Normal(0,\sigma^2)$ the moment generating function is $e^{\lambda^2\sigma^2/2}$. The exponent $-\lambda t+\lambda^2\sigma^2/2$ is minimized at $\lambda=t/\sigma^2$, and
+\begin{equation}
+\Pr[X\ge t]\ \le\ e^{-t^2/(2\sigma^2)}.
+\label{eq:ch12:gauss-chernoff}
+\end{equation}
+
+For a sum of Bernoulli variables the optimization gives a bound in terms of the Kullback--Leibler divergence between two coins, the quantity \cref{ch03} studies.
+\begin{theorem}[Chernoff bound for a binomial]\label{thm:ch12:chernoff-kl}
+Let $S\sim\mathrm{Bin}(n,p)$ and $p<q<1$. Then
+\begin{equation}
+\Pr[S\ge nq]\ \le\ \exp\!\big(-n\,\KL{q}{p}\big),
+\qquad
+\KL{q}{p}=q\log\frac qp+(1-q)\log\frac{1-q}{1-p},
+\label{eq:ch12:chernoff-kl}
+\end{equation}
+with the divergence in nats. The lower tail $\Pr[S\le nq]$ for $q<p$ has the same bound.
+\end{theorem}
+\begin{proof}
+Each flip has $M(\lambda)=1-p+pe^\lambda$, so \cref{eq:ch12:chernoff} gives $\Pr[S\ge nq]\le\big(e^{-\lambda q}(1-p+pe^\lambda)\big)^n$. Setting the derivative of the logarithm to zero gives $e^{\lambda^*}=q(1-p)/\big(p(1-q)\big)$. Substituting and simplifying, the base becomes $\exp(-\KL qp)$.
+\end{proof}
+
+A looser but more convenient form is stated relative to the mean $\mu=np$. With $S\ge(1+\delta)\mu$ for $\delta>0$, the same calculation with $\lambda=\log(1+\delta)$ and the inequality $1+x\le e^x$ gives
+\begin{equation}
+\begin{gathered}
+\Pr[S\ge(1+\delta)\mu]\ \le\ \left(\frac{e^\delta}{(1+\delta)^{1+\delta}}\right)^{\!\mu}\le e^{-\delta^2\mu/3}\quad(0<\delta\le1),\\
+\Pr[S\le(1-\delta)\mu]\ \le\ e^{-\delta^2\mu/2}\quad(0<\delta<1).
+\end{gathered}
+\label{eq:ch12:chernoff-mult}
+\end{equation}
+These forms also hold when the independent coins have different probabilities $p_i$, with $\mu=\sum_ip_i$. The simplified exponents come from the inequalities $\delta-(1+\delta)\log(1+\delta)\le-\delta^2/3$ on $(0,1]$ and $-\delta-(1-\delta)\log(1-\delta)\le-\delta^2/2$ on $(0,1)$, which the check script confirms on a fine grid and which follow from Taylor series.
+
+\begin{example}[Tuning $\lambda$ for the coins]\label{ex:ch12:tune}
+Return to $\Pr[S\ge60]$ with $n=100$ and $p=\tfrac12$, so $q=0.6$. The function to minimize is $f(\lambda)=e^{-60\lambda}\big((1+e^\lambda)/2\big)^{100}$. At $\lambda=0$ it equals $1$, which is the trivial bound. The minimizer is $\lambda^*=\log\big(0.6\cdot0.5/(0.5\cdot0.4)\big)=\log1.5=0.405$, and $f(\lambda^*)=e^{-100\cdot0.02014}=0.1335$, since $\KL{0.6}{0.5}=0.6\log1.2+0.4\log0.8=0.02014$ nats. At $\lambda=1$ the function has risen to $7.47$, a bound worse than useless. The Chernoff value $0.1335$ is $4.7$ times the exact $0.0284$, compared with $29$ for Markov. The multiplicative form with $\delta=0.2$ and $\mu=50$ gives $0.391$, and its simplification $e^{-0.04\cdot50/3}$ gives $0.513$. Each simplification trades accuracy for a formula that is easier to invert.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, ymode=log, xmin=0, xmax=1, ymin=0.02, ymax=10,
+  xlabel={$\lambda$}, ylabel={$e^{-60\lambda}M_S(\lambda)$},
+  ytick={0.1,1,10}]
+\addplot[pblue, very thick, smooth] coordinates {(0,1) (0.05,0.625782) (0.1,0.41684) (0.15,0.295522) (0.2,0.222945) (0.25,0.178927) (0.3,0.152713) (0.35,0.138553) (0.4,0.133562) (0.45,0.13672) (0.5,0.148522) (0.55,0.171106) (0.6,0.208895) (0.65,0.27004) (0.7,0.369312) (0.75,0.533862) (0.8,0.814931) (0.85,1.31231) (0.9,2.22703) (0.95,3.97857) (1,7.47415)};
+\addplot[pgray, dashed, thin] coordinates {(0,1) (1,1)};
+\node[lbl, pgray, anchor=south west] at (axis cs:0.4,1) {trivial bound};
+\addplot[pred, dashed, thick] coordinates {(0,0.028444) (1,0.028444)};
+\node[lbl, pred, anchor=south east] at (axis cs:0.98,0.028444) {exact $\Pr[S\ge60]=0.0284$};
+\fill[pgreen] (axis cs:0.405465,0.133514) circle (2.5pt);
+\node[lbl, pgreen, anchor=north] at (axis cs:0.405465,0.11) {$\lambda^*=\log1.5$, bound $0.1335$};
+\end{axis}
+\end{tikzpicture}
+\caption{Every $\lambda>0$ gives a valid bound and the best one sits at the bottom of the curve. For one hundred fair coins and the threshold sixty the minimum is at $\lambda^*=\log1.5$. The remaining factor of 4.7 above the exact tail is the price of using Markov's inequality at all.}
+\label{fig:ch12:lambda}
+\end{figure}
+
+\Cref{fig:ch12:lambda} shows the curve being minimized. Two things are visible. The bound is valid for every $\lambda$, so a poorly tuned $\lambda$ costs accuracy but never correctness. And even the optimum stays above the exact tail, because the exponential rate is right while a polynomial prefactor of order $1/\sqrt n$ is lost. The Chernoff exponent $\KL qp$ is the exact large-deviation rate, which is why the curves in \cref{fig:ch12:ladder} run parallel.
+
+\buildson{\Cref{sec:ch12:markov}. The moment generating function of a Gaussian from \cref{ch02}. The KL divergence of \cref{ch03}.}
+\usedin{\Cref{ch11}, where the Chernoff method for a chi-square variable proves the Gaussian annulus and the Johnson--Lindenstrauss lemma. \Cref{sec:ch12:hoeffding,sec:ch12:subgauss}.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Hoeffding and Bernstein}
+\section{Hoeffding needs only a range, and Bernstein uses a small variance}\label{sec:ch12:hoeffding}
+
+The Chernoff method needs a bound on the moment generating function. For a variable that is known only to lie in an interval $[a,b]$, Hoeffding's lemma supplies one. If $\E X=\mu$ and $a\le X\le b$, then
+\begin{equation}
+\E\big[e^{\lambda(X-\mu)}\big]\ \le\ e^{\lambda^2(b-a)^2/8}\qquad\text{for all }\lambda\in\R.
+\label{eq:ch12:hoeffding-lemma}
+\end{equation}
+The right side is the moment generating function of a Gaussian with variance $(b-a)^2/4$, the largest variance any variable on $[a,b]$ can have. Putting \cref{eq:ch12:hoeffding-lemma} into the Chernoff method and optimizing $\lambda$ gives the inequality of \citet{hoeffding1963}.
+
+\begin{theorem}[Hoeffding]\label{thm:ch12:hoeffding}
+Let $X_1,\dots,X_n$ be independent with $a_i\le X_i\le b_i$, and let $S=\sum_iX_i$. For $t>0$
+\begin{equation}
+\Pr\big[S-\E S\ge t\big]\ \le\ \exp\!\left(-\frac{2t^2}{\sum_i(b_i-a_i)^2}\right).
+\label{eq:ch12:hoeffding}
+\end{equation}
+For identically bounded variables on $[a,b]$ and their mean,
+\begin{equation}
+\Pr\big[\bar X_n-\mu\ge\epsilon\big]\ \le\ e^{-2n\epsilon^2/(b-a)^2},
+\qquad
+\Pr\big[\abs{\bar X_n-\mu}\ge\epsilon\big]\ \le\ 2e^{-2n\epsilon^2/(b-a)^2}.
+\label{eq:ch12:hoeffding-mean}
+\end{equation}
+\end{theorem}
+
+Hoeffding's inequality asks for no variance, no shape and no identical distribution. That makes it the default when a bounded score, such as a recall at $k$ or an indicator of success, is averaged over independent queries. For coins on $[0,1]$ it gives $\Pr[\bar X_{100}-0.5\ge0.1]\le e^{-2}=0.1353$, almost the same as the Chernoff value $0.1335$ of \cref{ex:ch12:tune}.
+
+The price of ignoring the variance appears when the variance is far below its maximum. A coin with $p=0.01$ has variance $0.0099$, while Hoeffding behaves as if it were $0.25$. Bernstein's inequality keeps the variance. Let the $X_i$ be independent with mean $\mu$, variance $\sigma^2$ and $\abs{X_i-\mu}\le c$. Then
+\begin{equation}
+\Pr\big[\bar X_n-\mu\ge\epsilon\big]\ \le\ \exp\!\left(-\frac{n\epsilon^2}{2\sigma^2+\tfrac23c\epsilon}\right).
+\label{eq:ch12:bernstein}
+\end{equation}
+For small $\epsilon$ the exponent is close to $n\epsilon^2/(2\sigma^2)$, the Gaussian rate with the true variance. For large $\epsilon$ the term $c\epsilon$ takes over and the tail is exponential rather than Gaussian. A proof is in \citet{boucheron2013}.
+
+\begin{example}[A rare event]\label{ex:ch12:rare}
+Take $n=1000$ trials with $p=0.01$, so $\mu=np=10$, and ask for $\Pr[S\ge20]$, a doubling of the expected count. The exact binomial value is $0.00329$. Hoeffding with $\epsilon=0.01$ gives $e^{-2\cdot1000\cdot0.0001}=e^{-0.2}=0.819$, nearly useless. Bernstein with $\sigma^2=0.0099$ and $c=1$ gives $\exp\!\big(-0.1/(0.0198+0.00667)\big)=0.0229$. The multiplicative Chernoff bound with $\delta=1$ gives $(e^1/2^2)^{10}=(e/4)^{10}=0.0210$, and the KL form gives $e^{-1000\,\KL{0.02}{0.01}}=0.0200$. The three variance-aware bounds agree within fifteen percent of one another and sit six to seven times above the truth. Hoeffding sits $250$ times above it.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmode=log, ymode=log, xmin=0.0015, xmax=0.65, ymin=5e-7, ymax=10,
+  xlabel={success probability $p$}, ylabel={$\Pr[\bar X_{1000}-p\ge0.01]$},
+  xtick={0.002,0.01,0.1,0.5}, xticklabels={$0.002$,$0.01$,$0.1$,$0.5$},
+  ytick={1,1e-2,1e-4,1e-6}]
+\addplot[porange, thick] coordinates {(0.002,0.818731) (0.005,0.818731) (0.01,0.818731) (0.02,0.818731) (0.05,0.818731) (0.1,0.818731) (0.2,0.818731) (0.3,0.818731) (0.5,0.818731)}
+  node[pos=0.2, above, lbl] {Hoeffding};
+\addplot[pgreen, thick, mark=*, mark size=1.3pt] coordinates {(0.002,8.42235e-05) (0.005,0.0024344) (0.01,0.0228607) (0.02,0.113015) (0.05,0.37396) (0.1,0.585251) (0.2,0.736296) (0.3,0.791065) (0.5,0.820888)}
+;
+\node[lbl, pgreen, anchor=south west] at (axis cs:0.0016,0.01) {Bernstein};
+\addplot[pblue, very thick, mark=*, mark size=1.3pt] coordinates {(0.002,1.30323e-06) (0.005,0.000215803) (0.01,0.00328836) (0.02,0.0206965) (0.05,0.0867322) (0.1,0.158258) (0.2,0.225279) (0.3,0.255218) (0.5,0.273986)}
+  node[pos=0.55, below right, lbl] {exact};
+\end{axis}
+\end{tikzpicture}
+\caption{Hoeffding's bound does not depend on the success probability and so cannot see that a rare event has little variance. Bernstein's bound follows the exact tail down by orders of magnitude for small $p$ and becomes slightly worse than Hoeffding only near $p=1/2$. The sample size is one thousand and the deviation is one percentage point.}
+\label{fig:ch12:bernstein}
+\end{figure}
+
+\Cref{fig:ch12:bernstein} repeats the comparison across $p$ with $n=1000$ and $\epsilon=0.01$. Hoeffding is a flat line at $0.819$. Bernstein drops below it for every $p$ in the grid below $\tfrac12$ and is $336$ times smaller at $p=0.005$. At $p=\tfrac12$ Bernstein's exponent is $0.1/(0.5+0.0067)=0.1974$ against Hoeffding's $0.2$, so the general rule has a small cost when the variance is already as large as it can be. Neither bound is a confidence interval by itself. Bernstein needs $\sigma^2$, and if $\sigma^2$ is estimated from the same data, the estimate has its own error that the inequality does not cover.
+
+\inproject{\texttt{nats-bursting/\allowbreak paper/\allowbreak infocom\_appendix.tex}, appendix ``The Branch-Decision Rate'', estimates a flip probability $p$ from indicators that are exactly independent Bernoulli variables. It uses a Bernstein form so that the variance $p(1-p)$ appears in the bound, and states that a generic Hoeffding-type bound for Markov chains would replace that variance by a range proxy and overstate the sample requirement. The same argument appears in \texttt{infocom\_aoi\_model.tex}, Lemma ``Branch-decision rate''. \texttt{geometric-observation/\allowbreak PLAN-II.md}, item T1, names a matrix Bernstein inequality as the planned route to a probe sample-complexity theorem. That item is a plan, not a result.}
+
+\buildson{\Cref{sec:ch12:chernoff}. The variance of a Bernoulli variable, Primer~S, section~S.3.}
+\usedin{\Cref{sec:ch12:samplesize}, where both bounds are solved for $n$. \Cref{ch09}, where bounded per-query scores are averaged.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Sub-Gaussian variables}
+\section{A sub-Gaussian variable has tails no heavier than a Gaussian's}\label{sec:ch12:subgauss}
+
+Hoeffding's lemma and the Gaussian bound \cref{eq:ch12:gauss-chernoff} share one property. The moment generating function is dominated by that of a Gaussian. Naming that property gives a single class that covers bounded variables, Gaussians and their sums.
+
+\begin{definition}[Sub-Gaussian]\label{def:ch12:subgauss}
+A random variable $X$ with $\E X=0$ is sub-Gaussian with variance proxy $\sigma^2$ if
+\begin{equation}
+\E\big[e^{\lambda X}\big]\ \le\ e^{\lambda^2\sigma^2/2}\qquad\text{for all }\lambda\in\R.
+\label{eq:ch12:subgauss}
+\end{equation}
+\end{definition}
+The Chernoff method then gives $\Pr[X\ge t]\le e^{-t^2/(2\sigma^2)}$ and $\Pr[\abs X\ge t]\le2e^{-t^2/(2\sigma^2)}$, exactly as for a Gaussian. If $X_1,\dots,X_n$ are independent and sub-Gaussian with proxies $\sigma_i^2$, the product of the moment generating functions shows that $\sum_iX_i$ is sub-Gaussian with proxy $\sum_i\sigma_i^2$. Proxies add like variances. Hoeffding's lemma says that a centred variable on $[a,b]$ is sub-Gaussian with proxy $(b-a)^2/4$, and Hoeffding's inequality is then this addition rule followed by the Gaussian tail.
+
+The proxy is not the variance. It is at least the variance, which follows from expanding both sides of \cref{eq:ch12:subgauss} to second order in $\lambda$, and it can be much larger. A coin with $p=0.01$ has variance $0.0099$ and proxy $1/4$ under Hoeffding's lemma, which is the looseness seen in \cref{ex:ch12:rare}.
+
+\begin{example}[A random sign]\label{ex:ch12:rademacher}
+Let $X=\pm1$ with probability $\tfrac12$ each. Then $\E e^{\lambda X}=\cosh\lambda=\sum_k\lambda^{2k}/(2k)!$, while $e^{\lambda^2/2}=\sum_k\lambda^{2k}/(2^kk!)$. Since $(2k)!\ge2^kk!$ term by term, $\cosh\lambda\le e^{\lambda^2/2}$, and $X$ is sub-Gaussian with proxy $1$, equal to its variance. At $\lambda=1$ the two sides are $1.5431$ and $1.6487$.
+\end{example}
+
+For the Gaussian itself the Chernoff bound is correct in its exponent and loose in its prefactor. Write $\stdpdf(t)=e^{-t^2/2}/\sqrt{2\pi}$ for the standard normal density and $\Qf(t)=\Pr[Z\ge t]$ for its upper tail. The ratio $\Qf(t)/\stdpdf(t)$ is Mills' ratio, and it is pinned between two simple functions.
+\begin{proposition}[Gaussian tail estimates]\label{prop:ch12:mills}
+For $t>0$,
+\begin{equation}
+\left(\frac1t-\frac1{t^3}\right)\stdpdf(t)\ \le\ \Qf(t)\ \le\ \frac{\stdpdf(t)}t.
+\label{eq:ch12:mills}
+\end{equation}
+\end{proposition}
+\begin{proof}[Proof of the upper bound]
+On $x\ge t$ the factor $x/t$ is at least $1$, so $\Qf(t)=\int_t^\infty\stdpdf(x)\,dx\le\int_t^\infty\frac xt\stdpdf(x)\,dx=\frac{\stdpdf(t)}t$, since $\stdpdf'(x)=-x\stdpdf(x)$. The lower bound follows from one more integration by parts. Both are in \citet{vershynin2018}.
+\end{proof}
+
+\begin{example}[Three standard deviations]\label{ex:ch12:three-sigma}
+At $t=3$ the true tail is $\Qf(3)=0.001350$. The upper bound is $\stdpdf(3)/3=0.001477$, about nine percent high, and the lower bound is $\stdpdf(3)(1/3-1/27)=0.001313$. The Chernoff bound $e^{-4.5}=0.01111$ is $8.2$ times the truth. At $t=5$ the truth is $2.87\times10^{-7}$ and the upper bound $2.97\times10^{-7}$. The Mills bounds become relatively exact as $t$ grows, while the Chernoff bound stays off by a factor that grows like $t$.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, ymode=log, xmin=1.5, xmax=6.05, ymin=0.6, ymax=25,
+  xlabel={$t$}, ylabel={bound divided by $\Qf(t)$},
+  ytick={1,2,5,10,20}, yticklabels={$1$,$2$,$5$,$10$,$20$}]
+\addplot[pblue, very thick] coordinates {(1.5,1) (6.05,1)};
+\addplot[pgray, very thick, dashed] coordinates {(1.5,4.86) (1.75,5.399) (2,5.949) (2.25,6.508) (2.5,7.076) (2.75,7.65) (3,8.23) (3.25,8.814) (3.5,9.403) (3.75,9.996) (4,10.59) (4.25,11.19) (4.5,11.79) (4.75,12.4) (5,13) (5.25,13.61) (5.5,14.22) (5.75,14.83) (6,15.44)}
+  node[pos=0.45, above left, lbl] {Chernoff $e^{-t^2/2}$};
+\addplot[porange, thick] coordinates {(1.5,1.292) (1.75,1.231) (2,1.187) (2.25,1.154) (2.5,1.129) (2.75,1.11) (3,1.094) (3.25,1.082) (3.5,1.072) (3.75,1.063) (4,1.056) (4.25,1.05) (4.5,1.045) (4.75,1.041) (5,1.037) (5.25,1.034) (5.5,1.031) (5.75,1.029) (6,1.026)}
+  node[pos=0.3, above, lbl] {Mills upper $\stdpdf(t)/t$};
+\addplot[pgreen, thick] coordinates {(1.5,0.718) (1.75,0.8288) (2,0.89) (2.25,0.926) (2.5,0.9484) (2.75,0.963) (3,0.9728) (3.25,0.9795) (3.5,0.9843) (3.75,0.9878) (4,0.9904) (4.25,0.9923) (4.5,0.9938) (4.75,0.9949) (5,0.9958) (5.25,0.9965) (5.5,0.9971) (5.75,0.9975) (6,0.9979)}
+  node[pos=0.3, below, lbl] {Mills lower $(1/t-1/t^3)\stdpdf(t)$};
+\node[lbl, pblue, anchor=south east] at (axis cs:6.0,1) {exact $\Qf(t)$};
+\end{axis}
+\end{tikzpicture}
+\caption{Each bound is divided by the exact Gaussian tail, so the truth is the line at one. The two Mills bounds squeeze it from both sides and are within three percent of it at six standard deviations. The Chernoff bound has the right exponent but sits above the tail by a factor that grows with $t$, about eight at $t=3$ and fifteen at $t=6$.}
+\label{fig:ch12:mills}
+\end{figure}
+
+\buildson{\Cref{sec:ch12:chernoff,sec:ch12:hoeffding}. The Gaussian density of \cref{ch02}.}
+\usedin{\Cref{sec:ch12:max,sec:ch12:union}. \Cref{ch11}, where sub-Gaussian coordinates make norms and inner products concentrate.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{The maximum of many Gaussians}
+\section{The largest of \texorpdfstring{$n$}{n} Gaussians grows like the square root of twice the log of \texorpdfstring{$n$}{n}}\label{sec:ch12:max}
+
+A study that tries $n$ variants and reports the best one reports a maximum. Under the null each variant's standardized score is roughly $\Normal(0,1)$, and the question is how large the best of $n$ such scores is when nothing is there. The moment generating function answers it with a three-line proof that does not even need independence.
+
+\begin{theorem}[Maximum of sub-Gaussians]\label{thm:ch12:max}
+Let $X_1,\dots,X_n$ be centred and sub-Gaussian with proxy $\sigma^2$, independent or not. Then, for every $u\ge0$,
+\begin{equation}
+\E\Big[\max_{i\le n}X_i\Big]\ \le\ \sigma\sqrt{2\log n},
+\qquad
+\Pr\Big[\max_{i\le n}X_i\ge\sigma\sqrt{2\log n}+u\Big]\ \le\ e^{-u^2/(2\sigma^2)}.
+\label{eq:ch12:max}
+\end{equation}
+\end{theorem}
+\begin{proof}
+Let $M=\max_iX_i$ and $\lambda>0$. By Jensen's inequality and then by bounding a maximum by a sum,
+\[
+e^{\lambda\E M}\le\E e^{\lambda M}=\E\max_ie^{\lambda X_i}\le\sum_i\E e^{\lambda X_i}\le n\,e^{\lambda^2\sigma^2/2}.
+\]
+Taking logarithms, $\E M\le(\log n)/\lambda+\lambda\sigma^2/2$. The right side is smallest at $\lambda=\sqrt{2\log n}/\sigma$, where it equals $\sigma\sqrt{2\log n}$. The tail statement follows from the union bound of \cref{sec:ch12:union} and the Gaussian tail, since $n\,e^{-(\sigma\sqrt{2\log n}+u)^2/(2\sigma^2)}\le e^{-u^2/(2\sigma^2)}$.
+\end{proof}
+
+The bound is an upper bound only. For independent standard Gaussians the expected maximum is below $\sqrt{2\log n}$ at every $n$ in \cref{fig:ch12:max}, and the ratio climbs slowly, from $0.83$ at $n=100$ to $0.90$ at $n=10^4$. A lower bound of the same order for independent Gaussians is treated in \citet{vershynin2018}. The lower bound needs independence or something like it. If all $X_i$ are equal, the maximum is just one Gaussian with mean $0$, whatever $n$ is. For Gaussians with equal variances, Slepian's inequality in \citet{vershynin2018} makes this precise. Raising the correlations makes the maximum stochastically smaller, so positively correlated null statistics have a smaller expected winner than independent ones, and negatively correlated ones a larger one.
+
+\begin{example}[The best of forty null tests]\label{ex:ch12:forty}
+Forty independent tests, each with a standardized statistic $Z_i\sim\Normal(0,1)$ under the null. The bound gives $\E\max Z_i\le\sqrt{2\log40}=2.716$. The exact expected maximum, computed by numerical integration of $x\,n\stdpdf(x)\Phi(x)^{n-1}$, is $2.161$, and the median of the maximum is $\Phi^{-1}(0.5^{1/40})=2.116$. More than half the time, the best of forty null tests clears the one-sided $2.5$ percent bar of $1.96$. The exact chance that at least one does is $1-0.975^{40}=0.637$. Primer~S, section~S.8, made the same point with p-values. Here it is a statement about the size of the winning statistic.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmode=log, xmin=1, xmax=15000, ymin=0, ymax=4.6,
+  xlabel={number of independent $\Normal(0,1)$ draws $n$}, ylabel={size of the maximum}]
+\addplot[porange, thick] coordinates {(1,0) (2,1.17741) (5,1.79412) (10,2.14597) (20,2.44775) (50,2.79715) (100,3.03485) (200,3.25525) (500,3.52551) (1000,3.71692) (2000,3.89895) (5000,4.12727) (10000,4.29193)}
+  node[pos=0.88, above left, lbl] {bound $\sqrt{2\log n}$};
+\addplot[pblue, very thick] coordinates {(1,0) (2,0.56419) (5,1.16296) (10,1.53875) (20,1.86748) (50,2.24907) (100,2.50759) (200,2.74604) (500,3.0367) (1000,3.24144) (2000,3.43534) (5000,3.67756) (10000,3.85162)}
+  node[pos=0.88, below right, lbl] {exact $\E\max$};
+\addplot[only marks, pgreen, mark=o, mark size=2.2pt] coordinates {(10,1.54677) (100,2.48851) (1000,3.24188) (10000,3.85832)};
+\node[lbl, pgreen, anchor=west] at (axis cs:120,2.3) {simulated, 1000 runs each};
+\addplot[pred, dashed, thick] coordinates {(1,1.96) (15000,1.96)};
+\node[lbl, pred, anchor=north east] at (axis cs:14000,1.96) {$1.96$};
+\end{axis}
+\end{tikzpicture}
+\caption{The largest of $n$ null statistics grows without bound but only like the square root of a logarithm. From twenty-five draws on the expected winner clears the familiar bar of 1.96 with nothing there. The bound $\sqrt{2\log n}$ holds at every $n$ and the simulated means agree with the exact integral.}
+\label{fig:ch12:max}
+\end{figure}
+
+The growth is slow but it does not stop. Going from $100$ to $1000$ variants adds $0.73$ to the expected winner, and going from $1000$ to $10^4$ adds another $0.61$. That is why the programme registers the arm ordering and the number of arms before a run. A reported winner means something only against the null distribution of the maximum over the arms that were actually tried.
+
+\inproject{\emph{Data Mining as Observation}, Primer~S, section~S.8 (``Many tests at once, and why the best of forty is not a result'') and Chapter~0, section~0.9 (paragraph ``Multiple comparisons'') state the multiple-comparisons rule that this theorem quantifies. \Cref{ch09} applies it to registered studies.}
+
+\buildson{\Cref{sec:ch12:subgauss}. Jensen's inequality for the convex function $e^{\lambda x}$.}
+\usedin{\Cref{ch09}, multiplicity and the bar a registered winner must clear. \Cref{ch11}, the largest inner product among many random directions.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{The union bound}
+\section{The union bound pays a logarithm for many events}\label{sec:ch12:union}
+
+The probability that at least one of $m$ events occurs is at most the sum of their probabilities,
+\begin{equation}
+\Pr\Big[\bigcup_{j=1}^mA_j\Big]\ \le\ \sum_{j=1}^m\Pr[A_j].
+\label{eq:ch12:union}
+\end{equation}
+This follows from equation~S.1 of Primer~S by induction, and it needs no independence. It is the Bonferroni correction of section~S.8 read the other way round. To make $m$ statements hold simultaneously with failure probability $\delta$, it suffices to make each one fail with probability at most $\delta/m$.
+
+What that costs depends on the tail. With a Chebyshev tail, failure probability $\delta/m$ requires $m$ times as many samples. With an exponential tail, the requirement enters through a logarithm. Hoeffding's two-sided bound \cref{eq:ch12:hoeffding-mean} for $m$ means on $[0,1]$, each to within $\epsilon$, all at once with probability $1-\delta$, needs
+\begin{equation}
+n\ \ge\ \frac{\log(2m/\delta)}{2\epsilon^2},
+\qquad\text{against}\qquad
+n\ \ge\ \frac{m}{4\delta\epsilon^2}\ \ \text{from Chebyshev with }\sigma^2\le\tfrac14.
+\label{eq:ch12:union-n}
+\end{equation}
+For Gaussian statistics the threshold that holds $m$ one-sided tests at total level $\delta$ is $\Qf^{-1}(\delta/m)$, which by \cref{eq:ch12:gauss-chernoff} is at most $\sqrt{2\log(m/\delta)}$.
+
+\begin{example}[One metric or a thousand]\label{ex:ch12:thousand}
+Estimate a success rate to within $\epsilon=0.02$ with confidence $95$ percent. One rate needs $n\ge\log40/(2\cdot0.0004)$, so $n=4612$ by Hoeffding. A thousand rates estimated from the same samples, all within $0.02$ at once, need $\log(40000)/0.0008$, so $n=13246$. A thousandfold increase in the number of claims costs a factor of $2.87$ in data. Chebyshev with the union bound needs $12500$ for one rate and $12.5$ million for a thousand. These are sample sizes that suffice for each bound, not the smallest that work. The normal approximation, which carries no guarantee at finite $n$, asks for $2401$ for one rate, as \cref{sec:ch12:samplesize} shows. The Gaussian thresholds tell the same story. At total level $0.05$ the one-sided bar is $1.645$ for one test, $2.576$ for ten, $3.291$ for a hundred, $3.891$ for a thousand and $4.417$ for ten thousand. A million tests need $5.327$, below the bound $\sqrt{2\log(2\times10^7)}=5.798$.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmode=log, ymode=log, xmin=0.7, xmax=14000, ymin=300, ymax=5e8,
+  xlabel={number of simultaneous estimates $m$}, ylabel={samples $n$ for $\pm0.02$ at $95\%$}]
+\addplot[pred, thick, mark=*, mark size=1.3pt] coordinates {(1,12500) (10,125000) (100,1.25e+06) (1000,1.25e+07) (10000,1.25e+08)}
+  node[pos=0.7, above left, lbl] {Chebyshev and union, linear in $m$};
+\addplot[pgreen, thick, mark=*, mark size=1.3pt] coordinates {(1,4612) (10,7490) (100,10368) (1000,13246) (10000,16125)}
+;
+\node[lbl, pgreen, anchor=north west] at (axis cs:1.5,2800) {Hoeffding and union, logarithmic in $m$};
+\end{axis}
+\end{tikzpicture}
+\caption{The union bound charges each event its share of the failure budget, and an exponential tail turns that charge into a logarithm. Ten thousand simultaneous estimates cost three and a half times the data of one under Hoeffding and ten thousand times under Chebyshev.}
+\label{fig:ch12:union}
+\end{figure}
+
+The union bound is loose when the events overlap and tight when they are rare and nearly disjoint. For twenty independent events of probability $0.001$ it gives $0.02$, and the exact probability of at least one is $1-0.999^{20}=0.01981$. For forty events of probability $0.025$ it gives $1$, which says nothing, while the exact value in \cref{ex:ch12:forty} is $0.637$. The bound is a tool for small per-event probabilities, which is exactly what exponential tails provide.
+
+\inproject{\emph{Data Mining as Observation}, Chapter~0, section~0.9, equation~0.17 sets the no-structure ceiling for hub counts at $c^\star=\max\{c:\,n\Pr[X\ge c]\ge1\}$. The quantity $n\Pr[X\ge c]$ is the expected number of points out of $n$ that reach count $c$ by chance, and it is also the union bound on the probability that any point does. A ceiling of three is therefore the count above which, summed over the whole corpus, chance is expected to produce fewer than one point.}
+
+\buildson{Primer~S, sections~S.1 and S.8. \Cref{sec:ch12:hoeffding,sec:ch12:subgauss}.}
+\usedin{\Cref{ch11}, where a union over all $n(n-1)/2$ pairs of points gives the Johnson--Lindenstrauss dimension $m\propto\log n/\epsilon^2$. \Cref{ch09}, family-wise error.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Exact binomial intervals}
+\section{An exact binomial interval inverts the binomial tail, and zero successes give the rule of three}\label{sec:ch12:cp}
+
+The bounds so far are inequalities with slack. For a single proportion there is no need for slack, because the binomial tail can be computed exactly. Suppose $x$ successes are observed in $n$ independent trials with unknown rate $p$. The Wald interval $\hat p\pm1.96\sqrt{\hat p(1-\hat p)/n}$ of Primer~S, section~S.6 uses the normal approximation, and it fails in two ways. It can extend below $0$ or above $1$. And when $x=0$ its width is zero, which claims certainty from a finite sample. The interval of \citet{clopperpearson1934} replaces the approximation by the exact tail.
+
+\begin{definition}[Clopper--Pearson interval]\label{def:ch12:cp}
+At confidence $1-\alpha$, the lower limit $L$ is the value of $p$ at which seeing $x$ or more successes has probability $\alpha/2$, and the upper limit $U$ is the value at which seeing $x$ or fewer has probability $\alpha/2$,
+\begin{equation}
+\Pr_{p=L}[X\ge x]=\frac\alpha2,\qquad \Pr_{p=U}[X\le x]=\frac\alpha2,
+\qquad L=0\text{ if }x=0,\quad U=1\text{ if }x=n.
+\label{eq:ch12:cp}
+\end{equation}
+Equivalently $L$ is the $\alpha/2$ quantile of a $\mathrm{Beta}(x,n-x+1)$ distribution and $U$ is the $1-\alpha/2$ quantile of a $\mathrm{Beta}(x+1,n-x)$ distribution.
+\end{definition}
+The interval contains exactly those $p$ that a two-sided test at level $\alpha$ would not reject. Its coverage is at least $1-\alpha$ for every $p$ and every $n$. That guarantee is about the procedure across repeated samples, not about the one interval in hand, the same reading as in Primer~S, section~S.6.
+
+When $x=0$ the upper limit solves $(1-U)^n=\alpha/2$, or $\alpha$ for a one-sided bound. Taking logarithms and using $\log(1-U)\approx-U$ for small $U$,
+\begin{equation}
+U=1-\alpha^{1/n}\ \approx\ \frac{-\log\alpha}{n}=\frac{2.996}{n}\ \approx\ \frac3n\qquad(\alpha=0.05,\ \text{one-sided}).
+\label{eq:ch12:rule-of-three}
+\end{equation}
+This is the rule of three of \citet{hanley1983}. If nothing went wrong in $n$ independent trials that share one fixed rate, the rate is below $3/n$ with $95$ percent confidence. Since $1-e^{-y}<y$, the exact bound $1-\alpha^{1/n}$ is below $2.996/n$ at every $n$, so the rule is conservative even for small $n$. Trials that are dependent, or whose rate drifts, are not covered.
+
+\begin{example}[Zero failures, and three]\label{ex:ch12:zero}
+A gate is exercised $300$ times with no budget violation. The Wald interval is $[0,0]$. The one-sided $95$ percent Clopper--Pearson bound is $1-0.05^{1/300}=0.00994$, the rule of three gives $3/300=0.0100$, and the two-sided $95$ percent upper limit is $1-0.025^{1/300}=0.01222$. Three hundred clean runs support a violation rate below one percent and nothing stronger. Now $3$ violations in $50$ runs. The Wald interval is $0.06\pm0.0658$, which is $[-0.0058,\,0.1258]$ and includes impossible negative rates. The Clopper--Pearson interval is $[0.0125,\,0.1655]$. Its endpoints satisfy \cref{eq:ch12:cp}, so $\Pr_{p=0.1655}[X\le3]=0.025$ and $\Pr_{p=0.0125}[X\ge3]=0.025$.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.75\linewidth, xmin=0, xmax=0.51, ymin=0.35, ymax=1.06,
+  xtick={0,0.1,0.2,0.3,0.4,0.5},
+  xlabel={true rate $p$}, ylabel={coverage at $n=50$}]
+\addplot[pgray, dashed, thin] coordinates {(0,0.95) (0.51,0.95)};
+\node[lbl, pgray, anchor=north west] at (axis cs:0.2,0.85) {dashed line, nominal $0.95$};
+\addplot[pred, thick, sharp plot] coordinates {(0.0100,0.3948) (0.0200,0.6354) (0.0300,0.7812) (0.0400,0.8665) (0.0500,0.9199) (0.0600,0.8073) (0.0700,0.8662) (0.0800,0.9117) (0.0900,0.9425) (0.1000,0.8789) (0.1100,0.9167) (0.1200,0.9352) (0.1300,0.8943) (0.1400,0.9258) (0.1500,0.9408) (0.1600,0.9096) (0.1700,0.9263) (0.1800,0.9481) (0.1900,0.9130) (0.2000,0.9375) (0.2100,0.9558) (0.2200,0.9277) (0.2300,0.9481) (0.2400,0.9186) (0.2500,0.9408) (0.2600,0.9464) (0.2700,0.9341) (0.2800,0.9403) (0.2900,0.9280) (0.3000,0.9347) (0.3100,0.9526) (0.3200,0.9296) (0.3300,0.9487) (0.3400,0.9250) (0.3500,0.9451) (0.3600,0.9210) (0.3700,0.9420) (0.3800,0.9430) (0.3900,0.9393) (0.4000,0.9406) (0.4100,0.9370) (0.4200,0.9386) (0.4300,0.9352) (0.4400,0.9371) (0.4500,0.9338) (0.4600,0.9360) (0.4700,0.9538) (0.4800,0.9353) (0.4900,0.9534) (0.5000,0.9351)};
+\node[lbl, pred, anchor=west] at (axis cs:0.03,0.55) {Wald $\hat p\pm1.96\,\mathrm{SE}$};
+\addplot[pgreen, thick, sharp plot] coordinates {(0.0100,0.9862) (0.0200,0.9822) (0.0300,0.9832) (0.0400,0.9856) (0.0500,0.9882) (0.0600,0.9906) (0.0700,0.9780) (0.0800,0.9679) (0.0900,0.9785) (0.1000,0.9703) (0.1100,0.9606) (0.1200,0.9734) (0.1300,0.9678) (0.1400,0.9600) (0.1500,0.9726) (0.1600,0.9687) (0.1700,0.9628) (0.1800,0.9743) (0.1900,0.9714) (0.2000,0.9671) (0.2100,0.9648) (0.2200,0.9599) (0.2300,0.9719) (0.2400,0.9703) (0.2500,0.9667) (0.2600,0.9655) (0.2700,0.9617) (0.2800,0.9610) (0.2900,0.9722) (0.3000,0.9695) (0.3100,0.9690) (0.3200,0.9662) (0.3300,0.9660) (0.3400,0.9631) (0.3500,0.9633) (0.3600,0.9604) (0.3700,0.9609) (0.3800,0.9722) (0.3900,0.9588) (0.4000,0.9707) (0.4100,0.9570) (0.4200,0.9695) (0.4300,0.9556) (0.4400,0.9685) (0.4500,0.9545) (0.4600,0.9677) (0.4700,0.9538) (0.4800,0.9673) (0.4900,0.9534) (0.5000,0.9672)};
+\node[lbl, pgreen, anchor=south west] at (axis cs:0.1,1.0) {Clopper--Pearson};
+\end{axis}
+\end{tikzpicture}
+\caption{The exact interval never covers less than its nominal ninety-five percent while the normal-approximation interval falls short at almost every rate and collapses near zero. Coverage is computed exactly by summing binomial probabilities for fifty trials. The jagged shape comes from the discreteness of the count.}
+\label{fig:ch12:coverage}
+\end{figure}
+
+\Cref{fig:ch12:coverage} shows the actual coverage of both intervals at $n=50$, computed exactly by summing the binomial probabilities of every count whose interval contains $p$. The Wald interval covers less than $95$ percent at $46$ of the $50$ rates in the grid. At $p=0.01$ it covers only $0.395$, mostly because it misses whenever $x=0$, which happens with probability $0.99^{50}=0.605$. The Clopper--Pearson interval never drops below $0.95$, and its average coverage over the grid is $0.968$. That excess is the cost of a guarantee that holds at every $p$. \citet{agresti1998} show that approximate intervals such as Wilson's have coverage closer to nominal on average, at the price of dipping below it at some $p$. When the claim must hold at the unknown $p$ itself, as for a budget gate, the exact interval is the one to use.
+
+\inproject{\texttt{geometric-observation/\allowbreak paper/\allowbreak flip\_paper\_revtex.tex}, section ``Networking instantiations'', paragraph ``Hydrogen atom'', reports for the INFOCOM admission-gating model that a naive plug-in estimate violates the budget with probability $0.4916$, while a Clopper--Pearson gate keeps violations below $0.01$. That file states the result and does not give the gate's construction.}
+
+\buildson{Primer~S, sections~S.3 and S.6, the binomial and the confidence interval. \Cref{sec:ch12:chernoff}, binomial tails.}
+\usedin{\Cref{sec:ch12:samplesize}. \Cref{ch09}, where a registered pass rate is reported with an exact interval.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Order statistics}
+\section{Order statistics give guarantees that hold for every distribution}\label{sec:ch12:order}
+
+Every bound so far assumed something about the variables, a mean, a variance, a range or a binomial model. Some guarantees need nothing except independence and identical distribution. They come from the observation that, for a continuous distribution $F$, the event $X_i\le q$ is a coin flip with success probability $F(q)$, whatever $F$ looks like. Counting such coins turns statements about quantiles into binomial statements, and binomial statements can be computed exactly.
+
+Let $X_1,\dots,X_n$ be independent draws from a continuous $F$, let $X_{(1)}\le\dots\le X_{(n)}$ be the sorted sample, and let $q_p$ be the $p$-quantile, $F(q_p)=p$. The sample maximum is below $q_p$ only if all $n$ draws are, so
+\begin{equation}
+\Pr\big[X_{(n)}\ge q_p\big]=1-p^n,
+\qquad
+\Pr\big[X_{(n-k+1)}\ge q_p\big]=\Pr\big[\mathrm{Bin}(n,1-p)\ge k\big].
+\label{eq:ch12:order}
+\end{equation}
+The second formula covers the $k$-th largest value, which is at least $q_p$ exactly when at least $k$ draws land above $q_p$. Neither formula depends on $F$, but both use its continuity, which makes $F(q_p)=p$ attainable and rules out ties. A related fact uses only exchangeability and the absence of ties. A new draw $X_{n+1}$, exchangeable with the first $n$, is then equally likely to occupy any of the $n+1$ ranks, so $\Pr[X_{n+1}>X_{(n)}]=1/(n+1)$. A new draw from a shifted distribution, such as a latency measured after a deployment, is not exchangeable with the old ones, and the fact does not apply to it.
+
+For the whole distribution function at once, the empirical distribution $F_n(x)=\frac1n\#\{i:X_i\le x\}$ satisfies the Dvoretzky--Kiefer--Wolfowitz inequality, with the constant $2$ established by \citet{massart1990},
+\begin{equation}
+\Pr\Big[\sup_x\abs{F_n(x)-F(x)}>\epsilon\Big]\ \le\ 2e^{-2n\epsilon^2}.
+\label{eq:ch12:dkw}
+\end{equation}
+At a single $x$ this is Hoeffding's bound for the coin $\mathbf 1[X_i\le x]$. The content of the inequality is that the supremum over all $x$ costs nothing extra.
+
+\begin{example}[Certifying a 99th percentile]\label{ex:ch12:p99}
+A latency budget must hold at the 99th percentile, and the evidence is $n$ independent measurements. The sample maximum is an upper bound on $q_{0.99}$ with confidence $1-0.99^n$, which first reaches $0.95$ at $n=299$, where it is $0.9505$. For the 99.9th percentile the requirement is $n=2995$. Using the second-largest value instead of the maximum, which protects against one wild measurement, raises the requirement to $n=473$, and using the fifth largest raises it to $n=913$. With $n=1000$ the fifth-largest value bounds $q_{0.99}$ with confidence $0.971$. A simulation with $20000$ replications of $299$ draws gives coverage $0.948$ for exponential latencies and $0.950$ for Cauchy ones, a distribution with no mean, against the predicted $0.9505$. For the whole distribution function to within $\epsilon=0.01$ at $95$ percent confidence, \cref{eq:ch12:dkw} asks for $n=18445$, and for $\epsilon=0.05$ it asks for $738$.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.75\linewidth, xmin=0, xmax=1500, ymin=0, ymax=1.03,
+  xlabel={sample size $n$}, ylabel={$\Pr[\,k\text{-th largest}\ge q_{0.99}]$}]
+\addplot[pgray, dashed, thin] coordinates {(0,0.95) (1500,0.95)};
+\node[lbl, pgray, anchor=north east] at (axis cs:1500,0.95) {$0.95$};
+\addplot[pblue, very thick, smooth] coordinates {(50,0.395) (100,0.634) (150,0.7785) (200,0.866) (250,0.9189) (300,0.951) (350,0.9703) (400,0.982) (450,0.9891) (500,0.9934) (550,0.996) (600,0.9976) (650,0.9985) (700,0.9991) (750,0.9995) (800,0.9997) (850,0.9998) (900,0.9999) (950,0.9999) (1000,1) (1050,1) (1100,1) (1150,1) (1200,1) (1250,1) (1300,1) (1350,1) (1400,1) (1450,1) (1500,1)};
+\addplot[porange, thick, smooth] coordinates {(50,0.08944) (100,0.2642) (150,0.443) (200,0.5954) (250,0.7142) (300,0.8024) (350,0.8654) (400,0.9095) (450,0.9398) (500,0.9602) (550,0.9739) (600,0.983) (650,0.989) (700,0.9929) (750,0.9954) (800,0.9971) (850,0.9981) (900,0.9988) (950,0.9992) (1000,0.9995) (1050,0.9997) (1100,0.9998) (1150,0.9999) (1200,0.9999) (1250,1) (1300,1) (1350,1) (1400,1) (1450,1) (1500,1)};
+\addplot[pgreen, thick, smooth] coordinates {(50,0.0001457) (100,0.003432) (150,0.01799) (200,0.05175) (250,0.1078) (300,0.1839) (350,0.2741) (400,0.3712) (450,0.4684) (500,0.5604) (550,0.6437) (600,0.7163) (650,0.7777) (700,0.8284) (750,0.8692) (800,0.9015) (850,0.9266) (900,0.9459) (950,0.9604) (1000,0.9713) (1050,0.9794) (1100,0.9853) (1150,0.9895) (1200,0.9926) (1250,0.9948) (1300,0.9964) (1350,0.9975) (1400,0.9983) (1450,0.9988) (1500,0.9992)};
+\node[lbl, pblue, anchor=west] at (axis cs:108,0.62) {max};
+\node[lbl, porange, anchor=west, font=\footnotesize] at (axis cs:290,0.70) {2nd largest};
+\node[lbl, pgreen, anchor=west] at (axis cs:640,0.5) {5th largest};
+\draw[guide] (axis cs:299,0)--(axis cs:299,0.95);
+\draw[guide] (axis cs:473,0)--(axis cs:473,0.95);
+\draw[guide] (axis cs:913,0)--(axis cs:913,0.95);
+\fill[pblue] (axis cs:299,0.95) circle (1.8pt);
+\fill[porange] (axis cs:473,0.95) circle (1.8pt);
+\fill[pgreen] (axis cs:913,0.95) circle (1.8pt);
+\node[lbl, pblue, anchor=south west, font=\footnotesize] at (axis cs:299,0.02) {299};
+\node[lbl, porange, anchor=south west, font=\footnotesize] at (axis cs:473,0.02) {473};
+\node[lbl, pgreen, anchor=south west, font=\footnotesize] at (axis cs:913,0.02) {913};
+\end{axis}
+\end{tikzpicture}
+\caption{The confidence that a high order statistic bounds the 99th percentile is a binomial tail and does not depend on the distribution of the data. The maximum, the second largest and the fifth largest value reach ninety-five percent confidence at 299, 473 and 913 samples, so protecting against more outliers costs more samples.}
+\label{fig:ch12:order}
+\end{figure}
+
+\paragraph{The rank certificate.} The rank certificate of turboquant-pro is described in \cref{ch07}. Its specification states only the following, and this chapter adds nothing to its definitions. The certificate records a robust multiplicative distortion $\kappa$ of pairwise distances and a quantity $\hat\mu$, the ``corpus distance-ratio concentration at $\kappa$'', measured over $n_{\text{pairs}}$ anchor pairs. From these it reports
+\begin{equation}
+\tau_{\text{floor}}=1-2\hat\mu,\qquad \rho_{\text{floor}}=1-3\hat\mu
+\label{eq:ch12:cert}
+\end{equation}
+as guaranteed floors on Kendall's $\tau$ and Spearman's $\rho$, and it labels them distribution-free. The worked example in the specification has $200$ anchors, hence $200\cdot199/2=19900$ pairs, with $\hat\mu=0.0664$ and floors $0.8671$ and $0.8006$. Those floors imply $\hat\mu$ between $0.06645$ and $0.06647$, so the printed $\hat\mu$ is rounded. The specification does not state how sampling error in $\hat\mu$ is handled, so no claim about it is made here. The tools of this chapter show what such a statement would involve. If $\hat\mu$ were the mean of $19900$ independent indicators, Hoeffding at $\delta=0.05$ would give a two-sided half-width of $0.0096$, which would lower $\tau_{\text{floor}}$ by $0.019$. The pairs share anchors, so they are not independent, and that Hoeffding calculation does not apply as it stands. With only $200$ independent units the same bound would give $0.096$. A sampling guarantee for $\hat\mu$ would need an argument for this dependence, and the specification does not give one.
+
+\inproject{\texttt{turboquant-pro/\allowbreak docs/\allowbreak CERTIFICATE\_SPEC.md}, sections ``Example'' and ``Field reference'', defines \texttt{tau\_floor} as $1-2\cdot$\texttt{mu\_hat} and \texttt{spearman\_floor} as $1-3\cdot$\texttt{mu\_hat}, records \texttt{n\_pairs}, \texttt{n\_anchors} and the seed, and marks a certificate \texttt{vacuous} when no finite distortion certifies rank. Acceptance in turboquant-pro is rank fidelity, never reconstruction cosine, and \cref{ch07} explains why.}
+
+\buildson{\Cref{sec:ch12:hoeffding,sec:ch12:cp}. The empirical distribution and percentiles of Primer~S, section~S.4.}
+\usedin{\Cref{ch07}, rank-fidelity certificates. \Cref{ch09}, percentile bars set before a run.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Sample sizes}
+\section{A sample size is a tail bound solved for \texorpdfstring{$n$}{n}}\label{sec:ch12:samplesize}
+
+Every bound in the chapter has the form \cref{eq:ch12:generic}, and setting its right side equal to $\delta$ and solving for $n$ gives a sample size. For a proportion estimated to within $\pm\epsilon$ at confidence $1-\delta$, the four answers are
+\begin{equation}
+\begin{gathered}
+n_{\text{normal}}=\frac{z_{\delta/2}^2\,p(1-p)}{\epsilon^2},\qquad
+n_{\text{Cheb}}=\frac{p(1-p)}{\delta\epsilon^2},\qquad
+n_{\text{Hoeff}}=\frac{\log(2/\delta)}{2\epsilon^2},\\
+n_{\text{Bern}}=\frac{\log(2/\delta)\,\big(2\sigma^2+\tfrac23c\epsilon\big)}{\epsilon^2},
+\end{gathered}
+\label{eq:ch12:samplesize}
+\end{equation}
+with $z_{\delta/2}=\Qf^{-1}(\delta/2)$, which is $1.96$ at $\delta=0.05$, and $p(1-p)\le\tfrac14$ when nothing is known about $p$. All four assume independent trials. Only the normal formula is an approximation. The other three are guarantees under their stated assumptions, and the exact Clopper--Pearson interval can be searched for the smallest $n$ whose width meets the target.
+
+\begin{example}[Two percentage points at 95 percent]\label{ex:ch12:twopoints}
+With $\epsilon=0.02$, $\delta=0.05$ and the worst case $p=\tfrac12$, the normal approximation asks for $n=2401$. The smallest $n$ whose Clopper--Pearson interval at $\hat p\approx\tfrac12$ lies within $\pm0.02$ is $2449$, only two percent more, and it is a guarantee. Hoeffding asks for $4612$, and Chebyshev for $12500$.
+\end{example}
+
+\begin{example}[A rare failure rate to twenty percent]\label{ex:ch12:rare-n}
+A failure rate near $p=0.001$ is to be estimated to within twenty percent of itself, so $\epsilon=0.0002$, at $95$ percent. The normal approximation asks for $95941$ trials. Bernstein with $\sigma^2=0.000999$ and $c=1$ asks for $196556$. The multiplicative Chernoff bound \cref{eq:ch12:chernoff-mult}, set to $2e^{-\delta_r^2\mu/3}=0.05$ with $\delta_r=0.2$, needs $\mu=np=276.7$ expected failures, so $276666$ trials. Hoeffding asks for $46110994$, which is $480$ times the normal figure, because it treats a rare event as if it had variance $\tfrac14$. Bernstein and Chernoff need the assumption $p\le0.001$, made before the data. If that assumption is wrong, their sample sizes are wrong too.
+\end{example}
+
+\begin{table}[tbp]
+\centering
+\small
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Method & $\pm0.02$, $p\approx\tfrac12$ & $\pm20\%$ of $p=0.001$ & What it assumes \\
+\midrule
+Normal approximation & $2401$ & $95941$ & large $n$, $np$ not small \\
+Clopper--Pearson (exact) & $2449$ & & binomial model only \\
+Bernstein & & $196556$ & a known bound on $\sigma^2$ \\
+Multiplicative Chernoff & & $276666$ & a known bound on $p$ \\
+Hoeffding & $4612$ & $46110994$ & range $[0,1]$ only \\
+Chebyshev & $12500$ & & variance $\le\tfrac14$ \\
+\bottomrule
+\end{tabular}
+\caption{Samples needed for a stated precision at ninety-five percent confidence. A blank cell is a case the chapter's examples do not compute. Every row also assumes independent trials. The cheaper guarantees buy their savings with an assumption made before the data.}
+\label{tab:ch12:samplesize}
+\end{table}
+
+\Cref{tab:ch12:samplesize} collects the two examples. Two rules follow from it. For a proportion near one half, the normal approximation is close to the exact answer, and the exact answer costs almost nothing more and is a guarantee. For a rare event, a bound that ignores the variance is off by orders of magnitude, and the right tool is the exact binomial, Bernstein or the relative Chernoff bound. Every one of these numbers is fixed before the data exist, which is what lets a registration state its $n$ in advance.
+
+\inproject{\emph{Data Mining as Observation}, Primer~S, section~S.4, states that halving a standard error takes four times the data. Every formula in \cref{eq:ch12:samplesize} has the same $1/\epsilon^2$ dependence, and the bounds differ only in the constant in front. \Cref{ch09} uses these sample sizes in power calculations for registered studies.}
+
+\buildson{\Cref{sec:ch12:markov,sec:ch12:hoeffding,sec:ch12:cp}.}
+\usedin{\Cref{ch09}, registration and power. \Cref{ch07}, the number of queries behind a recall estimate.}
+
+% ---------------------------------------------------------------------------
+\let\sectionmark\ompSavedSectionmarkXII
+\section*{Exercises}
+
+\paragraph{Warm-up.}
+
+\begin{exercise}\label{exr:ch12:markov}
+A nonnegative waiting time has mean $2$ seconds. Bound $\Pr[X\ge10]$ by Markov's inequality. Compute the exact value when $X$ is exponential with mean $2$, and say which law attains the bound.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch12:cheb}
+A statistic has mean $0$ and variance $4$. Bound $\Pr[\abs X\ge6]$ by Chebyshev's inequality and compare with the exact value when $X\sim\Normal(0,4)$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch12:rule3}
+A model is run on $600$ held-out cases with no failures. Give the one-sided $95$ percent Clopper--Pearson upper bound on its failure rate and compare with the rule of three.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch12:union}
+Twenty monitors each raise a false alarm with probability $0.001$ per day. Bound the probability of at least one false alarm on a given day. Compute it exactly if the monitors are independent.
+\end{exercise}
+
+\paragraph{By hand.}
+
+\begin{exercise}\label{exr:ch12:gauss}
+Derive \cref{eq:ch12:gauss-chernoff} from the moment generating function $e^{\lambda^2\sigma^2/2}$. Evaluate the bound at $t=2\sigma$ and compare it with $\Qf(2)$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch12:hoeffn}
+How many independent queries are needed so that a mean recall in $[0,1]$ is within $\pm0.05$ of its expectation with probability $0.99$, by Hoeffding's inequality?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch12:allpass}
+A test passes on all $20$ of $20$ cases. Show that the two-sided $95$ percent Clopper--Pearson lower limit is $0.025^{1/20}$ and evaluate it.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch12:hundred}
+A screen tests $100$ independent hypotheses, all null, with $z$-statistics $Z_i\sim\Normal(0,1)$. Use \cref{thm:ch12:max} to bound $\E\max Z_i$. Use the union bound to bound $\Pr[\max Z_i\ge3]$, and compute it exactly.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch12:bern}
+With $n=10000$ trials and $p=0.001$, bound $\Pr[\bar X-p\ge0.001]$ by Hoeffding and by Bernstein with $c=1$. Which one would you report, and why?
+\end{exercise}
+
+\paragraph{Programming.}
+
+\begin{exercise}\label{exr:ch12:prog-ladder}
+Reproduce \cref{fig:ch12:ladder} for $S\sim\mathrm{Bin}(400,0.3)$. Add the Hoeffding curve and find the threshold beyond which the Chernoff bound of \cref{eq:ch12:chernoff-kl} is within a factor of $10$ of the exact tail.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch12:prog-coverage}
+Compute the exact coverage of the Wald, Wilson and Clopper--Pearson intervals at $n=20$ for $p$ on a grid of step $0.005$. Report the minimum and the mean coverage of each.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch12:prog-order}
+With a fixed seed, draw $299$ values from a log-normal distribution $20000$ times and estimate $\Pr[X_{(299)}\ge q_{0.99}]$. Repeat with a Pareto distribution of shape $1.5$. Compare both with $1-0.99^{299}$ and explain why the agreement does not depend on the distribution.
+\end{exercise}
+
+% checks/ch12_examples.py on Atlas: 131/131 PASS

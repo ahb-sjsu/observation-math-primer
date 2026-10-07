@@ -1,16 +1,10 @@
-\chapter{Information is measured in bits, and a description is priced by its rate}\label{ch03}\chaptermark{Information theory and rate--distortion}
-% Short running heads for this chapter. \section keeps its full sentence title in the
-% text and the table of contents. The standard \sectionmark is suspended for the
-% chapter and restored at its end.
-\providecommand{\shortsecmark}[1]{\markright{\MakeUppercase{\thesection.\ #1}}}
-\let\savedsectionmarkiii\sectionmark
-\renewcommand{\sectionmark}[1]{}
+\chapter{Information is measured in bits, and a description is priced by its rate}\label{ch03}
 
 Primer S, section S.10 of \emph{Data Mining as Observation}, measured the surprise of an outcome in bits and called its average the entropy. Section 0.7 of the same book spent a budget of bits on the directions of a covariance and found the water level. This chapter puts both on the footing that the programme's papers use. It defines entropy, relative entropy and mutual information for pairs of variables, and it extends them to continuous vectors, where a Gaussian's entropy is a log determinant. It then says what a rate is as a property of a code, and it derives the rate--distortion function of a Gaussian source, first for plain squared error and then for a weighted squared error. The weighted version is the consumer-relative function $\RC(D)$ of Observation Theory. Its classical name is the weighted squared-error rate--distortion function of Sakrison~\cite{sakrison1968}, and this chapter uses both names. The last three sections add a second party. That party holds side information, or learns from the description without decoding it, or wants a different reconstruction. The quantities that arise are the conditional rate--distortion function, the Wyner--Ziv function, the conditional leakage of secure source coding, and successive refinement.
 
 Logarithms are natural and information is in nats unless the base is written. A formula written with $\log$ holds in any base once both sides use the same one. Examples are worked in bits, with $\log_2$ written out. One nat is $1/\ln 2\approx1.4427$ bits.
 
-\section{Entropy is average surprise, and the chain rule splits it into stages}\label{sec:ch03:entropy}\shortsecmark{Entropy and the chain rule}
+\section{Entropy is average surprise, and the chain rule splits it into stages}\label{sec:ch03:entropy}
 
 Primer S gave the entropy of one discrete distribution. Two variables observed together have a joint distribution $p(x,y)$ and therefore a joint entropy. If $X$ is revealed first, the uncertainty that remains about $Y$ is averaged over the values $X$ can take, and that average is the conditional entropy. The three are tied by the chain rule, which says that describing the pair costs the same as describing $X$ and then describing $Y$ to someone who already knows $X$.
 
@@ -33,9 +27,9 @@ The chain rule and the two basic bounds follow by writing $p(x,y)=p(x)p(y\mid x)
 \end{equation}
 The middle inequality says that conditioning cannot increase entropy on average. It is a statement about the average over $x$. A particular value $X=x$ can leave $Y$ more uncertain than before, and $\Ent(Y\mid X=x)>\Ent(Y)$ is possible. Equality $\Ent(Y\mid X)=\Ent(Y)$ holds exactly when $X$ and $Y$ are independent. The last bound is attained by the uniform distribution on the alphabet $\mathcal X$. The chain rule extends to $n$ variables as $\Ent(X_1,\dots,X_n)=\sum_i \Ent(X_i\mid X_1,\dots,X_{i-1})$.
 
-For an i.i.d.\ sequence every conditional term equals $\Ent(X)$, so $\Ent(X^n)=n\Ent(X)$. This is why entropy is quoted per symbol, and why the rates of \cref{sec:ch03:rate} are quoted per symbol too. For a sequence with memory the terms shrink as the past grows, and the per-symbol limit, the entropy rate, is what a good compressor approaches. The programme's sources are i.i.d.\ draws of a vector, so a single vector plays the role of one symbol and its correlations are handled inside the symbol, by the log determinants of \cref{sec:ch03:gauss}.
+For an i.i.d.\ sequence every conditional term equals $\Ent(X)$, so $\Ent(X^n)=n\Ent(X)$. This is why entropy is quoted per symbol, and why the rates of \cref{sec:ch03:rate} are quoted per symbol too. For a stationary sequence with memory the terms cannot grow as the past grows, and for a stationary ergodic source the per-symbol limit, the entropy rate, is what a good compressor approaches. Without stationarity neither statement is guaranteed. The programme's sources are i.i.d.\ draws of a vector, so a single vector plays the role of one symbol and its correlations are handled inside the symbol, by the log determinants of \cref{sec:ch03:gauss}.
 
-\begin{example}[A noisy copy of a fair bit]\label{ex:ch03:bsc}
+\begin{example}[A noisy copy of a fair bit]\label[example]{ex:ch03:bsc}
 Let $X$ be a fair bit and let $Y$ equal $X$ with probability $3/4$. The joint probabilities are $p(0,0)=p(1,1)=3/8$ and $p(0,1)=p(1,0)=1/8$. Then $\Ent(X)=1$ bit. The joint entropy is
 \[
 \Ent(X,Y)=-2\cdot\tfrac38\log_2\tfrac38-2\cdot\tfrac18\log_2\tfrac18=1.8113\text{ bits}.
@@ -43,10 +37,26 @@ Let $X$ be a fair bit and let $Y$ equal $X$ with probability $3/4$. The joint pr
 Given either value of $X$, $Y$ is a coin with bias $1/4$, so $\Ent(Y\mid X)=h_2(1/4)=0.8113$ bits, where $h_2(p)=-p\log_2p-(1-p)\log_2(1-p)$ is the binary entropy function. The chain rule checks, since $1+0.8113=1.8113$. The pair costs less than the two bits that two independent fair bits would cost, because $Y$ repeats most of $X$.
 \end{example}
 
+\Cref{fig:ch03:binent} plots $h_2$. A biased coin is cheaper to describe than a fair one, and the saving grows slowly at first. A coin that lands heads three times in four still costs $0.8113$ bits per toss.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=1, ymin=0, ymax=1.12, xlabel={probability $p$}, ylabel={$h_2(p)$ in bits}, xtick={0,0.25,0.5,0.75,1}, ytick={0,0.5,1}]
+\addplot[pblue] coordinates {(0,0) (0.025,0.1687) (0.05,0.2864) (0.075,0.3843) (0.1,0.469) (0.125,0.5436) (0.15,0.6098) (0.175,0.669) (0.2,0.7219) (0.225,0.7692) (0.25,0.8113) (0.275,0.8485) (0.3,0.8813) (0.325,0.9097) (0.35,0.9341) (0.375,0.9544) (0.4,0.971) (0.425,0.9837) (0.45,0.9928) (0.475,0.9982) (0.5,1) (0.525,0.9982) (0.55,0.9928) (0.575,0.9837) (0.6,0.971) (0.625,0.9544) (0.65,0.9341) (0.675,0.9097) (0.7,0.8813) (0.725,0.8485) (0.75,0.8113) (0.775,0.7692) (0.8,0.7219) (0.825,0.669) (0.85,0.6098) (0.875,0.5436) (0.9,0.469) (0.925,0.3843) (0.95,0.2864) (0.975,0.1687) (1,0)}; % data:binent
+\addplot[porange, only marks, mark=*, mark size=2pt] coordinates {(0.25,0.8113) (0.1,0.469)};
+\node[lbl,porange,anchor=north west] at (axis cs:0.26,0.8) {$h_2(1/4)=0.8113$};
+\node[lbl,porange,anchor=north west] at (axis cs:0.11,0.46) {$h_2(0.1)=0.469$};
+\end{axis}
+\end{tikzpicture}
+\caption{The binary entropy function is largest for a fair coin and falls to zero at certainty. The marked points are the noisy copy of a fair bit, $h_2(1/4)=0.8113$ bits, and the ten-percent error rate of \cref{ex:ch03:huffman}, $h_2(0.1)=0.469$ bits.}
+\label{fig:ch03:binent}
+\end{figure}
+
 \buildson{Primer S, section S.10 (surprise and entropy of one distribution). Conditional probability from Primer S, section S.1.}
 \usedin{\cref{sec:ch03:kl} (mutual information), \cref{sec:ch03:rate} (the entropy is the lossless rate), and \cref{sec:ch03:leakage}, where a conditional entropy $H(M\mid S^n)$ is the leakage of a description.}
 
-\section{Relative entropy prices a wrong model, and mutual information is a relative entropy}\label{sec:ch03:kl}\shortsecmark{Relative entropy and mutual information}
+\section{Relative entropy prices a wrong model, and mutual information is a relative entropy}\label{sec:ch03:kl}
 
 Primer S introduced the Kullback--Leibler divergence as the bits wasted by coding outcomes from $p$ with a code built for $q$. The same object, called relative entropy here, measures how far a joint distribution is from independence. That distance is the mutual information, and every later quantity in this chapter is a mutual information.
 
@@ -70,7 +80,7 @@ Conditioning extends mutual information to three variables, and the chain rule f
 
 Three variables form a Markov chain $X-Y-Z$ when $Z$ depends on $X$ only through $Y$, that is, $p(z\mid x,y)=p(z\mid y)$. Processing cannot create information about $X$.
 
-\begin{theorem}[Data-processing inequality]\label{thm:ch03:dpi}
+\begin{theorem}[Data-processing inequality]\label[theorem]{thm:ch03:dpi}
 If $X-Y-Z$ is a Markov chain, then
 \begin{equation}\label{eq:ch03:dpi}
 \MI{X}{Z}\le\MI{X}{Y}.
@@ -82,16 +92,55 @@ Expand $\MI{X}{Y,Z}$ by \eqref{eq:ch03:cmi} in two orders. It equals $\MI{X}{Z}+
 
 The inequality covers any deterministic function $Z=g(Y)$. It is the reason a reconstruction $\hat X$ computed from a message $M$ can never carry more information about the source than $M$ does.
 
-\begin{example}[Asymmetry, information and processing]\label{ex:ch03:kl-dpi}
+\begin{example}[Asymmetry, information and processing]\label[example]{ex:ch03:kl-dpi}
 Take $p=(0.9,0.1)$ and $q=(0.5,0.5)$. Then $\KL{p}{q}=0.9\log_2 1.8+0.1\log_2 0.2=0.531$ bits, while $\KL{q}{p}=0.5\log_2\frac{5}{9}+0.5\log_2 5=0.737$ bits. The order matters.
 
 For the pair of \cref{ex:ch03:bsc}, $\MI{X}{Y}=\Ent(Y)-\Ent(Y\mid X)=1-0.8113=0.1887$ bits. Now pass $Y$ through a second channel that flips it with probability $1/4$, giving $Z$. A flip from $X$ to $Z$ needs exactly one of the two stages to flip, which has probability $2\cdot\frac14\cdot\frac34=\frac38$. So $\MI{X}{Z}=1-h_2(3/8)=1-0.9544=0.0456$ bits, which is less than $0.1887$, as \eqref{eq:ch03:dpi} requires.
 \end{example}
 
-\buildson{Primer S, equation S.20 (the divergence as wasted bits) and \cref{sec:ch03:entropy}.}
-\usedin{Every later section. The Markov chain $\hat X-X-S$ is the hypothesis of the leakage identity in \cref{sec:ch03:leakage}. Fisher information (Chapter~2) is the second-order term of the relative entropy between nearby members of a family.}
+The entropies and informations of two variables are often drawn as overlapping regions, as in \cref{fig:ch03:venn}. The picture is a bookkeeping device for the chain rules \eqref{eq:ch03:chain} and \eqref{eq:ch03:cmi}. For two variables every region is nonnegative. For three variables the central region, sometimes called co-information, can be negative, and the picture then misleads. \Cref{fig:ch03:klasym} shows the asymmetry of relative entropy for a whole family of coins.
 
-\section{The entropy of a Gaussian vector is a log determinant}\label{sec:ch03:gauss}\shortsecmark{Gaussian entropy}
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+  \fill[pblue!15] (0,0) circle (1.5);
+  \fill[porange!15] (1.6,0) circle (1.5);
+  \begin{scope}
+    \clip (0,0) circle (1.5);
+    \fill[pgreen!30] (1.6,0) circle (1.5);
+  \end{scope}
+  \draw[pblue,thick] (0,0) circle (1.5);
+  \draw[porange,thick] (1.6,0) circle (1.5);
+  \node[lbl,align=center] at (-0.55,0) {$H(X\mid Y)$\\$0.8113$};
+  \node[lbl,align=center] at (0.8,0) {$I(X;Y)$\\$0.1887$};
+  \node[lbl,align=center] at (2.15,0) {$H(Y\mid X)$\\$0.8113$};
+  \node[lbl,pblue] at (-0.4,1.75) {$H(X)=1$};
+  \node[lbl,porange] at (2.0,1.75) {$H(Y)=1$};
+  \node[lbl] at (0.8,-1.85) {$H(X,Y)=1.8113$ bits};
+\end{tikzpicture}
+\caption{The chain rules as overlapping regions, with the numbers of the noisy copy of a fair bit in bits. Each circle is the entropy of one variable, the overlap is their mutual information, and the union is the joint entropy. The two circles share less than a fifth of a bit although each holds a whole bit.}
+\label{fig:ch03:venn}
+\end{figure}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=1, ymin=0, ymax=1.25, xlabel={coin bias $a$}, ylabel={bits}, xtick={0,0.25,0.5,0.75,1}, ytick={0,0.5,1}]
+\addplot[pblue] coordinates {(0.05,0.7136) (0.1,0.531) (0.15,0.3902) (0.2,0.2781) (0.25,0.1887) (0.3,0.1187) (0.35,0.06593) (0.4,0.02905) (0.45,0.007226) (0.5,0) (0.55,0.007226) (0.6,0.02905) (0.65,0.06593) (0.7,0.1187) (0.75,0.1887) (0.8,0.2781) (0.85,0.3902) (0.9,0.531) (0.95,0.7136)}; % data:klfwd
+\addplot[porange] coordinates {(0.05,1.198) (0.1,0.737) (0.15,0.4857) (0.2,0.3219) (0.25,0.2075) (0.3,0.1258) (0.35,0.06803) (0.4,0.02945) (0.45,0.00725) (0.5,0) (0.55,0.00725) (0.6,0.02945) (0.65,0.06803) (0.7,0.1258) (0.75,0.2075) (0.8,0.3219) (0.85,0.4857) (0.9,0.737) (0.95,1.198)}; % data:klrev
+\addplot[pgreen, only marks, mark=*, mark size=2pt] coordinates {(0.9,0.531) (0.9,0.737)};
+\node[lbl,pblue,anchor=north east] at (axis cs:0.88,0.5) {$D(p_a\,\|\,p_{1/2})$};
+\node[lbl,porange,anchor=south east] at (axis cs:0.88,0.75) {$D(p_{1/2}\,\|\,p_a)$};
+\end{axis}
+\end{tikzpicture}
+\caption{Relative entropy depends on which distribution is the truth. For a coin of bias $a$ against a fair coin, coding a biased coin with a fair model, in blue, wastes $0.531$ bits at $a=0.9$, while coding a fair coin with the biased model, in orange, wastes $0.737$ bits and grows without bound as $a\to0$ or $1$.}
+\label{fig:ch03:klasym}
+\end{figure}
+
+\buildson{Primer S, equation S.20 (the divergence as wasted bits) and \cref{sec:ch03:entropy}.}
+\usedin{Every later section. The Markov chain $\hat X-X-S$ is the hypothesis of the leakage identity in \cref{sec:ch03:leakage}. Fisher information (\cref{ch02}) is the second-order term of the relative entropy between nearby members of a family.}
+
+\section{The entropy of a Gaussian vector is a log determinant}\label{sec:ch03:gauss}
 
 For a continuous variable with density $f$, the sum in \eqref{eq:ch03:entropy} becomes an integral and gives the differential entropy. It behaves like entropy in the chain rule and in every difference, but it is not an absolute count of bits. It changes under a change of units and it can be negative. Mutual information, which is a difference of two differential entropies, keeps its meaning and is invariant under invertible maps of either variable.
 
@@ -102,9 +151,9 @@ For a random vector $X\in\R^d$ with density $f$,
 \end{equation}
 \end{definition}
 
-Chapter~2 introduces the Gaussian density. Its logarithm is a quadratic form, and the expectation of the quadratic form $x\T\Sigma^{-1}x$ is $\tr(\Sigma^{-1}\Sigma)=d$. That gives the entropy in one line.
+\cref{ch02} introduces the Gaussian density. Its logarithm is a quadratic form, and the expectation of the quadratic form $x\T\Sigma^{-1}x$ is $\tr(\Sigma^{-1}\Sigma)=d$. That gives the entropy in one line.
 
-\begin{proposition}[Gaussian entropy and Gaussian information]\label{prop:ch03:gauss-h}
+\begin{proposition}[Gaussian entropy and Gaussian information]\label[proposition]{prop:ch03:gauss-h}
 If $X\sim\Normal(\mu,\Sigma)$ with $\Sigma\pd0$, then
 \begin{equation}\label{eq:ch03:gauss-h}
 \h(X)=\tfrac12\log\det(2\pi e\,\Sigma)=\tfrac d2\log(2\pi e)+\tfrac12\log\det\Sigma .
@@ -114,19 +163,19 @@ Among all densities with covariance $\Sigma$, the Gaussian has the largest diffe
 \MI{X}{Y}=\tfrac12\log\frac{\det\Sigma_X\,\det\Sigma_Y}{\det\Sigma_{(X,Y)}}
 =\tfrac12\log\frac{\det\Sigma_X}{\det\Sigma_{X\mid Y}},
 \end{equation}
-where $\Sigma_{X\mid Y}=\Sigma_X-C\Sigma_Y^{-1}C\T$ is the conditional covariance, the Schur complement of Chapter~1.
+where $\Sigma_{X\mid Y}=\Sigma_X-C\Sigma_Y^{-1}C\T$ is the conditional covariance, the Schur complement of \cref{ch01}.
 \end{proposition}
 
-The maximum-entropy property is proved by writing $\h(g)-\h(X_G)=-\KL{g}{f_G}\le0$ for any density $g$ with the Gaussian's covariance~\cite{coverthomas2006}. It is the reason a Gaussian source is the hardest to compress at a given covariance, and the converse bounds below use it. The second form of \eqref{eq:ch03:gauss-mi} reads as follows in words. Information is half the log of how much the volume of the uncertainty ellipsoid shrinks when $Y$ is observed. For two scalars with correlation $\rho$ it reduces to $\MI{X}{Y}=-\frac12\log(1-\rho^2)$.
+The maximum-entropy property is proved by writing $\h(g)-\h(X_G)=-\KL{g}{f_G}\le0$ for any density $g$ with the Gaussian's covariance~\cite{coverthomas2006}. It is the reason a Gaussian source is the hardest to compress at a given covariance under squared error, and the converse bounds below use it. The ranking belongs to squared error and its weighted forms. Under another distortion measure the Gaussian need not be the worst source of its covariance. The second form of \eqref{eq:ch03:gauss-mi} reads as follows in words. Information is half the log of how much the volume of the uncertainty ellipsoid shrinks when $Y$ is observed. For two scalars with correlation $\rho$ it reduces to $\MI{X}{Y}=-\frac12\log(1-\rho^2)$.
 
-Relative entropy between two Gaussians has a closed form that contains every tool of Chapter~1, a trace, a quadratic form and a log determinant. It follows by taking the expectation of the log ratio of the two densities under the first.
+Relative entropy between two Gaussians has a closed form that contains every tool of \cref{ch01}, a trace, a quadratic form and a log determinant. It follows by taking the expectation of the log ratio of the two densities under the first.
 \begin{equation}\label{eq:ch03:gauss-kl}
 \KL{\Normal(\mu_0,\Sigma_0)}{\Normal(\mu_1,\Sigma_1)}
 =\tfrac12\Bigl[\tr(\Sigma_1^{-1}\Sigma_0)-d+(\mu_1-\mu_0)\T\Sigma_1^{-1}(\mu_1-\mu_0)+\log\frac{\det\Sigma_1}{\det\Sigma_0}\Bigr].
 \end{equation}
 Since $\MI{X}{Y}$ is the relative entropy from the joint law to the product of its marginals, \eqref{eq:ch03:gauss-mi} is the special case of \eqref{eq:ch03:gauss-kl} in which $\Sigma_1$ is the block-diagonal part of $\Sigma_0$. The trace term is then $d$ and only the log determinants survive.
 
-\begin{example}[A correlated pair]\label{ex:ch03:gauss-pair}
+\begin{example}[A correlated pair]\label[example]{ex:ch03:gauss-pair}
 Let $X=(x_1,x_2)\sim\Normal(0,\Sigma)$ with $\Sigma=\begin{psmallmatrix}2&1\\1&2\end{psmallmatrix}$, so $\det\Sigma=3$. By \eqref{eq:ch03:gauss-h}, $\h(X)=\ln(2\pi e)+\tfrac12\ln3=2.8379+0.5493=3.3872$ nats, or $4.8867$ bits. The information between the coordinates is, by \eqref{eq:ch03:gauss-mi}, $\tfrac12\log_2\frac{2\cdot2}{3}=0.2075$ bits. The correlation is $\rho=1/2$, and $-\frac12\log_2(1-\frac14)$ gives the same $0.2075$. In conditional form, $\Var(x_1\mid x_2)=2-\frac12=1.5$, and $\frac12\log_2(2/1.5)$ is again $0.2075$ bits. For comparison, a pair with $\rho=0.8$ shares $-\frac12\ln0.36=0.5108$ nats, which is $0.7370$ bits.
 
 Equation \eqref{eq:ch03:gauss-kl} gives the same number a third way. With $\Sigma_1=\diag(2,2)$, the trace term is $\tr(\Sigma_1^{-1}\Sigma)=2=d$, and what remains is $\frac12\ln\frac43=0.1438$ nats, which is $0.2075$ bits. Against the standard normal instead, $\KL{\Normal(0,\Sigma)}{\Normal(0,I)}=\frac12(4-2-\ln3)=0.4507$ nats. That number counts both the correlation and the excess variance.
@@ -136,10 +185,10 @@ A scalar Gaussian with variance $0.01$ has $\h=\frac12\log_2(2\pi e\cdot0.01)=-1
 
 \inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex}, Lemma ``Information bound, arbitrary joints'' (label \texttt{lem:info}), bounds $\MI{X}{\hat X}$ below by $\tfrac12\log\det\Sigma_x-\tfrac12\log\det\Sigma(\hat X)$ using exactly the maximum-entropy property of \cref{prop:ch03:gauss-h}.}
 
-\buildson{Chapter~1 (determinants, Schur complements, log-det). Chapter~2 (the Gaussian density and its conditional covariance).}
-\usedin{\cref{sec:ch03:gauss-rd,sec:ch03:weighted,sec:ch03:leakage}. Chapter~4 proves that $\log\det$ is concave, which makes the rate a convex function of an error covariance.}
+\buildson{\cref{ch01} (determinants, Schur complements, log-det). \cref{ch02} (the Gaussian density and its conditional covariance).}
+\usedin{\cref{sec:ch03:gauss-rd,sec:ch03:weighted,sec:ch03:leakage}. \cref{ch04} proves that $\log\det$ is concave, which makes the rate a convex function of an error covariance.}
 
-\section{A rate is a count of bits per source symbol that a code spends}\label{sec:ch03:rate}\shortsecmark{What a rate is}
+\section{A rate is a count of bits per source symbol that a code spends}\label{sec:ch03:rate}
 
 The quantities so far belong to probability distributions. A rate belongs to a code. A block code reads $n$ source symbols $X^n=(X_1,\dots,X_n)$, maps them to one of $\abs{\mathcal M_n}$ messages, and the decoder maps the message to a reconstruction $\hat X^n$. The code's rate is the logarithm of the number of messages per source symbol.
 \begin{equation}\label{eq:ch03:rate}
@@ -150,7 +199,7 @@ Here $d$ is a distortion measure, such as Hamming distortion for symbols or squa
 
 For lossy coding the operational question is the smallest rate at which codes can meet an average distortion $D$. Shannon's rate--distortion theorem answers it with a single-letter optimization over test channels $p(\hat x\mid x)$~\cite{coverthomas2006,berger1971}.
 
-\begin{theorem}[Rate--distortion theorem, stated]\label{thm:ch03:rd}
+\begin{theorem}[Rate--distortion theorem, stated]\label[theorem]{thm:ch03:rd}
 For an i.i.d.\ source $X$ and a bounded distortion measure $d$, the least achievable rate at distortion $D$ is
 \begin{equation}\label{eq:ch03:rd}
 R(D)=\min_{p(\hat x\mid x):\ \E d(X,\hat X)\le D}\ \MI{X}{\hat X}.
@@ -164,22 +213,22 @@ The converse uses only the tools of the first two sections, and it is short enou
 \begin{equation}\label{eq:ch03:converse}
 nR_n\ \ge\ \Ent(M)\ \ge\ \MI{X^n}{\hat X^n}\ \ge\ \sum_{i=1}^n\MI{X_i}{\hat X_i}\ \ge\ \sum_{i=1}^n R\bigl(\E d(X_i,\hat X_i)\bigr)\ \ge\ nR(D_n).
 \end{equation}
-The first step holds because a variable with $\abs{\mathcal M_n}$ values has entropy at most $\log\abs{\mathcal M_n}$. The second is the data-processing inequality for the chain $X^n-M-\hat X^n$. The third writes $\MI{X^n}{\hat X^n}=\sum_i\Ent(X_i)-\Ent(X^n\mid\hat X^n)$, uses the chain rule on the second term, and drops conditioning, which can only raise each $\Ent(X_i\mid\cdot)$ to $\Ent(X_i\mid\hat X_i)$ or above. The fourth is the definition \eqref{eq:ch03:rd}. The last is Jensen's inequality for the convex function $R$. Convexity is the subject of Chapter~4, and it enters information theory at exactly this step.
+The first step holds because a variable with $\abs{\mathcal M_n}$ values has entropy at most $\log\abs{\mathcal M_n}$. The second is the data-processing inequality for the chain $X^n-M-\hat X^n$. The third writes $\MI{X^n}{\hat X^n}=\sum_i\Ent(X_i)-\Ent(X^n\mid\hat X^n)$, uses the chain rule on the second term, and drops conditioning, which can only raise each $\Ent(X_i\mid\cdot)$ to $\Ent(X_i\mid\hat X_i)$ or above. The fourth is the definition \eqref{eq:ch03:rd}. The last is Jensen's inequality for the convex function $R$. Convexity is the subject of \cref{ch04}, and it enters information theory at exactly this step.
 
-\begin{example}[A lossless code and a lossy one]\label{ex:ch03:huffman}
+\begin{example}[A lossless code and a lossy one]\label[example]{ex:ch03:huffman}
 The source $(\frac12,\frac14,\frac14)$ of Primer S has entropy $1.5$ bits. The prefix code $\{0,10,11\}$ has lengths $1,2,2$, Kraft sum $2^{-1}+2^{-2}+2^{-2}=1$, and mean length $\frac12\cdot1+\frac14\cdot2+\frac14\cdot2=1.5$ bits. It meets the entropy exactly, because every probability is a power of two.
 
-A fair bit reproduced with Hamming distortion has $R(D)=1-h_2(D)$ for $0\le D\le\frac12$~\cite{coverthomas2006}. Allowing ten percent of the bits to be wrong lowers the rate from one bit to $1-h_2(0.1)=1-0.469=0.531$ bits per source bit. The saving is available only to long block codes. Dropping bits one at a time cannot reach it.
+A fair bit reproduced with Hamming distortion has $R(D)=1-h_2(D)$ for $0\le D\le\frac12$~\cite{coverthomas2006}. Allowing ten percent of the bits to be wrong lowers the rate from one bit to $1-h_2(0.1)=1-0.469=0.531$ bits per source bit. The full saving is approached only as the block length grows. Dropping bits one at a time cannot reach it. Sending a fraction $0.8$ of the bits and guessing the rest meets $D=0.1$ at $0.8$ bits per source bit.
 \end{example}
 
 \buildson{\cref{sec:ch03:entropy,sec:ch03:kl}. Primer S, section S.10.}
-\usedin{\cref{sec:ch03:gauss-rd} onward. Chapter~7 (quantization).}
+\usedin{\cref{sec:ch03:gauss-rd} onward. \cref{ch07} (quantization).}
 
-\section{A Gaussian source costs one bit for every factor of four in distortion}\label{sec:ch03:gauss-rd}\shortsecmark{Gaussian rate--distortion}
+\section{A Gaussian source costs one bit for every factor of four in distortion}\label{sec:ch03:gauss-rd}
 
 For a scalar Gaussian with squared error, the minimization in \eqref{eq:ch03:rd} has a closed form. The proof shows the two moves used throughout the programme. The converse uses the maximum-entropy property, and the achievability uses a Gaussian test channel written backward, as the source equal to the reconstruction plus independent noise.
 
-\begin{proposition}[Scalar Gaussian rate--distortion]\label{prop:ch03:scalar-rd}
+\begin{proposition}[Scalar Gaussian rate--distortion]\label[proposition]{prop:ch03:scalar-rd}
 For $X\sim\Normal(0,\sigma^2)$ and $d(x,\hat x)=(x-\hat x)^2$,
 \begin{equation}\label{eq:ch03:scalar-rd}
 R(D)=\begin{cases}\tfrac12\log\dfrac{\sigma^2}{D}, & 0<D\le\sigma^2,\\[4pt] 0,& D>\sigma^2,\end{cases}
@@ -193,12 +242,30 @@ The error has second moment at most $D$, so its entropy is at most $\frac12\log(
 Achievability. Let $\hat X\sim\Normal(0,\sigma^2-D)$ and $Z\sim\Normal(0,D)$ be independent and set $X=\hat X+Z$. Then $X$ has variance $\sigma^2$, the error is $Z$, and $\MI{X}{\hat X}=\h(X)-\h(Z)$ equals the bound. If $D>\sigma^2$, the reconstruction $\hat X=0$ costs nothing.
 \end{proof}
 
-Each bit divides the distortion by four, which is six decibels per bit. Section 0.7 of \emph{Data Mining as Observation} found the same factor of four for a uniform quantizer at high resolution, and the two statements are different. The quantizer's rule is an approximation for one scalar quantizer. Equation \eqref{eq:ch03:scalar-rd} is the floor for all codes. At high resolution an entropy-coded uniform scalar quantizer on a Gaussian source spends $\frac12\log_2(\pi e/6)=0.2546$ bits per sample more than $R(D)$, which is $1.53$\,dB of distortion~\cite{grayneuhoff1998}.
+For $D\le\sigma^2$ each bit divides the distortion by four, which is six decibels per bit. Above $\sigma^2$ the rate is zero and the rule does not apply. Section 0.7 of \emph{Data Mining as Observation} found the same factor of four for a uniform quantizer at high resolution, and the two statements are different. The quantizer's rule is an approximation for one scalar quantizer. Equation \eqref{eq:ch03:scalar-rd} is the floor for all codes. At high resolution an entropy-coded uniform scalar quantizer on a Gaussian source spends $\frac12\log_2(\pi e/6)=0.2546$ bits per sample more than $R(D)$, which is $1.53$\,dB of distortion~\cite{grayneuhoff1998}.
+
+\Cref{fig:ch03:gaussrd} draws the curve and the quantizer's price above it.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=1.05, ymin=0, ymax=2.6, xlabel={distortion $D$ (source variance $1$)}, ylabel={rate in bits}, xtick={0,0.25,0.5,0.75,1}, ytick={0,1,2}]
+\addplot[pblue] coordinates {(0.05,2.161) (0.1,1.661) (0.15,1.368) (0.2,1.161) (0.25,1) (0.3,0.8685) (0.35,0.7573) (0.4,0.661) (0.45,0.576) (0.5,0.5) (0.55,0.4312) (0.6,0.3685) (0.65,0.3107) (0.7,0.2573) (0.75,0.2075) (0.8,0.161) (0.85,0.1172) (0.9,0.076) (0.95,0.037) (1,0)}; % data:gaussrd
+\addplot[porange, dashed] coordinates {(0.05,2.416) (0.1,1.916) (0.15,1.623) (0.2,1.416) (0.25,1.255) (0.3,1.123)}; % data:ecsq
+\addplot[pgreen, only marks, mark=*, mark size=2pt] coordinates {(0.25,1)};
+\node[lbl,pgreen,anchor=south west] at (axis cs:0.26,1.0) {$R(1/4)=1$ bit};
+\node[lbl,porange,anchor=south west] at (axis cs:0.17,1.6) {uniform quantizer, $+0.2546$ bits};
+\node[lbl,pblue,anchor=south west] at (axis cs:0.6,0.4) {$R(D)=\frac12\log_2(1/D)$};
+\end{axis}
+\end{tikzpicture}
+\caption{The Gaussian rate--distortion function is a floor that no code can go below. One bit buys a factor of four in distortion. The dashed curve is the high-resolution cost of an entropy-coded uniform scalar quantizer, a constant $0.2546$ bits above the floor, drawn only where the high-resolution approximation applies.}
+\label{fig:ch03:gaussrd}
+\end{figure}
 
 A Gaussian vector with independent components of variances $\gamma_1,\dots,\gamma_d$ splits into $d$ scalar problems that share one budget. Mutual information adds over independent components, and the optimal split puts the same distortion $\theta$ on every component whose variance exceeds $\theta$ and leaves the rest undescribed. A component with $\gamma_i\le\theta$ is reconstructed as zero and contributes its whole variance. For a correlated source with covariance $\Sigma_x$, rotating into the eigenvectors of $\Sigma_x$ makes the components independent, so the $\gamma_i$ are the eigenvalues of $\Sigma_x$.
 
-\begin{theorem}[Reverse water-filling~\cite{coverthomas2006,berger1971}]\label{thm:ch03:rwf}
-For $X\sim\Normal(0,\Sigma_x)$ with eigenvalues $\gamma_1,\dots,\gamma_d$ and the distortion $\E\norm{X-\hat X}^2$,
+\begin{theorem}[Reverse water-filling~\cite{coverthomas2006,berger1971}]\label[theorem]{thm:ch03:rwf}
+For $X\sim\Normal(0,\Sigma_x)$ with eigenvalues $\gamma_1,\dots,\gamma_d$, the distortion $\E\norm{X-\hat X}^2$ and $0<D\le\tr\Sigma_x$,
 \begin{equation}\label{eq:ch03:rwf}
 R(D)=\sum_{i=1}^d\tfrac12\log^{+}\frac{\gamma_i}{\theta},\qquad
 D_i=\min(\theta,\gamma_i),\qquad \sum_{i=1}^d D_i=D,
@@ -206,45 +273,45 @@ D_i=\min(\theta,\gamma_i),\qquad \sum_{i=1}^d D_i=D,
 where $\log^+u=\max(\log u,0)$, $D_i$ is the distortion left on component $i$, and the water level $\theta$ is set by the budget $D$.
 \end{theorem}
 
-The name comes from \cref{fig:ch03:rwf}. Draw each variance as a column and fill water to level $\theta$. The water in a column is the distortion that column keeps. Columns that stick out of the water are described, and the part above the water is what the description conveys. Columns entirely under water get no bits. Chapter~4 derives \eqref{eq:ch03:rwf} from the Karush--Kuhn--Tucker conditions. The proof that the components may be treated separately uses Hadamard's inequality and is given for the weighted case in \cref{sec:ch03:weighted}.
+The name comes from \cref{fig:ch03:rwf}. Draw each variance as a column and fill water to level $\theta$. The water in a column is the distortion that column keeps. Columns that stick out of the water are described, and the part above the water is what the description conveys. Columns entirely under water get no bits. \cref{ch04} derives \eqref{eq:ch03:rwf} from the Karush--Kuhn--Tucker conditions. The proof that the components may be treated separately uses Hadamard's inequality and is given for the weighted case in \cref{sec:ch03:weighted}.
 
 The water level has a second meaning. As long as the set of described components does not change, each of the $k$ described components keeps $\theta=(D-\sum_{\gamma_i\le\theta}\gamma_i)/k$, and differentiating \eqref{eq:ch03:rwf} gives the slope of the curve,
 \begin{equation}\label{eq:ch03:slope}
 \frac{dR}{dD}=-\frac{1}{2\theta}\quad\text{nats per unit of distortion}.
 \end{equation}
-The last bit is the most expensive one. A small water level means that a further unit of distortion is worth many nats. Chapter~4 shows that $1/(2\theta)$ is the Lagrange multiplier of the distortion constraint, so the price that duality assigns to distortion is the slope of $R(D)$.
+The last bit is the most expensive one. A small water level means that a further unit of distortion is worth many nats. \cref{ch04} shows that $1/(2\theta)$ is the Lagrange multiplier of the distortion constraint, so the price that duality assigns to distortion is the slope of $R(D)$.
 
-\begin{figure}[t]
+\begin{figure}[tbp]
 \centering
 \begin{tikzpicture}[x=1.5cm,y=0.9cm]
   % columns gamma = 4, 2, 1, 0.25 ; water theta = 0.5
   \foreach \i/\g/\w in {1/4/0.5, 2/2/0.5, 3/1/0.5, 4/0.25/0.25}{
-    \fill[blue!25] (\i-0.35,0) rectangle (\i+0.35,\w);
-    \draw[thick] (\i-0.35,0) rectangle (\i+0.35,\g);
-    \node[below] at (\i,0) {$\gamma_{\i}=\g$};
+    \fill[pred!22] (\i-0.35,0) rectangle (\i+0.35,\w);
+    \draw[thick,pblue] (\i-0.35,0) rectangle (\i+0.35,\g);
+    \node[lbl,below] at (\i,0) {$\gamma_{\i}=\g$};
   }
-  \draw[dashed,blue!70!black,thick] (0.4,0.5) -- (4.6,0.5) node[right] {$\theta=0.5$};
-  \draw[->] (0.4,0) -- (4.8,0);
-  \draw[->] (0.4,0) -- (0.4,4.4) node[left] {variance};
+  \draw[dashed,pred,thick] (0.4,0.5) -- (4.6,0.5) node[right,lbl] {$\theta=0.5$};
+  \draw[->,pgray] (0.4,0) -- (4.8,0);
+  \draw[->,pgray] (0.4,0) -- (0.4,4.4) node[left,lbl] {variance};
   \node[align=center,font=\small] at (1,4.3) {$1.5$ bits};
   \node[align=center,font=\small] at (2,2.3) {$1$ bit};
   \node[align=center,font=\small] at (3,1.3) {$0.5$ bit};
   \node[align=center,font=\small] at (4,0.75) {$0$ bits};
 \end{tikzpicture}
-\caption{Reverse water-filling for four independent Gaussian components with variances $4,2,1,0.25$ at total distortion $D=1.75$. The water level is $\theta=0.5$. The shaded water in each column is the distortion that component keeps, $\min(\theta,\gamma_i)$. The fourth column is under water, is reconstructed as zero, and receives no bits. The total rate is $3$ bits (\cref{ex:ch03:rwf}).}
+\caption{Reverse water-filling for four independent Gaussian components with variances $4,2,1,0.25$ at total distortion $D=1.75$. The water level is $\theta=0.5$. The red water in each column is the distortion that component keeps, $\min(\theta,\gamma_i)$. The fourth column is under water, is reconstructed as zero, and receives no bits. The total rate is $3$ bits (\cref{ex:ch03:rwf}).}
 \label{fig:ch03:rwf}
 \end{figure}
 
-\begin{example}[Four components and three bits]\label{ex:ch03:rwf}
+\begin{example}[Four components and three bits]\label[example]{ex:ch03:rwf}
 Take variances $\gamma=(4,2,1,0.25)$ and a total distortion budget $D=1.75$. Try $\theta=0.5$. The first three columns exceed it and keep $0.5$ each, and the fourth keeps its own $0.25$. The total is $0.5+0.5+0.5+0.25=1.75$, so $\theta=0.5$ is the water level. The rates are $\frac12\log_2 8=1.5$, $\frac12\log_2 4=1$, $\frac12\log_2 2=0.5$ and $0$ bits, which sum to $R(1.75)=3$ bits. With no bits at all the distortion would be $\tr\Sigma_x=7.25$. The slope \eqref{eq:ch03:slope} at this point is $-1/(2\cdot0.5)=-1$ nat, or $-1.4427$ bits, per unit of distortion. Lowering $D$ from $1.75$ to $1.65$ keeps the same three columns described, moves the water to $\theta=(1.65-0.25)/3=0.4667$, and raises the rate to $3.149$ bits, close to the $3+0.1\times1.4427=3.144$ that the slope predicts. A scalar source of variance $1$ described at one bit has $D=\sigma^2 2^{-2}=0.25$, and at two bits $1/16$.
 \end{example}
 
 \inproject{\nolinkurl{observation-data-mining/chapters/ch00_the_mathematics_this_book_uses.md}, section 0.7, equation 0.13, is the high-resolution quantizer version of \eqref{eq:ch03:rwf}, written with bits and the products $s_iv_i$ of sensitivity and variance.}
 
 \buildson{\cref{prop:ch03:gauss-h}. Section 0.7 of \emph{Data Mining as Observation}.}
-\usedin{\cref{sec:ch03:weighted}. Chapter~4 (the KKT derivation). Chapter~6 (Observation Theory). Chapter~7 (quantization).}
+\usedin{\cref{sec:ch03:weighted}. \cref{ch04} (the KKT derivation). \cref{ch06} (Observation Theory). \cref{ch07} (quantization).}
 
-\section{Weighted distortion water-fills the spectrum of the whitened read operator}\label{sec:ch03:weighted}\shortsecmark{Weighted rate--distortion}
+\section{Weighted distortion water-fills the spectrum of the whitened read operator}\label{sec:ch03:weighted}
 
 A downstream consumer does not feel every coordinate of the error equally. Section 0.5 of \emph{Data Mining as Observation} defined the read operator $\PC=\E[J\T GJ]$ and the observer distortion $\dO=\tr(\PC M_\delta)=\E[\delta\T\PC\delta]$. As a distortion measure this is the weighted squared error $d(x,\hat x)=(x-\hat x)\T\PC(x-\hat x)$ for a fixed positive semidefinite weight. Its rate--distortion function for a Gaussian source was derived by Sakrison for a frequency-weighted squared error on a Gaussian process~\cite{sakrison1968}, and Berger's book treats it as part of the classical theory~\cite{berger1971}. Observation Theory calls it the consumer-relative function $\RC(D)$. The object is standard. What the programme adds is how $\PC$ is obtained, from the consumer's Jacobian and a workload, and what happens when two observers or a side-information holder enter (\cref{sec:ch03:leakage,sec:ch03:refine}).
 
@@ -256,12 +323,12 @@ For a source $X$ and a fixed $\PC\psd0$,
 With $\PC=I$ (the identity reader) it is the $R(D)$ of \cref{thm:ch03:rwf}.
 \end{definition}
 
-\begin{theorem}[Gaussian $\RC(D)$ by reverse water-filling]\label{thm:ch03:rc}
+\begin{theorem}[Gaussian $\RC(D)$ by reverse water-filling]\label[theorem]{thm:ch03:rc}
 Let $X\sim\Normal(0,\Sigma_x)$ with $\Sigma_x\pd0$, and let $\gamma_1,\dots,\gamma_d$ be the eigenvalues of the whitened read operator $\tilde P=\Sigma_x^{1/2}\PC\Sigma_x^{1/2}$. For $0<D<\tr(\PC\Sigma_x)$,
 \begin{equation}\label{eq:ch03:rc}
 \RC(D)=\sum_{i=1}^d\tfrac12\log^{+}\frac{\gamma_i}{\theta},\qquad\sum_{i=1}^d\min(\gamma_i,\theta)=D,
 \end{equation}
-and equivalently, with the max-det form of Chapter~4,
+and equivalently, with the max-det form of \cref{ch04},
 \begin{equation}\label{eq:ch03:rc-maxdet}
 \RC(D)=\tfrac12\log\det\Sigma_x-\tfrac12\max\bigl\{\log\det\Sd:\ 0\prec\Sd\preceq\Sigma_x,\ \tr(\PC\Sd)\le D\bigr\}.
 \end{equation}
@@ -272,9 +339,9 @@ The matrices $\tilde P$, $\PC^{1/2}\Sigma_x\PC^{1/2}$ and $\PC\Sigma_x$ have the
 The proof has three steps. First, the conditional mean is the best estimator for every weight, so the distortion of any reconstruction is at least $\tr(\PC\Sd)$, where $\Sd=\Cov(X\mid\hat X)$ averaged over $\hat X$. Second, as in \cref{prop:ch03:scalar-rd}, $\MI{X}{\hat X}\ge\frac12\log\det\Sigma_x-\frac12\log\det\Sd$, and a Gaussian backward channel $X=\hat X+Z$ with $Z\sim\Normal(0,\Sd)$ attains it for any $0\prec\Sd\preceq\Sigma_x$. That gives \eqref{eq:ch03:rc-maxdet}. Third, whiten. Put $W=\Sigma_x^{-1/2}\Sd\Sigma_x^{-1/2}$, so the constraints become $W\preceq I$ and $\tr(\tilde PW)\le D$, and the objective is $\log\det W$ plus a constant. Write $W$ in the eigenbasis of $\tilde P$. The distortion $\tr(\tilde PW)=\sum_i\gamma_iW_{ii}$ depends only on the diagonal of $W$, the cap $W\preceq I$ forces $W_{ii}\le1$, and Hadamard's inequality $\det W\le\prod_iW_{ii}$ says that the off-diagonal entries can only lower the objective. So $W$ is diagonal, and the problem is the scalar one of maximizing $\sum_i\log W_{ii}$ subject to $\sum_i\gamma_iW_{ii}\le D$ and $W_{ii}\le1$. Setting $D_i=\gamma_iW_{ii}$ turns it into \cref{thm:ch03:rwf} with the $\gamma_i$ as variances. The eigenvalue statement holds because $AB$ and $BA$ have the same nonzero eigenvalues.
 \end{proof}
 
-Three points follow. First, the water-filling runs on $\gamma_i$, which mixes the source and the reader. A direction gets bits only if the source varies there and the consumer reads it. Second, on $\ker\PC$ the consumer is blind and no rate is spent. Third, $D$ is measured in the consumer's units. Scaling $\PC$ by $c$ scales both $\gamma_i$ and the meaningful range of $D$ by $c$, and $\RC(cD)$ for the scaled reader equals $\RC(D)$ for the original. The theorem needs a fixed $\PC$. For a point-dependent $\PC(x)$ the rate--distortion theorem still applies to the distortion measure, but the closed form \eqref{eq:ch03:rc} is lost, because no single linear change of variables whitens every point.
+Three points follow. First, the water-filling runs on $\gamma_i$, which mixes the source and the reader. A direction gets bits only if the source varies there and the consumer reads it. Second, no rate is spent on the null space of $\tilde P$, the whitened directions the consumer cannot see. That does not mean the description says nothing about an unread coordinate. In \cref{ex:ch03:rc} below the consumer reads only $x_1$, yet the error variance of the correlated $x_2$ falls from $2$ to $1.625$. Third, $D$ is measured in the consumer's units. Scaling $\PC$ by $c$ scales both $\gamma_i$ and the meaningful range of $D$ by $c$, and $\RC(cD)$ for the scaled reader equals $\RC(D)$ for the original. The theorem needs a fixed $\PC$. For a point-dependent $\PC(x)$ the rate--distortion theorem still applies to the distortion measure, but the closed form \eqref{eq:ch03:rc} is lost, because no single linear change of variables whitens every point.
 
-\begin{example}[A consumer that reads one coordinate of a correlated pair]\label{ex:ch03:rc}
+\begin{example}[A consumer that reads one coordinate of a correlated pair]\label[example]{ex:ch03:rc}
 Let $\Sigma_x=\begin{psmallmatrix}2&1\\1&2\end{psmallmatrix}$ and $\PC=\diag(1,0)$, a consumer that reads $x_1$ only. Then $\PC\Sigma_x=\begin{psmallmatrix}2&1\\0&0\end{psmallmatrix}$ has eigenvalues $(2,0)$, so the whitened read operator has $\gamma=(2,0)$, and $\tr(\PC\Sigma_x)=2$. At $D=0.5$ only one column is above water, $\theta=0.5$, and $\RC(0.5)=\frac12\log_2(2/0.5)=1$ bit. The optimal error covariance is
 \[
 \Sd^\star=\begin{pmatrix}0.5&0.25\\0.25&1.625\end{pmatrix},
@@ -284,14 +351,49 @@ which has $\tr(\PC\Sd^\star)=0.5$ and $\frac12\log_2(\det\Sigma_x/\det\Sd^\star)
 The identity reader at the same $D=0.5$ water-fills the eigenvalues $(3,1)$ of $\Sigma_x$. Both exceed $\theta=0.25$, and $R(0.5)=\frac12\log_2 12+\frac12\log_2 4=2.792$ bits. The consumer-matched code costs $1.79$ bits less for the distortion the consumer feels. The two numbers are not distortions of the same thing. The identity reader's $0.5$ is total squared error and the consumer's $0.5$ is squared error in $x_1$.
 \end{example}
 
+\Cref{fig:ch03:thesis} sets the two allocations side by side. It is the picture to remember from this chapter.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[x=1.45cm,y=1.15cm]
+  % identity reader: eigenvalues of Sigma_x, 3 and 1, water 0.25
+  \foreach \i/\g in {1/3, 2/1}{
+    \fill[pred!22] (\i-0.3,0) rectangle (\i+0.3,0.25);
+    \draw[thick,pblue] (\i-0.3,0) rectangle (\i+0.3,\g);
+  }
+  \draw[dashed,pred,thick] (0.5,0.25) -- (2.5,0.25) node[right,lbl] {$\theta=0.25$};
+  \node[lbl] at (1,3.25) {$1.79$ bits};
+  \node[lbl] at (2,1.25) {$1$ bit};
+  \node[lbl,below] at (1,0) {$\gamma_1=3$};
+  \node[lbl,below] at (2,0) {$\gamma_2=1$};
+  \node[lbl,align=center] at (1.5,-0.85) {identity reader, $P=I$\\$R(0.5)=2.79$ bits};
+  \draw[->,pgray] (0.5,0) -- (2.6,0);
+  % consumer reads x1: whitened spectrum 2 and 0, water 0.5
+  \begin{scope}[xshift=4.2cm]
+  \fill[pred!22] (0.7,0) rectangle (1.3,0.5);
+  \draw[thick,porange] (0.7,0) rectangle (1.3,2);
+  \draw[thick,porange] (1.7,0) -- (2.3,0);
+  \draw[dashed,pred,thick] (0.5,0.5) -- (2.5,0.5) node[right,lbl] {$\theta=0.5$};
+  \node[lbl] at (1,2.25) {$1$ bit};
+  \node[lbl] at (2,0.25) {$0$ bits};
+  \node[lbl,below] at (1,0) {$\gamma_1=2$};
+  \node[lbl,below] at (2,0) {$\gamma_2=0$};
+  \node[lbl,align=center] at (1.5,-0.85) {consumer, $\PC=\diag(1,0)$\\$\RC(0.5)=1$ bit};
+  \draw[->,pgray] (0.5,0) -- (2.6,0);
+  \end{scope}
+\end{tikzpicture}
+\caption{The same source and the same budget $D=0.5$, water-filled for two readers. The identity reader fills the spectrum $(3,1)$ of $\Sigma_x$ and pays $2.79$ bits. The consumer that reads only $x_1$ fills the spectrum $(2,0)$ of its whitened read operator, spends nothing on the direction it cannot see, and pays $1$ bit. For a Gaussian source and a fixed read operator, compressing for a consumer means water-filling a different spectrum.}
+\label{fig:ch03:thesis}
+\end{figure}
+
 \inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex}, Proposition ``Gaussian rate--distortion; Berger reduction'' (label \texttt{prop:rd}) states \eqref{eq:ch03:rc} in bits, using the eigenvalues of $\PC^{1/2}\Sigma_x\PC^{1/2}$, and Lemma ``Gaussian optimum: max-det form and uniqueness'' (label \texttt{lem:maxdet}) states \eqref{eq:ch03:rc-maxdet} in nats. Proposition ``Finite-blocklength reduction'' (label \texttt{prop:dispersion}) is the finite-$n$ statement mentioned in \cref{sec:ch03:rate}. The programme's own novelty assessment, \nolinkurl{geometric-observation/articles/2026-10-01-ot-novelty-assessment.md}, lists consumer-relative $\RC(D)$ as Sakrison's weighted rate--distortion function and asks that it be credited as such.}
 
 \inproject{\nolinkurl{turboquant-pro/turboquant_pro/read_allocation.py}, function \texttt{allocate\_bits}, water-fills bits on the products $\lambda_i\sigma_i^2$ of the eigenvalues of $\PC$ and the measured source variance along each eigenvector of $\PC$. Those products are the $\gamma_i$ of \eqref{eq:ch03:rc} when $\PC$ and $\Sigma_x$ commute. \Cref{exr:ch03:noncommute} computes what the difference costs when they do not.}
 
-\buildson{\cref{thm:ch03:rwf}. Section 0.5 of \emph{Data Mining as Observation} (the read operator and $\dO$). Chapter~1 (positive definite matrices and eigenvalues).}
-\usedin{Chapter~4 (the max-det program and its KKT conditions). Chapter~6 (Observation Theory). Chapter~7 (quantization and turboquant-pro).}
+\buildson{\cref{thm:ch03:rwf}. Section 0.5 of \emph{Data Mining as Observation} (the read operator and $\dO$). \cref{ch01} (positive definite matrices and eigenvalues).}
+\usedin{\cref{ch04} (the max-det program and its KKT conditions). \cref{ch06} (Observation Theory). \cref{ch07} (quantization and turboquant-pro).}
 
-\section{Side information lowers the rate, and for a Gaussian it does not matter whether the encoder has it}\label{sec:ch03:side}\shortsecmark{Side information}
+\section{Side information lowers the rate, and for a Gaussian it does not matter whether the encoder has it}\label{sec:ch03:side}
 
 Suppose a variable $S$, correlated with the source, is available. If both encoder and decoder see $S^n$, the code may depend on it, and the relevant quantity is the conditional rate--distortion function. If only the decoder sees $S^n$, the encoder must describe $X^n$ without knowing what the decoder already knows. Wyner and Ziv found the rate for that case~\cite{wynerziv1976}.
 
@@ -311,14 +413,47 @@ R_{\mathrm{WZ}}(D)=R_{X\mid S}(D)=\tfrac12\log^{+}\frac{\Var(X\mid S)}{D}.
 \end{equation}
 The conditional form is \cref{prop:ch03:scalar-rd} applied to the conditional law of $X$ given $S$, which is Gaussian with variance $\Var(X\mid S)$ for every value of $S$.
 
-\begin{example}[A noisy look at the source]\label{ex:ch03:side}
+\begin{example}[A noisy look at the source]\label[example]{ex:ch03:side}
 Let $X\sim\Normal(0,1)$ and $S=X+U_s$ with $U_s\sim\Normal(0,1)$ independent. The conditional variance is $\Var(X\mid S)=(1+1)^{-1}=0.5$. At $D=0.25$ the plain rate is $R(0.25)=1$ bit, and with side information it is $\frac12\log_2(0.5/0.25)=0.5$ bit, whether the encoder sees $S$ or not. A Wyner--Ziv test channel that attains it is $U=X+N$ with $\Var N=0.5$, since then $\Var(X\mid U,S)^{-1}=1+1+2=4$. From the joint covariance of $(X,U,S)$, $\MI{X}{U}-\MI{S}{U}=0.5$ bit, as \eqref{eq:ch03:wz} says.
 \end{example}
 
-\buildson{\cref{prop:ch03:scalar-rd,eq:ch03:gauss-mi}. Conditional Gaussian laws from Chapter~2.}
-\usedin{\cref{sec:ch03:leakage}, where the side information sits with a third party rather than with the decoder. Chapter~6.}
+\Cref{fig:ch03:si} shows the two arrangements.
 
-\section{Leakage to a holder of side information is a conditional mutual information}\label{sec:ch03:leakage}\shortsecmark{Conditional leakage}
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[node distance=9mm]
+  \node[lbl] (x1) {$X^n$};
+  \node[block,right=of x1] (e1) {encoder};
+  \node[block,right=14mm of e1] (d1) {decoder};
+  \node[lbl,right=of d1] (y1) {$\hat X^n$};
+  \node[lbl] (s1) at ($(e1)!0.5!(d1)+(0,1.1)$) {$S^n$};
+  \draw[flow] (x1) -- (e1);
+  \draw[flow] (e1) -- node[above,lbl] {$M$} (d1);
+  \draw[flow] (d1) -- (y1);
+  \draw[flow,pblue] (s1) -| (e1);
+  \draw[flow,pblue] (s1) -| (d1);
+  \node[lbl,anchor=west] at ($(y1.east)+(0.2,0)$) {$R_{X\mid S}(D)$};
+  \begin{scope}[yshift=-2.4cm]
+  \node[lbl] (x2) {$X^n$};
+  \node[block,right=of x2] (e2) {encoder};
+  \node[block,right=14mm of e2] (d2) {decoder};
+  \node[lbl,right=of d2] (y2) {$\hat X^n$};
+  \node[lbl] (s2) at ($(d2)+(0,1.1)$) {$S^n$};
+  \draw[flow] (x2) -- (e2);
+  \draw[flow] (e2) -- node[above,lbl] {$M$} (d2);
+  \draw[flow] (d2) -- (y2);
+  \draw[flow,pblue] (s2) -- (d2);
+  \node[lbl,anchor=west] at ($(y2.east)+(0.2,0)$) {$R_{\mathrm{WZ}}(D)$};
+  \end{scope}
+\end{tikzpicture}
+\caption{Side information at both ends, above, and at the decoder only, below. The lower encoder cannot see what the decoder knows, yet for a Gaussian source with squared error and jointly Gaussian side information it needs no more rate than the upper one. For a binary source with Hamming distortion it can need strictly more.}
+\label{fig:ch03:si}
+\end{figure}
+
+\buildson{\cref{prop:ch03:scalar-rd,eq:ch03:gauss-mi}. Conditional Gaussian laws from \cref{ch02}.}
+\usedin{\cref{sec:ch03:leakage}, where the side information sits with a third party rather than with the decoder. \cref{ch06}.}
+
+\section{Leakage to a holder of side information is a conditional mutual information}\label{sec:ch03:leakage}
 
 Now let the party that holds $S^n$ be someone other than the decoder. It receives the message $M$ but has no task to reconstruct $X$. In secure source coding this party is an eavesdropper, and the quantity of interest is how much the message tells it about the source beyond what $S^n$ already told it. In the programme's papers the same quantity is read as the cost that the holder pays to re-encode what it learns. The name the novelty assessment adopts, and this book uses, is the conditional leakage.
 
@@ -332,7 +467,7 @@ L_n=\frac1n\MI{X^n}{M\mid S^n}=\frac1n\Ent(M\mid S^n)\quad\text{(deterministic e
 \end{equation}
 \end{definition}
 
-The first equality holds because $\Ent(M\mid X^n,S^n)=0$ when $M$ is a function of $X^n$. The second expression is the holder's equivocation, the uncertainty about the source that survives the message, and it is the leakage subtracted from a constant. So minimizing leakage is the same problem as maximizing the eavesdropper's equivocation. The rate--distortion--equivocation region for discrete sources is due to Villard and Piantanida~\cite{villard2013}, and Ekrem and Ulukus treat vector Gaussian sources under a matrix distortion constraint~\cite{ekrem2013}. The leakage is not a rate that any decoder pays. It is a conditional information, and it can be smaller than the rate by up to the information the message shares with $S$.
+The first equality holds because $\Ent(M\mid X^n,S^n)=0$ when $M$ is a function of $X^n$. The second expression is the holder's equivocation, the uncertainty about the source that survives the message, and it is the leakage subtracted from a constant. So minimizing leakage is the same problem as maximizing the eavesdropper's equivocation. The rate--distortion--equivocation region for discrete sources is due to Villard and Piantanida~\cite{villard2013}, and Ekrem and Ulukus treat vector Gaussian sources under a matrix distortion constraint~\cite{ekrem2013}. The leakage is not a rate that any decoder pays. It is a conditional information. Since $\Ent(M\mid S^n)=\Ent(M)-\MI{M}{S^n}$ and $\Ent(M)\le nR_n$, the leakage is smaller than the rate by at least $\frac1n\MI{M}{S^n}$, the information per symbol that the message shares with $S^n$.
 
 For jointly Gaussian test channels the single-letter leakage has a log-det form. If the description $\hat X$ is formed from $X$ alone, then $\hat X-X-S$ is a Markov chain, and by \eqref{eq:ch03:cmi},
 \begin{equation}\label{eq:ch03:leak-gauss}
@@ -342,34 +477,56 @@ For jointly Gaussian test channels the single-letter leakage has a log-det form.
 \Cov(X\mid \hat X,S)^{-1}=\Sd^{-1}+H\T\Sigma_U^{-1}H,
 \end{gathered}
 \end{equation}
-where $S=HX+U$ with $U\sim\Normal(0,\Sigma_U)$ independent, and $\Sd=\Cov(X\mid\hat X)$. The precision form on the right is the information form of Gaussian conditioning from Chapter~2, in which independent observations add their precisions. The identity $\ell=r-\MI{\hat X}{S}$ says that, at a fixed rate, a description leaks less when it is more informative about what the holder already sees.
+where $S=HX+U$ with $U\sim\Normal(0,\Sigma_U)$ independent, and $\Sd=\Cov(X\mid\hat X)$. The precision form on the right is the information form of Gaussian conditioning from \cref{ch02}, in which independent observations add their precisions. The identity $\ell=r-\MI{\hat X}{S}$ says that, at a fixed rate, a description leaks less when it is more informative about what the holder already sees.
 
-\begin{example}[Rate one bit, leakage two thirds of a bit]\label{ex:ch03:leak}
+\begin{example}[Rate one bit, leakage two thirds of a bit]\label[example]{ex:ch03:leak}
 Use the source and holder of \cref{ex:ch03:side}, with $\sigma^2=1$, $S=X+U$, $\Var U=1$, and the rate-optimal description at $D=0.25$, so $r=1$ bit. The holder's conditional variance before the message is $\Var(X\mid S)=0.5$, and after it is $(1/0.25+1/1)^{-1}=0.2$. The leakage is $\ell=\frac12\log_2(0.5/0.2)=0.661$ bits. Directly, $\hat X$ has variance $0.75$ and $S=\hat X+Z+U$ with $\Var(Z+U)=1.25$, so $\MI{\hat X}{S}=\frac12\log_2(2/1.25)=0.339$ bits, and $1-0.339=0.661$, as \eqref{eq:ch03:leak-gauss} says.
 \end{example}
 
-In this scalar example the description has no freedom. Both $r$ and $\ell$ decrease as the error variance grows, so the largest admissible error variance, $D$, is optimal for both, and one description is both rate-optimal and leakage-optimal. The same is true under a matrix constraint on the whole error covariance, which is the setting of Ekrem and Ulukus. A trade-off between the two costs appears when the encoder can choose among error covariances that meet a weighted constraint $\tr(Q\Sd)\le D$, because that set has no largest element.
+\Cref{fig:ch03:leak} shows who holds what.
 
-\begin{example}[Two coordinates, and the holder sees one]\label{ex:ch03:tradeoff}
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[node distance=9mm]
+  \node[lbl] (x) {$X^n$};
+  \node[block,right=of x] (e) {encoder};
+  \node[block,right=16mm of e] (d) {decoder};
+  \node[lbl,right=of d] (y) {$\hat X^n$};
+  \node[block,below=10mm of d,fill=porange!15] (h) {holder};
+  \node[lbl,right=of h] (s) {$S^n$};
+  \draw[flow] (x) -- (e);
+  \draw[flow] (e) -- node[above,lbl] {$M$, rate $R$} (d);
+  \draw[flow] (d) -- (y);
+  \draw[flow,porange] ($(e.east)!0.5!(d.west)$) |- (h);
+  \draw[flow,pblue] (s) -- (h);
+  \node[lbl,porange,anchor=north] at (h.south) {leakage $\frac1n I(X^n;M\mid S^n)$};
+\end{tikzpicture}
+\caption{One message, two costs. The decoder pays the rate $R$ to reconstruct the source. The holder also sees the message, already knows $S^n$, and learns the conditional leakage. The holder reconstructs nothing, so the leakage is not a rate any decoder pays.}
+\label{fig:ch03:leak}
+\end{figure}
+
+In this scalar example the description has no freedom. Both $r$ and $\ell$ decrease as the error variance grows, so the largest admissible error variance, $D$, is optimal for both, and one description is both rate-optimal and leakage-optimal. The same is true under a matrix constraint on the whole error covariance, which is the setting of Ekrem and Ulukus. A trade-off between the two costs can appear only when the encoder chooses among error covariances that meet a weighted constraint $\tr(Q\Sd)\le D$, because that set has no largest element. The condition is necessary, not sufficient. If $S$ is independent of $X$, then $\MI{\hat X}{S}=0$ and $\ell=r$ for every description, so no trade-off exists under any constraint.
+
+\begin{example}[Two coordinates, and the holder sees one]\label[example]{ex:ch03:tradeoff}
 Let $X\sim\Normal(0,I_2)$, let the decoder's distortion be $\tr\Sd\le1$, and let the holder observe $S=x_2+U$ with $\Var U=1$, so $\Cov(X\mid S)=\diag(1,0.5)$. The rate-optimal description water-fills two equal columns and gives $\Sd=0.5I$ and $r=1$ bit. Its leakage follows from \eqref{eq:ch03:leak-gauss} with $H\T\Sigma_U^{-1}H=\diag(0,1)$, which gives $\Cov(X\mid\hat X,S)=\diag(0.5,\frac13)$ and $\ell=\frac12\log_2 3=0.7925$ bits.
 
 Now let the description spend its error unevenly, $\Sd=\diag(a,1-a)$. The leakage is
 \[
 \ell(a)=\tfrac12\log_2\frac{(2-a)/2}{a(1-a)},
 \]
-and setting the derivative of its logarithm to zero gives $a^2-4a+2=0$, so $a=2-\sqrt2=0.5858$. There $\ell=0.7716$ bits and $r=\frac12\log_2\frac{1}{a(1-a)}=1.0216$ bits. The least-leaking description is finer on $x_2$, the coordinate the holder already sees, and coarser on $x_1$. It pays $0.0216$ bits of rate to save $0.0209$ bits of leakage. Restricting to diagonal $\Sd$ loses nothing here. The problem is unchanged when $x_1$ changes sign, and the leakage is strictly convex in $\Sd$ (Chapter~4), so its unique minimizer has a zero off-diagonal entry.
+and setting the derivative of its logarithm to zero gives $a^2-4a+2=0$, so $a=2-\sqrt2=0.5858$. There $\ell=0.7716$ bits and $r=\frac12\log_2\frac{1}{a(1-a)}=1.0216$ bits. The least-leaking description is finer on $x_2$, the coordinate the holder already sees, and coarser on $x_1$. It pays $0.0216$ bits of rate to save $0.0209$ bits of leakage. Restricting to diagonal $\Sd$ loses nothing here. The problem is unchanged when $x_1$ changes sign, and the leakage is strictly convex in $\Sd$ (\cref{ch04}), so its unique minimizer has a zero off-diagonal entry.
 \end{example}
 
 \inproject{\nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex}, Section ``Model and the Coding Theorem'', defines the rate, distortion and leakage $L_n=\frac1n H(M\mid S^n)=\frac1n I(T^n;M\mid S^n)$ of \eqref{eq:ch03:leak} for an encoder that observes a source and a context. Proposition \texttt{prop:posterior} gives the pair $(r,\ell)$ in the log-det form \eqref{eq:ch03:leak-gauss}, and Theorem \texttt{thm:op} makes it operational. The draft credits Villard--Piantanida for the discrete region and Ekrem--Ulukus for the matrix-constraint case (its Proposition \texttt{prop:matrix}). Logarithms there are base two.}
 
 \buildson{\cref{sec:ch03:kl} (conditional information and the Markov chain), \cref{prop:ch03:gauss-h}, \cref{sec:ch03:side}.}
-\usedin{Chapter~4 (the leakage is a convex function of $\Sd$, and its minimization is a max-det program). Chapter~6.}
+\usedin{\cref{ch04} (the leakage is a convex function of $\Sd$, and its minimization is a max-det program). \cref{ch06}.}
 
-\section{Successive refinement asks whether a description can be extended for a second decoder}\label{sec:ch03:refine}\shortsecmark{Successive refinement}
+\section{Successive refinement asks whether a description can be extended for a second decoder}\label{sec:ch03:refine}
 
 A two-stage code sends a first message at rate $R_1$ that a first decoder uses to reach distortion $D_1$, and then a second message so that a second decoder, holding both, reaches $D_2<D_1$ at total rate $R_2$. The pair is successively refinable when no rate is lost at either stage, that is, when $(R_1,R_2)=(R(D_1),R(D_2))$ is achievable. Equitz and Cover characterized this~\cite{equitzcover1991}.
 
-\begin{theorem}[Equitz--Cover, stated]\label{thm:ch03:ec}
+\begin{theorem}[Equitz--Cover, stated]\label[theorem]{thm:ch03:ec}
 For one source and one distortion measure, $(D_1,D_2)$ is successively refinable if and only if there are reconstructions $\hat X_1,\hat X_2$ that attain $R(D_1)$ and $R(D_2)$ in \eqref{eq:ch03:rd} and form a Markov chain
 \begin{equation}\label{eq:ch03:ec}
 X-\hat X_2-\hat X_1 .
@@ -378,20 +535,42 @@ X-\hat X_2-\hat X_1 .
 
 The Gaussian source with squared error is successively refinable at every pair, and so is a binary source with Hamming distortion~\cite{equitzcover1991}. Equitz and Cover also show that some sources are not. For the scalar Gaussian, the backward channels can be nested as $X=\hat X_2+Z_2$ and $\hat X_2=\hat X_1+Z_1$ with independent Gaussian noises, which is the chain \eqref{eq:ch03:ec}.
 
-The programme asks the question for two observers with different read operators $P_1$ and $P_2$, so the two stages use different distortion measures. In the max-det form \eqref{eq:ch03:rc-maxdet}, observer $i$'s optimal error covariance is $\Sigma_i^\star$, and refinability turns into a statement about the Loewner order of Chapter~1.
+The programme asks the question for two observers with different read operators $P_1$ and $P_2$, so the two stages use different distortion measures. For a Gaussian source, observer $i$'s optimal error covariance in the max-det form \eqref{eq:ch03:rc-maxdet} is unique. Call it $\Sigma_i^\star$. Refinability then turns into a statement about the Loewner order of \cref{ch01}.
 \begin{equation}\label{eq:ch03:refinable}
 (D_1,D_2)\ \text{refinable}\iff \Sigma_2^\star\preceq\Sigma_1^\star .
 \end{equation}
 The uncertainty ellipsoid of the second observer must fit inside the first. The criterion compares optimal error covariances, not read operators. Exercise~\ref{exr:ch03:refine} gives readers $P_1\preceq P_2$ that are not refinable.
 
-\begin{example}[One bit each, two bits together]\label{ex:ch03:refine}
+\begin{example}[One bit each, two bits together]\label[example]{ex:ch03:refine}
 For a scalar $X\sim\Normal(0,1)$, the stages $D_1=\frac14$ and $D_2=\frac1{16}$ cost $1$ bit and $2$ bits in total, with nothing lost. Now take $X\sim\Normal(0,I_2)$, a first observer with $P_1=\diag(1,0)$ and a second with $P_2=\diag(0,1)$, both at $D=0.25$. Their optimal error covariances are $\Sigma_1^\star=\diag(0.25,1)$ and $\Sigma_2^\star=\diag(1,0.25)$, each at a rate of $1$ bit. They do not nest. If the first stage is optimal for observer 1, the second stage must also bring $x_2$ to error $0.25$ while keeping $x_1$ where it is, which gives $\diag(0.25,0.25)$ and a total of $2$ bits. Observer 2 alone needed $1$ bit, so the second stage loses $1$ bit relative to $R_2(D_2)$.
 \end{example}
 
+\Cref{fig:ch03:refine} shows the two-stage code.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[node distance=9mm]
+  \node[lbl] (x) {$X^n$};
+  \node[block,right=of x] (e) {encoder};
+  \node[block,right=18mm of e,yshift=7mm] (d1) {decoder 1};
+  \node[block,right=18mm of e,yshift=-7mm] (d2) {decoder 2};
+  \node[lbl,right=of d1] (y1) {$\hat X_1^n$, distortion $D_1$};
+  \node[lbl,right=of d2] (y2) {$\hat X_2^n$, distortion $D_2$};
+  \draw[flow] (x) -- (e);
+  \draw[flow,pblue] (e.20) -- node[above,lbl,pos=0.45] {$M_1$} (d1.west);
+  \draw[flow,pblue] (e.20) -- (d2.170);
+  \draw[flow,porange] (e.-20) -- node[below,lbl,pos=0.45] {$M_2$} (d2.190);
+  \draw[flow] (d1) -- (y1);
+  \draw[flow] (d2) -- (y2);
+\end{tikzpicture}
+\caption{Successive refinement. The first message alone serves the first decoder. Both messages together serve the second. The pair is refinable when the first message costs $R(D_1)$ and both together cost $R(D_2)$, so that nothing is lost by building the fine description on the coarse one.}
+\label{fig:ch03:refine}
+\end{figure}
+
 \inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex}, Theorem ``Complete two-stage rate region'' (label \texttt{thm:region}) and Corollary ``Refinability'' (label \texttt{thm:multiobs}), which states \eqref{eq:ch03:refinable} and cites Equitz--Cover. The novelty assessment records that some older statements in the monograph read ``refinable iff $P_1\preceq P_2$'' and that the corollary's covariance criterion is the correct one.}
 
-\buildson{\cref{sec:ch03:weighted}. Chapter~1 (Loewner order).}
-\usedin{Chapter~4 (max-det programs). Chapter~6 (the two-observer theorem).}
+\buildson{\cref{sec:ch03:weighted}. \cref{ch01} (Loewner order).}
+\usedin{\cref{ch04} (max-det programs). \cref{ch06} (the two-observer theorem).}
 
 \section*{Exercises}
 
@@ -449,7 +628,6 @@ For random $\Sigma_x\pd0$ and random $\PC\psd0$ of rank $2$ in $\R^5$, check num
 For the scalar source and holder of \cref{ex:ch03:leak}, simulate $n=10^5$ draws of $(X,\hat X,S)$ from the Gaussian test channel and estimate $\MI{X}{\hat X\mid S}$ from the sample covariance with \eqref{eq:ch03:leak-gauss}. Compare with $0.661$ bits.
 \end{exercise}
 
-\let\sectionmark\savedsectionmarkiii
 
 % Verification: checks/ch03_examples.py run on Atlas.
-% RESULT_LINE_PLACEHOLDER
+% Atlas, 2026-10-07: 136/136 PASS

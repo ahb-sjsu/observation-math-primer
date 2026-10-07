@@ -1,1 +1,29 @@
-% placeholder until the drafting agent writes this file
+% Answers to selected exercises, chapter 12. Every number is checked by
+% checks/ch12_examples.py.
+
+\paragraph{Exercise \ref{exr:ch12:markov}}
+Markov gives $\Pr[X\ge10]\le2/10=0.2$. For the exponential law with mean $2$, $\Pr[X\ge10]=e^{-10/2}=e^{-5}=0.00674$, thirty times smaller. The bound is attained by the two-point law with $\Pr[X=10]=0.2$ and $\Pr[X=0]=0.8$, whose mean is $2$.
+
+\paragraph{Exercise \ref{exr:ch12:cheb}}
+Chebyshev gives $\Pr[\abs X\ge6]\le4/36=0.111$. For $X\sim\Normal(0,4)$ the event is $\abs Z\ge3$, with probability $2\Qf(3)=0.0027$. The bound is about forty times too large, but it holds for every law with this variance, including the three-point law of \cref{sec:ch12:markov} that attains it.
+
+\paragraph{Exercise \ref{exr:ch12:rule3}}
+With $x=0$ the one-sided bound solves $(1-U)^{600}=0.05$, so $U=1-0.05^{1/600}=0.00498$. The rule of three gives $3/600=0.005$. The two agree to within half a percent of each other, because $-\log0.05=2.996$.
+
+\paragraph{Exercise \ref{exr:ch12:union}}
+The union bound gives $20\cdot0.001=0.02$. With independent monitors the exact value is $1-0.999^{20}=0.01981$. The union bound is nearly exact here because the events are rare, so overlaps are negligible.
+
+\paragraph{Exercise \ref{exr:ch12:gauss}}
+By \cref{eq:ch12:chernoff}, $\Pr[X\ge t]\le\exp(-\lambda t+\lambda^2\sigma^2/2)$ for every $\lambda>0$. The exponent is a parabola in $\lambda$ with its minimum at $\lambda=t/\sigma^2$, where it equals $-t^2/(2\sigma^2)$. At $t=2\sigma$ the bound is $e^{-2}=0.1353$, while $\Qf(2)=0.02275$, a factor of about six.
+
+\paragraph{Exercise \ref{exr:ch12:hoeffn}}
+The two-sided form of \cref{eq:ch12:hoeffding-mean} with $b-a=1$ requires $2e^{-2n\epsilon^2}\le0.01$, so $n\ge\log(200)/(2\cdot0.0025)=5.298/0.005=1059.7$, and $n=1060$ queries suffice. The queries must be independent draws from the workload, otherwise the bound does not apply.
+
+\paragraph{Exercise \ref{exr:ch12:allpass}}
+With $x=n=20$ the upper limit is $1$ and the lower limit solves $\Pr_{p=L}[X\ge20]=L^{20}=0.025$, so $L=0.025^{1/20}=0.8316$. Twenty passes out of twenty support a pass rate above $83$ percent at this confidence and nothing stronger.
+
+\paragraph{Exercise \ref{exr:ch12:hundred}}
+\Cref{thm:ch12:max} gives $\E\max Z_i\le\sqrt{2\log100}=3.035$. The exact expected maximum is $2.508$. The union bound gives $\Pr[\max Z_i\ge3]\le100\,\Qf(3)=0.135$, and independence gives the exact $1-(1-\Qf(3))^{100}=0.1264$. A $z$ of $3$ somewhere among a hundred null tests happens about one time in eight.
+
+\paragraph{Exercise \ref{exr:ch12:bern}}
+Hoeffding gives $e^{-2\cdot10^4\cdot10^{-6}}=e^{-0.02}=0.980$. Bernstein, with $\sigma^2=0.000999$ and $c=1$, gives $\exp\!\big(-0.01/(0.001998+0.000667)\big)=0.0235$. The exact binomial probability $\Pr[S\ge20]$ is $0.00344$. Report Bernstein, because the variance is $250$ times below the value $1/4$ that Hoeffding assumes. The report must state that $\sigma^2$ was taken from the assumption $p=0.001$, which was fixed before the data.

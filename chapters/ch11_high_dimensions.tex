@@ -1,1 +1,494 @@
-\chapter{High-dimensional geometry}\label{ch11}
+\chapter{In high dimensions distances concentrate, and concentration makes hubs}\label{ch11}\chaptermark{High dimensions and hubs}
+% Standalone build (jobname ch11) only. The other chapters are not in this build,
+% so their chapter labels are given plain numbers here to keep \cref{chNN}
+% resolvable. In main.tex the real labels are used and this block does nothing.
+\makeatletter
+\providecommand\omp@stubchapter[2]{%
+  \@ifundefined{r@#1}{%
+    \global\@namedef{r@#1}{{#2}{}{}{}{}}%
+    \global\@namedef{r@#1@cref}{{[chapter][#2][]#2}{}{}{}{}}}{}}
+\edef\omp@jobA{\jobname}\edef\omp@jobB{\detokenize{ch11}}
+\ifx\omp@jobA\omp@jobB
+  \omp@stubchapter{ch01}{1}\omp@stubchapter{ch02}{2}\omp@stubchapter{ch03}{3}%
+  \omp@stubchapter{ch04}{4}\omp@stubchapter{ch05}{5}\omp@stubchapter{ch06}{6}%
+  \omp@stubchapter{ch07}{7}\omp@stubchapter{ch08}{8}\omp@stubchapter{ch09}{9}%
+  \omp@stubchapter{ch10}{10}\omp@stubchapter{ch12}{12}\omp@stubchapter{ch13}{13}%
+\fi
+\makeatother
+% Short running heads, as in chapter 7. \section keeps its full sentence title in
+% the text and the table of contents. The standard \sectionmark is suspended for
+% the chapter and restored at its end.
+\providecommand{\shortsecmark}[1]{\markright{\MakeUppercase{\thesection.\ #1}}}
+\let\savedsectionmarkxi\sectionmark
+\renewcommand{\sectionmark}[1]{}
+
+An embedding model turns a sentence into a vector with a few hundred or a few thousand coordinates. A vector index stores millions of them and answers a query with the $k$ stored vectors nearest to it. Intuition about distance comes from two and three dimensions, and in this setting most of it is wrong. A random vector does not sit near the centre of its distribution. Two random directions are almost exactly perpendicular. The nearest and the farthest neighbour of a query are almost the same distance away. And a few stored vectors turn up in the result lists of a large share of all queries while many others turn up in none. Each of these statements needs data that vary independently in many directions. Data confined to a few directions behave like low-dimensional data, however many coordinates they are written in, as \cref{sec:ch11:dist} shows.
+
+This chapter derives each of those facts from one source, the law of large numbers applied to a sum of many coordinates. The first three sections show that norms, angles and pairwise distances concentrate. The fourth turns concentration into a tool, the random projection of Johnson and Lindenstrauss, and connects it to the random rotations of \cref{ch01,ch07}. The last four sections are about hubs. They define the reverse-neighbour count $N_k$, explain why its distribution grows a long right tail in high dimension, set a no-structure ceiling for it with the Poisson distribution, and show why an average over queries cannot see what hubs do to a search system.
+
+The treatment of concentration follows the ideas of chapter~2 of Blum, Hopcroft and Kannan \cite{blum2020}, with examples of our own. Vershynin \cite{vershynin2018} gives sharper versions of every bound. The hubness material starts from Radovanovi\'c, Nanopoulos and Ivanovi\'c \cite{radovanovic2010}. \emph{Data Mining as Observation}, Chapter~3, sections 3.4 and 3.5, and Chapter~10 already tell the project story of hubs and anti-hubs, with the measurements. This chapter supplies the mathematics underneath and does not repeat those stories. Every number below is recomputed by \texttt{checks/ch11\_examples.py}, and every simulation in it is seeded and runs in seconds.
+
+Throughout, $d$ is the dimension, $n$ the number of stored points and $k$ the number of neighbours returned. A standard Gaussian vector is $x\sim\Normal(0,I_d)$, as in \cref{ch02}.
+
+% ---------------------------------------------------------------------------
+\section{An average of many independent terms concentrates, so a Gaussian vector has length close to \texorpdfstring{$\sqrt d$}{sqrt d}}\label{sec:ch11:norm}\shortsecmark{Norms concentrate}
+
+The squared length of a vector is a sum over its coordinates, $\norm{x}^2=x_1^2+\dots+x_d^2$. When the coordinates are independent, that sum is $d$ times an average of $d$ independent terms, and an average of many independent terms settles near its expectation. Primer~S, section~S.4, states this as the law of large numbers. \Cref{ch12} makes it quantitative with Chebyshev's inequality. If $u_1,\dots,u_d$ are independent with common mean $\mu$ and variance $\sigma^2$, their average $\bar u$ has variance $\sigma^2/d$, and Chebyshev's inequality applied to $\bar u$ gives
+\begin{equation}\label{eq:ch11:lln}
+\Pr\big[\abs{u-\E u}\ge c\big]\le\frac{\Var(u)}{c^2},\qquad
+\Pr\big[\abs{\bar u-\mu}\ge\epsilon\big]\le\frac{\sigma^2}{d\,\epsilon^2}.
+\end{equation}
+The bound uses nothing about the shape of the distribution, which is why it is loose, and its only dependence on the number of terms is the factor $1/d$, which is why it is useful.
+
+Apply it to $u_i=x_i^2$ with $x_i\sim\Normal(0,1)$. Each term has mean $1$ and variance $\E x_i^4-1=2$. The squared norm is a chi-square variable with $d$ degrees of freedom, and
+\begin{equation}\label{eq:ch11:chisq}
+\E\norm{x}^2=d,\qquad \Var\norm{x}^2=2d,\qquad
+\frac{\sqrt{\Var\norm{x}^2}}{\E\norm{x}^2}=\sqrt{\frac 2d}.
+\end{equation}
+The relative spread of the squared norm falls like $1/\sqrt d$. The norm itself sits near $\sqrt d$, and its absolute spread does not grow at all. If $\abs{\norm{x}-\sqrt d}\ge\beta$ then, multiplying by $\norm{x}+\sqrt d\ge\sqrt d$, also $\abs{\norm{x}^2-d}\ge\beta\sqrt d$, and Chebyshev's inequality with variance $2d$ gives a bound that is the same in every dimension,
+\begin{equation}\label{eq:ch11:annulus-cheb}
+\Pr\big[\,\abs{\norm{x}-\sqrt d}\ge\beta\,\big]\le\frac{2d}{\beta^2 d}=\frac{2}{\beta^2}.
+\end{equation}
+The Chernoff and sub-Gaussian bounds of \cref{ch12} replace the variance by the exponential moment and sharpen this to the Gaussian annulus theorem. For some absolute constant $c>0$ and every $\beta\le\sqrt d$,
+\begin{equation}\label{eq:ch11:annulus}
+\Pr\big[\,\abs{\norm{x}-\sqrt d}\ge\beta\,\big]\le 3e^{-c\beta^2}.
+\end{equation}
+The intuition is that $\norm x^2-d$ is a sum of $d$ independent centred terms, so its typical size is $\sqrt d$, and its tails fall exponentially because each term $x_i^2-1$ has an exponential moment. Blum, Hopcroft and Kannan prove \cref{eq:ch11:annulus} from a moment bound for sums of independent variables \cite{blum2020}, and Vershynin proves the same statement for any vector with independent, mean-zero, unit-variance sub-Gaussian coordinates \cite{vershynin2018}. Almost all of the probability of a standard Gaussian in $\R^d$ lies in a shell of radius $\sqrt d$ and width of order one, which is the picture in \cref{fig:ch11:annulus}.
+
+The density is still largest at the origin. What the annulus says is that the volume near the origin is too small to hold any probability. In $d=2$, $\norm{x}^2$ is exponential with mean $2$, and $\Pr[\norm x\le1]=1-e^{-1/2}\approx0.3935$. In $d=100$ the same probability is below $10^{-79}$. The most likely point is a point the sample never visits.
+
+\begin{example}[One hundred coordinates]\label{ex:ch11:norm}
+Let $d=100$. Then $\E\norm{x}^2=100$ and $\Var\norm{x}^2=200$, a standard deviation of $14.14$, so the relative spread is $\sqrt{2/100}=0.1414$. Chebyshev's inequality \cref{eq:ch11:lln} bounds the chance of a squared norm outside $[70,130]$ by $200/30^2=0.222$. The exact chi-square probability is $0.0334$, so the bound is valid and about seven times too large. The norm itself has mean $\E\norm x=\sqrt2\,\Gamma(50.5)/\Gamma(50)=9.975$ and standard deviation $0.7062$, which is $7.1$ percent of the mean and already close to the limiting value $1/\sqrt2\approx0.7071$. In $d=400$ the dimension-free bound \cref{eq:ch11:annulus-cheb} with $\beta=3$ gives $\Pr[\abs{\norm x-20}\ge3]\le2/9=0.222$, while the exact value is $2.25\times10^{-5}$.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.86\linewidth, height=0.36\linewidth, xmin=0, xmax=24, ymin=0, ymax=0.9,
+  xlabel={length $\norm{x}$}, ylabel={density}, xtick={0,1,3.16,10,20}, xticklabels={$0$,$1$,$\sqrt{10}$,$10$,$20$}]
+\addplot[pgray, thick] coordinates {(0.020,0.7977) (0.151,0.7888) (0.281,0.7670) (0.412,0.7330) (0.543,0.6885) (0.673,0.6362) (0.804,0.5775) (0.934,0.5158) (1.065,0.4525) (1.196,0.3902) (1.326,0.3312) (1.457,0.2760) (1.588,0.2261) (1.718,0.1824) (1.849,0.1444) (1.979,0.1126) (2.110,0.0861) (2.241,0.0648) (2.371,0.0480) (2.502,0.0349) (2.633,0.0249) (2.763,0.0175) (2.894,0.0121) (3.024,0.0082) (3.155,0.0055) (3.286,0.0036) (3.416,0.0023) (3.547,0.0015) (3.678,0.0009) (3.808,0.0006) (3.939,0.0003) (4.069,0.0002) (4.200,0.0001)};
+\addplot[porange] coordinates {(0.020,0.0000) (0.218,0.0000) (0.416,0.0000) (0.615,0.0000) (0.813,0.0003) (1.011,0.0017) (1.209,0.0069) (1.407,0.0209) (1.606,0.0510) (1.804,0.1035) (2.002,0.1814) (2.200,0.2796) (2.398,0.3851) (2.597,0.4802) (2.795,0.5454) (2.993,0.5694) (3.191,0.5494) (3.389,0.4924) (3.588,0.4110) (3.786,0.3212) (3.984,0.2355) (4.182,0.1623) (4.380,0.1055) (4.579,0.0645) (4.777,0.0374) (4.975,0.0205) (5.173,0.0107) (5.371,0.0053) (5.569,0.0025) (5.768,0.0011) (5.966,0.0005) (6.164,0.0002) (6.362,0.0001)};
+\addplot[pblue] coordinates {(6.800,0.0000) (7.000,0.0000) (7.200,0.0001) (7.400,0.0004) (7.600,0.0013) (7.800,0.0037) (8.000,0.0094) (8.200,0.0215) (8.400,0.0444) (8.600,0.0833) (8.800,0.1423) (9.000,0.2221) (9.200,0.3170) (9.400,0.4149) (9.600,0.4989) (9.800,0.5521) (10.000,0.5633) (10.200,0.5307) (10.400,0.4625) (10.600,0.3733) (10.800,0.2795) (11.000,0.1943) (11.200,0.1256) (11.400,0.0756) (11.600,0.0424) (11.800,0.0222) (12.000,0.0108) (12.200,0.0050) (12.400,0.0021) (12.600,0.0008) (12.800,0.0003) (13.000,0.0001) (13.200,0.0000)};
+\addplot[pgreen] coordinates {(16.800,0.0000) (17.000,0.0000) (17.200,0.0002) (17.400,0.0005) (17.600,0.0016) (17.800,0.0041) (18.000,0.0099) (18.200,0.0219) (18.400,0.0441) (18.600,0.0814) (18.800,0.1379) (19.000,0.2146) (19.200,0.3070) (19.400,0.4041) (19.600,0.4898) (19.800,0.5472) (20.000,0.5640) (20.200,0.5365) (20.400,0.4716) (20.600,0.3833) (20.800,0.2883) (21.000,0.2008) (21.200,0.1296) (21.400,0.0775) (21.600,0.0431) (21.800,0.0222) (22.000,0.0106) (22.200,0.0047) (22.400,0.0020) (22.600,0.0008) (22.800,0.0003) (23.000,0.0001) (23.200,0.0000)};
+\node[lbl, pgray, anchor=west] at (axis cs:0.6,0.80) {$d=1$};
+\node[lbl, porange, anchor=south] at (axis cs:3.0,0.62) {$d=10$};
+\node[lbl, pblue, anchor=south] at (axis cs:10,0.62) {$d=100$};
+\node[lbl, pgreen, anchor=south] at (axis cs:20,0.62) {$d=400$};
+\end{axis}
+\end{tikzpicture}
+\caption{The length of a standard Gaussian vector concentrates on a shell of radius near $\sqrt d$. The shell moves outward with the dimension while its width stays near $0.71$, so the relative width shrinks like $1/\sqrt d$.}
+\label{fig:ch11:annulus}
+\end{figure}
+
+\buildson{Primer~S, sections~S.2 and S.4 of \emph{Data Mining as Observation}. The multivariate normal of \cref{ch02}. Chebyshev's inequality and the Chernoff bound of \cref{ch12}.}
+\usedin{Every later section of this chapter. \Cref{ch07}, where a randomly rotated unit vector has coordinates of size $1/\sqrt d$.}
+
+% ---------------------------------------------------------------------------
+\section{Almost all of a high-dimensional ball lies near its surface and near every equator, so random directions are nearly orthogonal}\label{sec:ch11:ball}\shortsecmark{Shells, equators and angles}
+
+The Gaussian annulus has a deterministic cousin. Shrinking any solid body $A\subset\R^d$ toward the origin by the factor $1-\epsilon$ multiplies its volume by $(1-\epsilon)^d$, because each of the $d$ side lengths of every small cube inside it shrinks by that factor. If $A$ is star-shaped about the origin, as a ball or a cube centred there is, the shrunk copy lies inside $A$. The fraction of the volume of $A$ outside the shrunk copy, which for a ball is the shell within relative distance $\epsilon$ of the surface, is therefore
+\begin{equation}\label{eq:ch11:shell}
+1-(1-\epsilon)^d\ \ge\ 1-e^{-\epsilon d},
+\end{equation}
+using $1-\epsilon\le e^{-\epsilon}$. For fixed $\epsilon$ this tends to one as $d$ grows. In a high-dimensional ball, almost every point is near the boundary.
+
+The ball itself also vanishes. Its volume is
+\begin{equation}\label{eq:ch11:volume}
+V(d)=\frac{\pi^{d/2}}{\Gamma(d/2+1)},
+\end{equation}
+which gives $V(2)=\pi$ and $V(3)=4\pi/3$, peaks at $V(5)=8\pi^2/15\approx5.2638$ and falls to $V(20)=\pi^{10}/10!\approx0.0258$. The numerator is exponential in $d$ and the denominator grows like a factorial. A unit ball in high dimension is a tiny object, and the unit cube that contains it is huge by comparison.
+
+The second fact is about directions. Let $u$ be a uniformly random point on the unit sphere in $\R^d$. Normalizing a standard Gaussian vector produces one, $u=x/\norm x$, because the Gaussian density depends only on $\norm x$. By symmetry the $d$ coordinates of $u$ have the same distribution, and their squares add to one, so each has
+\begin{equation}\label{eq:ch11:coord}
+\E[u_1^2]=\frac1d,\qquad u_1^2\sim\mathrm{Beta}\big(\tfrac12,\tfrac{d-1}2\big),\qquad
+p(t)=\frac{\Gamma(d/2)}{\sqrt\pi\,\Gamma\big(\frac{d-1}2\big)}\,(1-t^2)^{(d-3)/2},\quad \abs t\le1,
+\end{equation}
+where $p$ is the density of $u_1$. Any fixed unit vector can play the role of the first axis. So the cosine of the angle between a random direction and any fixed direction, and therefore between two independent random directions, has mean zero, variance $1/d$ and density $p$. Two random directions are perpendicular up to an error of order $1/\sqrt d$. Read with the first axis as north, almost all of the sphere lies near the equator. For $d\ge4$ the density $p$ is largest at $t=0$, and for large $d$ it is close to the normal density with variance $1/d$, \cref{fig:ch11:cos}.
+
+The ball has the same property. If $y$ is uniform in the unit ball of $\R^d$, then $y_1^2\sim\mathrm{Beta}(\frac12,\frac{d+1}2)$, so most of the ball's volume lies in a thin slab around any hyperplane through the centre. Every equator is crowded, which is no contradiction, because the slabs around different equators overlap almost entirely.
+
+\begin{example}[Three dimensions against one hundred]\label{ex:ch11:ball}
+Take a shell of relative width $\epsilon=0.05$. In $d=3$ it holds $1-0.95^3=0.1426$ of the ball's volume. In $d=100$ it holds $1-0.95^{100}=0.9941$, and the bound $e^{-5}=0.0067$ for the remainder is close to the exact $0.0059$. Now take the cosine $t$ of the angle between two random directions. In $d=3$ the density \cref{eq:ch11:coord} is the constant $\frac12$, so $t$ is uniform on $[-1,1]$ and $\Pr[\abs t>0.3]=0.7$. In $d=100$ the standard deviation of $t$ is $1/\sqrt{100}=0.1$. Chebyshev's inequality bounds $\Pr[\abs t>0.3]$ by $0.01/0.09=0.111$, and the exact Beta probability is $0.0023$. In the unit ball of $\R^{100}$, the slab $\abs{y_1}\le0.2$ holds $0.957$ of the volume.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.80\linewidth, height=0.38\linewidth, xmin=-1, xmax=1, ymin=0, ymax=13.5,
+  xlabel={cosine $t$ between two random directions}, ylabel={density}]
+\addplot[pgray, thick] coordinates {(-1,0.5) (1,0.5)};
+\addplot[porange] coordinates {(-0.9900,0.0000) (-0.9240,0.0014) (-0.8580,0.0110) (-0.7920,0.0368) (-0.7260,0.0847) (-0.6600,0.1572) (-0.5940,0.2538) (-0.5280,0.3709) (-0.4620,0.5024) (-0.3960,0.6408) (-0.3300,0.7776) (-0.2640,0.9040) (-0.1980,1.0120) (-0.1320,1.0946) (-0.0660,1.1465) (0.0000,1.1641) (0.0660,1.1465) (0.1320,1.0946) (0.1980,1.0120) (0.2640,0.9040) (0.3300,0.7776) (0.3960,0.6408) (0.4620,0.5024) (0.5280,0.3709) (0.5940,0.2538) (0.6600,0.1572) (0.7260,0.0847) (0.7920,0.0368) (0.8580,0.0110) (0.9240,0.0014) (0.9900,0.0000)};
+\addplot[pblue] coordinates {(-0.4500,0.0001) (-0.4200,0.0003) (-0.3900,0.0013) (-0.3600,0.0047) (-0.3300,0.0148) (-0.3000,0.0408) (-0.2700,0.1008) (-0.2400,0.2229) (-0.2100,0.4443) (-0.1800,0.8015) (-0.1500,1.3131) (-0.1200,1.9594) (-0.0900,2.6688) (-0.0600,3.3240) (-0.0300,3.7902) (0.0000,3.9594) (0.0300,3.7902) (0.0600,3.3240) (0.0900,2.6688) (0.1200,1.9594) (0.1500,1.3131) (0.1800,0.8015) (0.2100,0.4443) (0.2400,0.2229) (0.2700,0.1008) (0.3000,0.0408) (0.3300,0.0148) (0.3600,0.0047) (0.3900,0.0013) (0.4200,0.0003) (0.4500,0.0001)};
+\addplot[pgreen] coordinates {(-0.1423,0.0005) (-0.1328,0.0018) (-0.1233,0.0061) (-0.1138,0.0190) (-0.1044,0.0535) (-0.0949,0.1387) (-0.0854,0.3280) (-0.0759,0.7076) (-0.0664,1.3930) (-0.0569,2.5033) (-0.0474,4.1079) (-0.0379,6.1572) (-0.0285,8.4074) (-0.0190,10.5297) (-0.0095,12.0516) (0.0000,12.6062) (0.0095,12.0516) (0.0190,10.5297) (0.0285,8.4074) (0.0379,6.1572) (0.0474,4.1079) (0.0569,2.5033) (0.0664,1.3930) (0.0759,0.7076) (0.0854,0.3280) (0.0949,0.1387) (0.1044,0.0535) (0.1138,0.0190) (0.1233,0.0061) (0.1328,0.0018) (0.1423,0.0005)};
+\node[lbl, pgray, anchor=south] at (axis cs:-0.8,0.5) {$d=3$};
+\node[lbl, porange, anchor=south west] at (axis cs:0.30,0.9) {$d=10$};
+\node[lbl, pblue, anchor=west] at (axis cs:0.12,3.6) {$d=100$};
+\node[lbl, pgreen, anchor=west] at (axis cs:0.06,11.5) {$d=1000$};
+\end{axis}
+\end{tikzpicture}
+\caption{Two random directions become perpendicular as the dimension grows. The cosine between them is uniform in three dimensions and piles up within about $1/\sqrt d$ of zero in high dimension, with peak height near $\sqrt{d/2\pi}$.}
+\label{fig:ch11:cos}
+\end{figure}
+
+Near-orthogonality is a statement about random pairs, not about a basis. A basis of $\R^d$ has only $d$ exactly orthogonal vectors, but far more than $d$ random unit vectors can be pairwise within a small angle of perpendicular. That is the room high-dimensional embeddings use to store many distinct concepts, and it is also why a cosine of $0.1$ between two embedding vectors means nothing in $d=100$ until it is compared with the cosines of unrelated pairs. For uniformly random directions those spread by $1/\sqrt d$ around zero. Real embedding sets need not be isotropic, so the reference spread has to be measured on unrelated pairs from the corpus itself.
+
+\buildson{\Cref{sec:ch11:norm}. The Beta and Gamma functions of a first probability course.}
+\usedin{\Cref{sec:ch11:jl}, where the coordinates of a randomly rotated vector have variance $1/d$. \Cref{ch01,ch07}, random rotations before scalar quantization.}
+
+% ---------------------------------------------------------------------------
+\section{Pairwise distances concentrate, and the farthest point is barely farther than the nearest}\label{sec:ch11:dist}\shortsecmark{Distances concentrate}
+
+The difference of two independent standard Gaussian vectors is Gaussian with covariance $2I$. By \cref{eq:ch11:chisq} its squared length is twice a chi-square variable with $d$ degrees of freedom,
+\begin{equation}\label{eq:ch11:pair}
+\E\norm{x-y}^2=2d,\qquad \Var\norm{x-y}^2=8d,\qquad
+\frac{\sqrt{\Var\norm{x-y}^2}}{\E\norm{x-y}^2}=\sqrt{\frac2d}.
+\end{equation}
+The relative spread is $1$ in $d=2$, $0.1414$ in $d=100$ and $0.01414$ in $d=10{,}000$. Every pairwise distance is close to $\sqrt{2d}$, which is Pythagoras applied to two nearly perpendicular vectors of length $\sqrt d$.
+
+Beyer, Goldstein, Ramakrishnan and Shaft turned this into a statement about search \cite{beyer1999}. Fix $n$ data points $P_1,\dots,P_n$ and a query $Q$, all independent, and let $D_{\min}$ and $D_{\max}$ be the smallest and largest distance from $Q$ to the data. Their theorem lets the distributions change with a parameter $m$, which is usually the dimension.
+
+\begin{theorem}[Beyer et al.\ \cite{beyer1999}]\label{thm:ch11:beyer}
+Let $n$ be fixed and $0<p<\infty$. If the distance $D_m$ from the query to one data point satisfies
+\begin{equation}\label{eq:ch11:beyer}
+\lim_{m\to\infty}\Var\!\left(\frac{D_m^p}{\E[D_m^p]}\right)=0,
+\qquad\text{then}\qquad
+\lim_{m\to\infty}\Pr\big[D_{\max,m}\le(1+\epsilon)\,D_{\min,m}\big]=1\quad\text{for every }\epsilon>0.
+\end{equation}
+\end{theorem}
+
+The proof is the law of large numbers again. The condition says that each ratio $D_m^p/\E[D_m^p]$ converges in probability to one. A fixed number $n$ of such ratios converge together, so their largest and smallest values approach each other. For independent Gaussian coordinates with $p=2$, the variance in the condition is $8d/(2d)^2=2/d$, which tends to zero. The theorem is about a fixed $n$ as the dimension grows. It does not say how large $d$ must be for a given $n$, and the nearest-neighbour contrast falls slowly.
+
+\begin{example}[The contrast at one hundred dimensions]\label{ex:ch11:ratio}
+Take $d=100$ and $n=1000$ data points. The squared distances from a query have mean $200$ and standard deviation $28.28$. A normal approximation puts the smallest and largest of $1000$ near $3.09$ standard deviations from the mean, which is $112.6$ and $287.4$, and a ratio of distances $\sqrt{287.4/112.6}\approx1.60$. Simulating $100$ queries against $1000$ seeded Gaussian points gives a median ratio of $1.49$. The approximation is rough because the chi-square distribution is skewed, but either number says the same thing. In $d=100$ the farthest stored point is only about half again as far as the nearest one, while in $d=2$ the median ratio is $78$.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.72\linewidth, height=0.40\linewidth, xmode=log, ymode=log, xmin=1.5, xmax=14000, ymin=1, ymax=120,
+  xlabel={dimension $d$}, ylabel={median $D_{\max}/D_{\min}$}, ytick={1,1.5,2,4,10,30,100}, yticklabels={$1$,$1.5$,$2$,$4$,$10$,$30$,$100$}]
+\addplot[pblue, mark=*, mark size=1.4pt] coordinates {(2,77.920) (5,8.124) (10,3.970) (20,2.522) (50,1.767) (100,1.492) (200,1.317) (500,1.188) (1000,1.138) (2000,1.094) (5000,1.058) (10000,1.041)};
+\draw[guide] (axis cs:1.5,1) -- (axis cs:14000,1);
+\node[lbl, pblue, anchor=south west] at (axis cs:100,1.55) {$1.49$ at $d=100$};
+\node[lbl, pblue, anchor=south] at (axis cs:10000,1.08) {$1.04$};
+\end{axis}
+\end{tikzpicture}
+\caption{The farthest of $1000$ Gaussian points is barely farther from a query than the nearest one once the dimension is in the hundreds. Each point is the median over $100$ seeded queries.}
+\label{fig:ch11:ratio}
+\end{figure}
+
+Two caveats belong next to the theorem. First, its condition fails for structured data. If the points lie on an $r$-dimensional subspace of $\R^d$, their pairwise distances are exactly those of $r$-dimensional data, and they concentrate at the rate $\sqrt{2/r}$, not $\sqrt{2/d}$. What matters is the number of directions in which the data actually vary, the intrinsic dimension, not the number of coordinates used to write them down. Second, concentration does not make nearest-neighbour search useless when the data are clustered and the query belongs to a cluster. Then the within-cluster and between-cluster distances concentrate around different values, and the contrast between them survives. Blum, Hopcroft and Kannan use exactly this to separate two Gaussians whose centres are far enough apart \cite{blum2020}. \emph{Data Mining as Observation}, Chapter~3, section~3.4, reads concentration as the reader running out of resolution and treats dimensionality reduction as the remedy.
+
+\buildson{\Cref{sec:ch11:norm,sec:ch11:ball}.}
+\usedin{\Cref{sec:ch11:hubs,sec:ch11:centrality}, where concentration lets a small systematic advantage decide who is retrieved.}
+
+% ---------------------------------------------------------------------------
+\section{A random projection to order \texorpdfstring{$\log n/\epsilon^2$}{log n / eps squared} dimensions keeps every pairwise distance}\label{sec:ch11:jl}\shortsecmark{Random projection}
+
+Concentration is also a tool. Let $G$ be a $d\times m$ matrix of independent $\Normal(0,1)$ entries and define the map
+\begin{equation}\label{eq:ch11:proj}
+f(v)=\frac{1}{\sqrt m}\,G\T v\in\R^m .
+\end{equation}
+For a fixed vector $v$, each coordinate $g_j\T v$ of $G\T v$ is Gaussian with variance $\norm v^2$, and the $m$ coordinates are independent, so $m\norm{f(v)}^2/\norm v^2$ is chi-square with $m$ degrees of freedom. The squared length is preserved on average, $\E\norm{f(v)}^2=\norm v^2$, and by \cref{eq:ch11:chisq} its relative spread is $\sqrt{2/m}$. Applied to a difference $v=u-w$, the same holds for every distance, because $f$ is linear. The question is how large $m$ must be for all $\binom n2$ distances among $n$ points to be preserved at once.
+
+\begin{theorem}[Johnson--Lindenstrauss, in the form of Dasgupta and Gupta]\label{thm:ch11:jl}
+Let $0<\epsilon<1$, let $n\ge2$, and let
+\begin{equation}\label{eq:ch11:jl-k}
+m\ \ge\ \frac{4\ln n}{\epsilon^2/2-\epsilon^3/3}.
+\end{equation}
+For any $n$ points $v_1,\dots,v_n\in\R^d$, the random map \cref{eq:ch11:proj} satisfies, with probability at least $1/n$,
+\begin{equation}\label{eq:ch11:jl}
+(1-\epsilon)\norm{v_i-v_j}^2\ \le\ \norm{f(v_i)-f(v_j)}^2\ \le\ (1+\epsilon)\norm{v_i-v_j}^2\qquad\text{for all }i,j .
+\end{equation}
+\end{theorem}
+
+Johnson and Lindenstrauss proved the existence of such a map \cite{johnsonlindenstrauss1984}, and Dasgupta and Gupta gave the elementary proof with the constant in \cref{eq:ch11:jl-k} \cite{dasguptagupta2003}. Their argument projects onto a random subspace. With a Gaussian matrix the argument is shorter, and it uses only two tools of \cref{ch12}, the Chernoff bound and the union bound.
+
+\emph{Proof sketch.} Let $Y$ be chi-square with $m$ degrees of freedom, so $m\norm{f(v)}^2/\norm v^2$ has the law of $Y$. Its moment generating function is $\E e^{\lambda Y}=(1-2\lambda)^{-m/2}$ for $\lambda<\frac12$. The Chernoff bound of \cref{ch12} is Markov's inequality applied to $e^{\lambda Y}$ and optimized over $\lambda$. Here the optimum is $\lambda=\epsilon/(2(1+\epsilon))$ for the upper tail, and the same argument with $e^{-\lambda Y}$ handles the lower tail. The two bounds are
+\begin{equation}\label{eq:ch11:chernoff}
+\Pr\big[Y\ge(1+\epsilon)m\big]\le\big((1+\epsilon)e^{-\epsilon}\big)^{m/2},\qquad
+\Pr\big[Y\le(1-\epsilon)m\big]\le\big((1-\epsilon)e^{\epsilon}\big)^{m/2}.
+\end{equation}
+The Taylor bounds $\ln(1+\epsilon)\le\epsilon-\epsilon^2/2+\epsilon^3/3$ and $\ln(1-\epsilon)\le-\epsilon-\epsilon^2/2$ put both right sides below $\exp\!\big(-\tfrac m2(\epsilon^2/2-\epsilon^3/3)\big)$. Under \cref{eq:ch11:jl-k} this is at most $n^{-2}$. There are $n(n-1)/2$ pairs and two tails per pair, so by the union bound of \cref{ch12} the probability that any pair fails is at most $n(n-1)/n^2=1-1/n$. \hfill$\square$
+
+The bound has two surprising features. The target dimension $m$ does not depend on $d$ at all, only on the number of points and the tolerance. And the probability is exponentially small in $m$ for each pair, which is what makes a union bound over $n^2$ pairs cost only a $\ln n$. Success probability $1/n$ looks weak, and it is. Redrawing the matrix until every distance checks out could take about $n$ draws by this bound. The better remedy is a slightly larger $m$. Replacing the $4$ in \cref{eq:ch11:jl-k} by $6$ makes each tail at most $n^{-3}$, and the same union bound then gives success with probability at least $1-1/n$.
+
+\begin{example}[How many dimensions]\label{ex:ch11:jl}
+For $n=1000$ points and $\epsilon=0.2$, the denominator of \cref{eq:ch11:jl-k} is $0.02-0.00267=0.01733$ and $4\ln1000=27.63$, so $m\ge1594.1$ and $m=1595$ suffices. At $\epsilon=0.5$ the requirement drops to $m=332$. For one million points at $\epsilon=0.2$ it rises only to $m=3189$, because $\ln n$ doubled. For one pair the bound is loose. With $m=100$ and $\epsilon=0.2$ the upper Chernoff bound is $(1.2e^{-0.2})^{50}=0.413$, while the exact chi-square tail $\Pr[Y\ge120]$ is $0.0844$.
+\end{example}
+
+The example also shows the limits of the guarantee. An embedding corpus of a million vectors in $d=1024$ would need $m=3189$ to be certified at $\epsilon=0.2$, more than the dimension it started with. The lemma is a worst-case statement over every possible set of $n$ points. On real data, and on the Gaussian points of \cref{fig:ch11:jl}, the measured worst distortion is well below the bound.
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.76\linewidth, height=0.42\linewidth, xmode=log, ymode=log, xmin=8, xmax=2000, ymin=0.03, ymax=3,
+  xlabel={target dimension $m$}, ylabel={distortion of squared distances}, ytick={0.05,0.1,0.2,0.5,1,2}, yticklabels={$0.05$,$0.1$,$0.2$,$0.5$,$1$,$2$}]
+\addplot[pred] coordinates {(128,0.9525) (150,0.7536) (200,0.5916) (300,0.4491) (400,0.3761) (600,0.2968) (800,0.2524) (1200,0.2020) (1600,0.1731)};
+\addplot[pblue, mark=*, mark size=1.4pt] coordinates {(10,2.4116) (20,1.5903) (50,0.9799) (100,0.6351) (200,0.4225) (400,0.3065) (800,0.1942) (1600,0.1477)};
+\addplot[pgray, dashed] coordinates {(10,0.4472) (20,0.3162) (50,0.2000) (100,0.1414) (200,0.1000) (400,0.0707) (800,0.0500) (1600,0.0354)};
+\node[lbl, pred, anchor=south west] at (axis cs:300,0.46) {JL bound};
+\node[lbl, pblue, anchor=north east] at (axis cs:90,0.6) {worst pair, measured};
+\node[lbl, pgray, anchor=north east] at (axis cs:100,0.13) {typical pair $\sqrt{2/m}$};
+\end{axis}
+\end{tikzpicture}
+\caption{A Gaussian random projection of $200$ points from $1000$ dimensions keeps every pairwise squared distance within the Johnson--Lindenstrauss tolerance, and the measured worst pair sits below the bound. The bound exists only for $m\ge128$, where it first drops below one.}
+\label{fig:ch11:jl}
+\end{figure}
+
+\paragraph{Rotations are the square case.} If the Gaussian matrix is replaced by an orthogonal matrix $Q$ with $m=d$, every distance is preserved exactly, since $\norm{Q\T v}=\norm v$. Keeping the first $m$ coordinates of a Haar-random rotation is the random-subspace projection of Dasgupta and Gupta. Vector quantizers use the rotation for a different reason, explained in \cref{ch01} and \cref{ch07}. After a random rotation every coordinate of a unit vector is distributed as $u_1$ in \cref{eq:ch11:coord}, with variance $1/d$ and a nearly Gaussian shape, so one scalar codebook fits every coordinate. That is concentration used as a guarantee about the input to a quantizer, not as dimension reduction. The one-bit quantized Johnson--Lindenstrauss transform in \cref{ch07} keeps only the signs of a random projection of one vector, together with its norm, and still estimates inner products without bias when the other vector is projected without quantization.
+
+\buildson{\Cref{sec:ch11:norm,sec:ch11:ball}. Orthogonal and Haar matrices in \cref{ch01}. The Chernoff and union bounds of \cref{ch12}.}
+\usedin{\Cref{ch07}, random rotation and the quantized JL estimator.}
+
+% ---------------------------------------------------------------------------
+\section{The reverse-neighbour count measures hubness, and its skewness grows with dimension}\label{sec:ch11:hubs}\shortsecmark{The reverse-neighbour count}
+
+A nearest-neighbour search answers the forward question, which stored points are closest to this query. Hubness is about the reverse question, for a stored point $x$, how many queries return it. Let $X$ be the stored corpus, $Q$ a multiset of queries and $\mathrm{top}_k(q)$ the $k$ stored points nearest to $q$, with $q$ itself excluded when it is also stored.
+
+\begin{definition}[$k$-occurrence count, hubs and anti-hubs]\label{def:ch11:nk}
+The $k$-occurrence count of $x\in X$ under the query set $Q$ is
+\begin{equation}\label{eq:ch11:nk}
+N_k(x)=\big|\{q\in Q:\ x\in\mathrm{top}_k(q)\}\big|,\qquad
+\sum_{x\in X}N_k(x)=k\,|Q|,\qquad
+S_{N_k}=\frac{\E\big[(N_k-\mu_{N_k})^3\big]}{\sigma_{N_k}^3},
+\end{equation}
+where the mean, standard deviation and third moment are taken over the points of $X$. The number $S_{N_k}$ is the skewness of the count distribution. In the corpus-to-corpus experiment $Q=X$, so the average count is exactly $k$.
+\end{definition}
+
+The sum identity holds because each query hands out exactly $k$ slots. It is why hubness is a statement about the \emph{shape} of the count distribution and never about its mean. A \emph{hub} is a point with a count far above $k$, and an \emph{anti-hub} is a point with a count near zero. The cut-offs are conventions. The turboquant-pro tools count the fraction of points with $N_k>2k$ and call the bottom count decile the anti-hubs, and \emph{Data Mining as Observation}, Chapter~10, equation~10.3, calls a point with $N_k=0$ an anti-hub. Skewness, defined for a sample in Primer~S, section~S.4, is the summary Radovanovi\'c et al.\ use \cite{radovanovic2010}. It is zero for a symmetric distribution and large when a few counts sit far out on the right.
+
+\begin{example}[Five points in the plane]\label{ex:ch11:five}
+Place $A=(0,0)$, $B=(1.8,0)$, $C=(-2,0)$, $D=(0,2.5)$ and $E=(0,-3)$. The distances from $A$ are $1.8$, $2$, $2.5$ and $3$, and among the others the shortest are $BD=3.081$, $CD=3.202$, $BE=3.499$ and $CE=3.606$. Every point other than $A$ has $A$ as its nearest neighbour, and $A$'s nearest neighbour is $B$. So $N_1=(4,1,0,0,0)$, with sum $5$ and mean $1$. The deviations from the mean are $3,0,-1,-1,-1$, the variance is $12/5=2.4$, the mean cubed deviation is $24/5=4.8$, and
+\[
+S_{N_1}=\frac{4.8}{2.4^{3/2}}=1.291 .
+\]
+The central point $A$ is a hub and three of the five points are anti-hubs, although the configuration is not unusual. \Cref{exr:ch11:five2} asks for $N_2$, which turns out symmetric.
+\end{example}
+
+The example already contains the mechanism. Point $A$ is close to the middle of the cloud, so it is close to everybody. In two dimensions this effect is weak and local, because the nearest neighbour of a point is usually decided by who happens to sit next to it. Radovanovi\'c et al.\ showed that the count distribution becomes more and more skewed to the right as the dimension grows, on synthetic data and across $50$ real data sets, and that what matters is the intrinsic dimension rather than the number of coordinates \cite{radovanovic2010}. \Cref{fig:ch11:nk} shows the change in one experiment, and \cref{fig:ch11:skew} follows the skewness across dimensions.
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.80\linewidth, height=0.44\linewidth, ymode=log, xmin=0, xmax=400, ymin=3e-4, ymax=1.5,
+  xlabel={count $c$}, ylabel={fraction of points with $N_{10}\ge c$}, ytick={0.001,0.01,0.1,1}, yticklabels={$10^{-3}$,$10^{-2}$,$0.1$,$1$}]
+\addplot[pgray, dashed] coordinates {(0,1.000e+00) (2,9.995e-01) (4,9.897e-01) (6,9.329e-01) (8,7.798e-01) (10,5.421e-01) (12,3.032e-01) (14,1.355e-01) (16,4.874e-02) (18,1.428e-02) (20,3.454e-03) (22,6.997e-04)};
+\addplot[porange] coordinates {(0,1.00000) (2,0.99450) (4,0.97650) (6,0.93450) (8,0.83450) (10,0.60000) (12,0.30250) (14,0.09150) (16,0.01700) (18,0.00200) (19,0.00100)};
+\addplot[pblue, mark=*, mark size=1.2pt] coordinates {(0,1.00000) (1,0.71300) (2,0.58000) (5,0.38650) (10,0.24950) (20,0.14450) (30,0.08800) (50,0.04250) (75,0.01750) (100,0.00850) (150,0.00450) (200,0.00400) (250,0.00200) (300,0.00100) (386,0.00050)};
+\node[lbl, porange, anchor=west] at (axis cs:24,0.004) {$d=3$, max $19$};
+\node[lbl, pgray, anchor=west] at (axis cs:24,0.0012) {Poisson null, mean $10$};
+\node[lbl, pblue, anchor=south west] at (axis cs:150,0.006) {$d=1000$, max $386$};
+\end{axis}
+\end{tikzpicture}
+\caption{In three dimensions the reverse-neighbour counts of $2000$ Gaussian points stay near their mean of $10$, close to what random assignment would give. In a thousand dimensions the same experiment leaves $29$ percent of the points in no list and puts one point in $386$ lists.}
+\label{fig:ch11:nk}
+\end{figure}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.80\linewidth, height=0.44\linewidth, xmode=log, xmin=1.5, xmax=14000, ymin=-1, ymax=9.5,
+  xlabel={dimension $d$}, ylabel={skewness $S_{N_{10}}$}]
+\draw[pred, dashed, thick] (axis cs:1.5,8.262) -- (axis cs:14000,8.262);
+\draw[guide] (axis cs:1.5,0.314) -- (axis cs:14000,0.314);
+\addplot[pblue, mark=*, mark size=1.5pt] coordinates {(2,-0.185) (3,-0.335) (5,-0.219) (10,0.779) (20,2.462) (50,4.905) (100,5.871) (200,6.237) (500,6.155) (1000,6.448) (2000,7.406) (5000,6.958) (10000,7.778)};
+\node[lbl, pred, anchor=south west] at (axis cs:1.7,8.3) {large-$d$ limit of the model \cref{eq:ch11:model}, $8.26$};
+\node[lbl, pgray, anchor=south east] at (axis cs:12000,0.35) {Poisson null, $0.31$};
+\node[lbl, pblue, anchor=north west] at (axis cs:12,0.5) {measured, mean of $10$ seeds};
+\end{axis}
+\end{tikzpicture}
+\caption{Concentration makes hubs. The skewness of the reverse-neighbour count of $2000$ Gaussian points at $k=10$ is slightly negative in low dimension, crosses the no-structure value between $d=5$ and $d=10$, and climbs toward the limit a simple centrality model predicts.}
+\label{fig:ch11:skew}
+\end{figure}
+
+Three features of \cref{fig:ch11:skew} need comment. In $d\le5$ the skewness is negative, so the counts are more even than random assignment would make them. In low dimension a point's reverse neighbours are mostly its own neighbours, and there is little room around a point for many others that are each closer to it than to one another. Between $d=10$ and $d=100$ the skewness rises steeply. Beyond a few hundred dimensions it levels off, and individual seeds scatter by one to two units around the mean, because a sample skewness is dominated by its few largest counts. The level it approaches depends on $n$ and $k$, which is why the project tools warn that skewness readings at different corpus sizes are not comparable.
+
+\inproject{\texttt{turboquant-pro/\allowbreak docs/\allowbreak CLI.md}, the entry for \texttt{tqp anatomy}, documents the instrument that reports the reverse-count tail of a corpus (skewness, maximum, hub mass share) together with correlations against centrality and local density. \texttt{turboquant-pro/\allowbreak docs/\allowbreak HUBNESS\_PRIMER.md} explains it from first principles and states that counts must come from exact neighbours, because approximate neighbour graphs over-return hubs.}
+
+\buildson{\Cref{sec:ch11:dist}. Skewness in Primer~S, section~S.4.}
+\usedin{\Cref{sec:ch11:centrality,sec:ch11:poisson,sec:ch11:tail}. \Cref{ch08}, where an evaluation reads a tail rather than a mean.}
+
+% ---------------------------------------------------------------------------
+\section{A point near the mean is near everything, and concentration turns that head start into many result lists}\label{sec:ch11:centrality}\shortsecmark{Centrality and density}
+
+Why should one point be closer to many queries than another? Expand the squared distance from a stored point $x$ to a random query $q$ with mean $\mu$ and covariance $\Sigma$, independent of $x$. The cross term has expectation zero, and
+\begin{equation}\label{eq:ch11:central}
+\E_q\norm{x-q}^2=\norm{x-\mu}^2+\tr\Sigma .
+\end{equation}
+The second term is the same for every stored point. So a point closer to the mean has a smaller expected squared distance to a random query, in any dimension. That is an average over queries. A given query can still be closer to a point far from the mean. Radovanovi\'c et al.\ call this spatial centrality \cite{radovanovic2010}. What dimension adds is that the remaining, query-specific part of the distance no longer swamps the head start. For a fixed query, the ranking of stored points by $\norm{x-q}^2=\norm x^2+\norm q^2-2\inner qx$ ignores the common term $\norm q^2$ and sorts by
+\begin{equation}\label{eq:ch11:score}
+s_q(x)=\norm{x}^2-2\inner{q}{x}.
+\end{equation}
+The first term is the head start, fixed for $x$ across all queries. The second is the query-specific part.
+
+\paragraph{A large-dimension model.} Take an isotropic Gaussian corpus with $\mu=0$ and $\Sigma=I$, and record the centrality of a point as the standardized squared norm $z=(\norm x^2-d)/\sqrt{2d}$, which is approximately $\Normal(0,1)$ by \cref{eq:ch11:chisq}. For a fixed $x$, the inner product $\inner qx$ over random queries is exactly $\Normal(0,\norm x^2)$, and $\norm x^2\approx d$. So over random queries $s_q(x)$ is approximately $\Normal(d+\sqrt{2d}\,z,\ 4d)$, and over random pairs $s$ is approximately $\Normal(d,6d)$. Treat the $k$-th smallest score of a query as a fixed threshold, the $k/(n-1)$ quantile of the pair distribution, $d+\sqrt{6d}\,c$ with $c=\Phi^{-1}\big(k/(n-1)\big)$. Then the probability that a random query retrieves $x$, and the count it implies, are
+\begin{equation}\label{eq:ch11:model}
+p(z)=\Phi\!\left(\frac{\sqrt6\,c-\sqrt2\,z}{2}\right),\qquad
+N_k(x)\mid z\ \approx\ \mathrm{Binomial}\big(n-1,\ p(z)\big).
+\end{equation}
+The dimension has cancelled. This is a model, not a theorem. It replaces each query's actual threshold by a fixed quantile and every distribution by its normal approximation, which is accurate only when $d$ is large. It does give an answer that can be checked. Averaging \cref{eq:ch11:model} over $z\sim\Normal(0,1)$ returns a mean count of exactly $k$, and for $n=2000$ and $k=10$ it predicts a skewness of $8.26$ and a fraction $0.36$ of points with no count at all. The simulations of \cref{fig:ch11:skew} approach that skewness from below, reaching $7.8$ at $d=10{,}000$, and the seeded sample at $d=1000$ has an anti-hub fraction of $0.29$.
+
+The model explains where the skew comes from. The threshold sits far in the lower tail of the score distribution, at $c=-2.58$ for $k/(n-1)=10/1999$. A head start of a fraction of a standard deviation moves a point's retrieval probability by a large factor there, because tail probabilities of the normal distribution change exponentially. In low dimension the normal approximations fail. A point is then retrieved by the queries that land in its own small neighbourhood, and the mass of that neighbourhood is close to $k/n$ for every point, so the counts stay even.
+
+\begin{example}[Two standard deviations closer to the centre]\label{ex:ch11:central}
+Let $d=100$. A point at the typical squared norm $100$ has expected squared distance $100+100=200$ to a random query, by \cref{eq:ch11:central}. A point two standard deviations closer to the centre has $\norm x^2=100-2\sqrt{200}=71.72$ and expected squared distance $171.72$. With $n=2000$ and $k=10$, the threshold is $c=\Phi^{-1}(10/1999)=-2.5755$. The typical point, $z=0$, has $p(0)=\Phi(\sqrt6\,c/2)=\Phi(-3.154)=0.000805$ and an expected count of $1999\times0.000805=1.61$. The central point, $z=-2$, has $p(-2)=\Phi\big((\sqrt6\,c+2\sqrt2)/2\big)=\Phi(-1.740)=0.0409$ and an expected count of $81.8$. A head start of two standard deviations in the norm multiplies the expected count by about fifty.
+\end{example}
+
+\Cref{fig:ch11:central} sets the model against the seeded simulation at $d=1000$. The Spearman correlation between the count and $-\norm x$ is $0.93$. The model has the right shape and underestimates the counts of central points. The points with $z\in[-2,-1)$ average $36.1$ lists, against $28.9$ predicted at their mean $z$, and those with $z\in[0,1)$ average $1.04$, against $0.50$.
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.80\linewidth, height=0.44\linewidth, xmin=-3, xmax=2.6, ymin=-3, ymax=140,
+  xlabel={centrality $z=(\norm x^2-d)/\sqrt{2d}$ \quad (left is closer to the mean)}, ylabel={count $N_{10}(x)$}]
+\addplot[only marks, mark=*, mark size=0.9pt, pblue, opacity=0.55] coordinates {(-0.90,11) (0.74,1) (-0.11,1) (-0.20,2) (0.10,3) (2.12,0) (-0.64,8) (-0.51,9) (-0.70,10) (-0.78,9) (-0.37,3) (-1.66,50) (0.04,1) (-0.29,3) (1.18,0) (1.36,0) (-1.40,33) (0.02,1) (0.30,1) (-1.47,43) (0.66,2) (-1.39,35) (-0.50,5) (-0.37,3) (-1.21,16) (0.01,4) (0.36,1) (-1.99,78) (0.62,1) (1.32,0) (-1.74,61) (-1.25,30) (-0.75,8) (-0.55,7) (0.00,2) (-1.65,60) (0.27,1) (0.72,1) (-1.64,57) (-0.23,2) (-0.05,1) (1.58,0) (-0.60,8) (0.96,0) (-1.09,18) (-0.88,17) (0.27,2) (-1.09,23) (-1.88,84) (-0.52,7) (1.05,0) (-1.56,43) (-0.07,3) (1.61,0) (0.41,0) (-0.59,7) (-1.78,60) (-0.33,4) (-0.08,1) (0.02,6) (-0.64,13) (-1.14,29) (0.62,2) (1.40,0) (0.41,1) (1.93,0) (0.74,1) (-0.49,3) (-0.57,2) (-1.81,53) (-0.79,8) (0.76,0) (1.06,0) (-0.29,0) (-1.18,28) (1.38,0) (0.16,1) (-1.43,36) (-0.24,5) (0.07,1) (0.37,1) (0.15,2) (1.28,0) (-1.11,16) (-0.07,2) (-0.19,6) (-1.14,16) (1.06,0) (2.19,0) (-0.61,7) (1.12,0) (-0.20,8) (0.40,1) (-0.34,3) (0.35,2) (-1.09,20) (0.04,1) (-0.51,10) (-0.86,18) (0.75,1) (1.62,1) (0.28,3) (2.12,0) (-0.36,3) (-1.67,46) (1.21,0) (0.68,1) (1.67,0) (0.08,1) (-1.46,41) (-0.16,4) (-0.21,0) (0.98,2) (-0.46,7) (0.35,3) (-0.41,4) (1.39,0) (-0.85,8) (-0.30,4) (0.95,0) (0.14,2) (1.84,0) (-0.89,20) (0.40,1) (-1.60,37) (1.17,0) (-0.62,5) (-0.51,6) (-1.18,31) (-0.52,2) (0.24,0) (2.08,1) (0.29,1) (1.37,0) (0.14,0) (0.95,1) (1.04,1) (0.41,1) (1.18,1) (0.92,0) (-0.03,4) (-0.81,12) (-0.07,2) (0.82,0) (-0.86,14) (0.71,1) (0.76,2) (-0.24,5) (0.10,0) (2.07,0) (-1.73,53) (0.08,2) (-0.66,7) (1.06,0) (-1.36,25) (0.11,2) (-0.39,5) (-2.14,99) (-0.59,7) (-0.23,7) (-1.15,30) (-0.06,3) (-0.41,4) (-0.72,10) (0.62,1) (0.02,0) (-0.61,6) (-0.96,16) (-0.03,4) (-0.73,3) (1.36,0) (0.40,1) (-0.09,1) (0.06,3) (-0.51,3) (-1.35,37) (-0.14,5) (-0.10,1) (1.09,0) (-0.22,3) (0.28,0) (0.99,0) (-0.61,6) (1.17,0) (0.82,0) (0.28,1) (-0.95,19) (0.72,1) (0.55,0) (1.62,0) (0.54,0) (1.45,1) (-0.73,12) (-1.19,22) (-1.43,40) (1.13,0) (1.74,0) (-0.78,11) (0.76,0) (0.70,0) (1.31,0) (-0.57,12) (0.34,2) (-0.41,11) (1.01,0) (-0.99,16) (-1.78,69) (1.61,0) (-0.80,10) (-0.61,6) (-0.38,5) (0.93,1) (-1.07,21) (1.49,0) (0.68,1) (0.07,2) (-0.74,11) (-0.66,10) (-0.28,3) (-1.00,17) (-0.23,2) (0.01,2) (0.22,1) (-1.47,49) (-0.90,13) (0.49,1) (-0.99,21) (-0.58,6) (0.36,2) (-0.61,8) (0.68,0) (-1.37,31) (0.73,1) (-0.42,8) (-0.50,7) (-0.39,6) (1.09,0) (0.29,1) (-1.06,22) (0.35,1) (1.90,0) (0.42,0) (0.34,2) (-1.66,49) (0.30,0) (-0.15,0) (1.39,0) (0.62,0) (0.43,0) (0.05,1) (-0.53,12) (-0.65,6) (0.10,1) (0.87,0) (0.31,0) (0.15,3) (1.49,0) (2.41,0) (-1.25,22) (1.40,0) (2.02,0) (0.05,2) (1.56,0) (-0.07,4) (-1.26,22) (0.11,2) (-0.47,2) (1.48,0) (-0.48,1) (0.94,0) (0.37,4) (-0.51,7) (0.29,0) (0.26,1) (-0.73,6) (-0.10,3) (0.68,0) (1.02,0) (-1.43,45) (-0.44,5) (0.35,0) (-0.76,8) (-1.26,23) (0.41,1) (-1.15,15) (1.06,0) (0.44,3) (1.27,1) (-0.18,5) (-0.17,10) (-0.61,5) (-0.28,4) (-0.11,2) (-1.05,23) (-1.12,28) (-0.67,16) (0.06,2) (0.74,0) (0.62,1) (0.58,0) (-0.58,12) (-0.32,3) (-0.57,12) (0.53,1) (-0.16,7) (-0.04,2) (-0.27,5) (0.80,0) (-0.81,11) (1.30,1) (-0.90,15) (-1.13,29) (-1.15,26) (-0.65,12) (0.91,0) (2.31,0) (-0.76,9) (0.38,1) (0.41,2) (0.47,0) (-0.72,16) (-0.47,4) (1.32,0) (0.83,1) (-0.07,3) (1.75,0) (-0.17,2) (0.46,1) (2.30,0) (1.26,1) (-1.71,65) (0.48,0) (-0.35,5) (-2.19,125) (-0.30,1) (0.20,3) (-1.00,15) (0.94,0) (0.38,2) (-2.05,57) (-0.49,6) (-0.02,2) (1.12,0) (1.07,0) (-0.21,3) (0.32,1) (0.35,1) (-0.97,17) (-1.98,79) (-1.17,26) (-1.00,13) (-1.01,21) (-0.96,24) (-1.31,41) (1.36,0) (-0.31,6) (2.14,0) (-0.35,6) (-1.53,42) (-1.27,30) (0.27,1) (-0.04,3) (-1.67,41) (-0.17,3) (0.41,3) (-1.13,19) (0.07,1) (0.77,1) (0.80,3) (-0.80,10) (-0.41,11) (-0.27,5) (1.55,0) (0.85,0) (-1.54,37) (-0.51,8) (0.26,0) (0.99,1) (0.25,2) (0.50,1) (0.95,0) (0.17,2) (-0.35,3) (-0.31,4) (-1.08,21) (0.23,0) (0.18,3) (-1.78,53) (-0.53,5) (0.69,0) (-0.36,5) (0.08,0) (0.05,5) (-1.08,21) (1.59,0) (0.05,3) (0.41,0) (0.40,2) (-0.29,10) (0.01,4)};
+\addplot[porange, very thick] coordinates {(-3.00,301.36) (-2.75,226.17) (-2.50,165.43) (-2.25,117.87) (-2.00,81.76) (-1.75,55.20) (-1.50,36.25) (-1.25,23.16) (-1.00,14.38) (-0.75,8.68) (-0.50,5.09) (-0.25,2.90) (0.00,1.61) (0.25,0.86) (0.50,0.45) (0.75,0.23) (1.00,0.11) (1.25,0.05) (1.50,0.02) (1.75,0.01) (2.00,0.00) (2.25,0.00) (2.50,0.00)};
+\node[lbl, porange, anchor=west] at (axis cs:-1.85,110) {model $(n-1)\,p(z)$};
+\node[lbl, pblue, anchor=west] at (axis cs:-0.2,40) {$400$ of $2000$ points, $d=1000$};
+\end{axis}
+\end{tikzpicture}
+\caption{Points closer to the mean of the cloud appear in many more result lists. The orange curve is the centrality model, which has the right shape and runs below the simulated counts of the most central points.}
+\label{fig:ch11:central}
+\end{figure}
+
+\paragraph{Local density is the second mechanism.} Real corpora are not one Gaussian cloud. They are mixtures of topics, languages and styles. Radovanovi\'c et al.\ found that in real data hubs sit closer to the centre of their own cluster than other points, and that the count correlates more strongly with the distance to the nearest cluster mean than with the distance to the global mean \cite{radovanovic2010}. Centrality can therefore be local. A point in a region that is denser than its surroundings is, for the queries that land nearby, the analogue of the point near the global mean. Telling the two mechanisms apart from a count alone is harder than it looks. In the seeded $d=1000$ Gaussian sample, which has only the centrality mechanism, the Spearman correlation between $N_{10}$ and minus the distance to the tenth neighbour, a standard density proxy, is $0.92$. A point that is close to everything also has close neighbours, so a high correlation with density does not show that density is the cause.
+
+\inproject{\texttt{turboquant-pro/\allowbreak docs/\allowbreak HUBNESS\_PRIMER.md}, section ``Two corpora, same hubness number, opposite behaviour'', reports a measurement of that project, not a theorem. A real text corpus and a synthetic look-alike had essentially the same count skewness. In the real corpus the largest $N_{10}$ was $78$, the correlation of the count with minus the tenth-neighbour distance was about $+0.67$, and the hubs' local scale was about $8$ percent below the population's. In the synthetic corpus the largest $N_{10}$ was $369$ and the hubs were $34$ percent closer to the mean than average. One skewness value, two mechanisms. The primer's motto is ``trust the tail, not the mean''. For the same reason as the paragraph above, the primer also states that the count-density correlation exceeds $+0.8$ on an isotropic Gaussian and cannot identify the mechanism, so \texttt{tqp anatomy} types each hub by its percentile in the population's centrality and density distributions instead. \emph{Data Mining as Observation}, Chapter~10, section~10.3, gives that classification rule.}
+
+\buildson{\Cref{sec:ch11:norm,sec:ch11:dist,sec:ch11:hubs}. The trace of a covariance, \cref{ch01}.}
+\usedin{\Cref{sec:ch11:tail}, which matches the remedy to the mechanism.}
+
+% ---------------------------------------------------------------------------
+\section{A Poisson null sets the count that a corpus with no structure would reach}\label{sec:ch11:poisson}\shortsecmark{The Poisson null}
+
+A count of $40$ means nothing until it is compared with what chance produces. The natural null removes all geometry. Each query's $k$ slots go to $k$ distinct stored points chosen uniformly at random, independently across queries. Under that null, in the corpus-to-corpus experiment, each of the other $n-1$ queries includes a given point with probability $p=k/(n-1)$, independently, so
+\begin{equation}\label{eq:ch11:null}
+N_k(x)\sim\mathrm{Binomial}\Big(n-1,\ \frac{k}{n-1}\Big)\ \approx\ \mathrm{Poisson}(k),\qquad
+S_{N_k}^{\mathrm{null}}=\frac{1-2p}{\sqrt{(n-1)p(1-p)}}\ \approx\ \frac1{\sqrt k}.
+\end{equation}
+The approximation is the law of rare events of Primer~S, section~S.3. With $n=2000$ and $k=10$ the binomial skewness is $0.314$ and the Poisson value is $1/\sqrt{10}=0.316$. So the no-structure skewness is not zero. A measured $S_{N_{10}}$ of $0.3$ is what the null produces and so gives no evidence of hubness, and only values well above it indicate hubs. It does not prove that hubs are absent, because skewness summarizes the whole distribution, and the largest count is the more direct check. The reference line in \cref{fig:ch11:skew} is this value.
+
+The largest count is the more direct statistic. \emph{Data Mining as Observation}, section~0.9, defines the no-structure ceiling as the largest count that at least one of the $n$ points is expected to reach by chance, with $\mu$ the expected count per point,
+\begin{equation}\label{eq:ch11:ceiling}
+c^\star=\max\big\{c:\ n\Pr[\mathrm{Poisson}(\mu)\ge c]\ge1\big\},\qquad
+\text{hub excess}=\frac{\max_x N_k(x)}{c^\star},
+\end{equation}
+and works the example $\mu=0.1$, in which the queries are few and the ceiling is $3$. Corpus-to-corpus measurement sits at the other end, $\mu=k$. The sum identity \cref{eq:ch11:nk} holds under the null as well, so the counts are not exactly independent across points. That dependence is weak when $n$ is large, and the ceiling is a reference value, not a test with an exact level.
+
+\begin{example}[The ceiling for the simulations of this chapter]\label{ex:ch11:ceiling}
+With $n=2000$ and $\mu=k=10$, the expected number of points with a count of at least $22$ is $2000\Pr[\mathrm{Poisson}(10)\ge22]=1.40$, and of at least $23$ it is $0.59$. The ceiling is $c^\star=22$. The seeded samples in $d=2$ and $d=3$ have largest counts $17$ to $20$, at or below the ceiling, so their hub excess is below one. The seeded sample in $d=1000$ has a largest count of $386$, a hub excess of $386/22=17.5$. For a corpus of $10{,}000$ points at $k=5$, the ceiling is $15$, since $10^4\Pr[\mathrm{Poisson}(5)\ge15]=2.26$ and $10^4\Pr[\mathrm{Poisson}(5)\ge16]=0.69$.
+\end{example}
+
+The null is a ceiling on what geometry-free chance produces, not a model of real data. Low-dimensional Gaussian samples are more even than the null, as the negative skewness in \cref{fig:ch11:skew} shows, and high-dimensional ones are far less even. Its use is to keep a reader from calling a count of $20$ at $k=10$ a hub.
+
+\inproject{\emph{Data Mining as Observation}, Chapter~3, section~3.5, equation~3.4, defines the hub excess this way and attributes the use of the Poisson null to the openvector-bench project, whose documentation asks for the excess rather than a raw share whenever a claim is about a corpus rather than a workload. That chapter also reports the project's finding that, on one real corpus with real queries, the best single predictor of who is retrieved was the query mass near a point, so hubness is a property of the corpus, the queries, the metric and $k$ together.}
+
+\buildson{Primer~S, sections~S.3 and S.4. \emph{Data Mining as Observation}, section~0.9. \Cref{sec:ch11:hubs}.}
+\usedin{\Cref{sec:ch11:tail}. \Cref{ch09}, where a null is fixed before the measurement it grades.}
+
+% ---------------------------------------------------------------------------
+\section{Mean recall averages over queries, and a few hubs fill many result lists}\label{sec:ch11:tail}\shortsecmark{The tail and the mean}
+
+\Cref{ch07} accepts a compressed index on recall at $k$ against exact neighbours. Recall is computed per query and then averaged. Partition the queries into strata $j$ with weights $w_j$, for instance by the count decile of each query's true nearest neighbour. The mean is a weighted average of the stratum recalls,
+\begin{equation}\label{eq:ch11:strata}
+\overline{\mathrm{recall}}=\sum_j w_j\,r_j,\qquad
+\Delta\overline{\mathrm{recall}}=w_j\,\Delta r_j\quad\text{when only stratum }j\text{ changes}.
+\end{equation}
+A stratum of weight $w$ that loses $\Delta$ in recall moves the mean by only $w\Delta$. The queries whose true neighbours are anti-hubs are a small stratum by construction. One explanation for their low recall is that their right answer is separated from the crowd by a small margin, which a quantizer rounds away first. That is a hypothesis about mechanism, not a theorem.
+
+\begin{example}[A mean that barely moves]\label{ex:ch11:recall}
+Suppose $90$ percent of queries have recall $0.98$ and the $10$ percent whose true neighbour is an anti-hub have recall $0.62$. The mean is $0.9\times0.98+0.1\times0.62=0.944$. Now let a coarser quantizer drop the anti-hub stratum to $0.40$ and leave the rest alone. The mean becomes $0.922$. The stratum lost $0.22$ and the mean lost $0.022$, ten times less. A gate on mean recall at $0.92$ passes both indexes.
+\end{example}
+
+The other side of the same distribution is the hubs. The counts sum to $k|Q|$, so the share of all result slots held by the busiest points is a Lorenz curve, the curve economists use for income. \Cref{fig:ch11:lorenz} draws it for the two seeded samples of \cref{fig:ch11:nk}. In $d=3$ the busiest $1$ percent of points hold $1.7$ percent of the slots. In $d=1000$ they hold $18.0$ percent, and the busiest $10$ percent hold $59.8$ percent. The Robin Hood index, the share of slots that would have to move to make every count equal,
+\begin{equation}\label{eq:ch11:robinhood}
+\mathrm{RH}=\frac{\sum_x\abs{N_k(x)-\bar N_k}}{2\sum_xN_k(x)},
+\end{equation}
+is $0.109$ in $d=3$ and $0.591$ in $d=1000$. For the five points of \cref{ex:ch11:five} it is $0.6$. A hub that is a bad answer, a near-duplicate, a corrupted vector or a vector inserted on purpose near the centre, is a bad answer for a large share of all queries at once.
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.56\linewidth, height=0.50\linewidth, xmin=0, xmax=1, ymin=0, ymax=1,
+  xlabel={busiest fraction of points}, ylabel={share of all result slots}, xtick={0,0.2,0.4,0.6,0.8,1}, ytick={0,0.2,0.4,0.6,0.8,1}]
+\addplot[pgray, dashed] coordinates {(0,0) (1,1)};
+\addplot[porange] coordinates {(0.00,0.0000) (0.01,0.0169) (0.02,0.0326) (0.05,0.0772) (0.10,0.1464) (0.20,0.2740) (0.30,0.3940) (0.40,0.5042) (0.50,0.6089) (0.60,0.7089) (0.70,0.7989) (0.80,0.8815) (0.90,0.9548) (1.00,1.0000)};
+\addplot[pblue] coordinates {(0.00,0.0000) (0.01,0.1797) (0.02,0.2607) (0.05,0.4279) (0.10,0.5976) (0.20,0.7861) (0.30,0.8828) (0.40,0.9387) (0.50,0.9707) (0.60,0.9887) (0.70,0.9987) (0.80,1.0000) (0.90,1.0000) (1.00,1.0000)};
+\node[lbl, pblue, anchor=west] at (axis cs:0.12,0.62) {$d=1000$};
+\node[lbl, porange, anchor=north west] at (axis cs:0.42,0.48) {$d=3$};
+\node[lbl, pgray, anchor=north west, rotate=40] at (axis cs:0.58,0.56) {equal counts};
+\end{axis}
+\end{tikzpicture}
+\caption{In a thousand dimensions the busiest tenth of the points fills sixty percent of all result slots, and $29$ percent of the points fill none. In three dimensions the slot shares stay close to the line of equal counts.}
+\label{fig:ch11:lorenz}
+\end{figure}
+
+\paragraph{Mitigations at a glance.} Two families of remedies rescale distances so that neighbour relations become more symmetric. Schnitzer, Flexer, Schedl and Widmer evaluated both and showed that they reduce hubness on synthetic data and on many real data sets \cite{schnitzer2012}. Local scaling, which they take from spectral clustering, divides each distance by the neighbourhood radii of both endpoints. Mutual proximity, their global variant, asks how unusual the distance is from both endpoints' points of view. With $\sigma_x$ the distance from $x$ to its $k$-th neighbour and $F_x$ the distribution function of the distances from $x$ to all other points,
+\begin{equation}\label{eq:ch11:ls}
+\mathrm{LS}(x,y)=\exp\!\left(-\frac{d_{xy}^2}{\sigma_x\sigma_y}\right),\qquad
+\mathrm{MP}_I(x,y)=\big(1-F_x(d_{xy})\big)\big(1-F_y(d_{xy})\big),
+\end{equation}
+where the subscript $I$ marks the version that treats the two distance distributions as independent. For a fixed query $q$, ranking by $\mathrm{LS}$ is ranking by $d_{qx}/\sqrt{\sigma_x}$, so a candidate with a small neighbourhood radius is pushed back. In the centrality model such a candidate is typically a central point, and in a clustered corpus it can also be a point in a dense region. On the seeded $d=1000$ sample, ranking by local scaling at $k=10$ lowers the skewness from $7.37$ to $2.54$ and the largest count from $386$ to $113$. Conneau et al.\ use a related correction, cross-domain similarity local scaling, which subtracts from twice the cosine each endpoint's mean similarity to its nearest neighbours \cite{conneau2018}. The third remedy is centering, subtracting the data mean before computing cosine or inner-product scores. Euclidean distance is unchanged by any shift, so centering does nothing to Euclidean $N_k$, and \cref{eq:ch11:central} explains why centrality in the Euclidean sense survives it. For inner-product scores it removes the shared mean direction that makes some points similar to everything. Hara et al.\ report that centering reduces hubness in high-dimensional data, fails when the sample is large, and propose a localized version that works in both cases \cite{hara2015}.
+
+None of these remedies is free. Each changes the ranking objective, so a remedy evaluated against the uncorrected exact neighbours will look like damage. \emph{Data Mining as Observation}, Chapter~10, section~10.5, recounts how the turboquant-pro project found that a density correction reduced hubness on the exact graph and was much harder to reproduce through a compressed index.
+
+\inproject{\texttt{turboquant-pro/\allowbreak docs/\allowbreak CLI.md}, the entry for \texttt{tqp hubdiff}, documents an instrument that compares an exact and a compressed search beyond aggregate recall. It reports fifth-percentile per-query recall, hub-rank correlation, hub-set Jaccard and anti-hub recall, recall restricted to queries whose true nearest neighbour is among the least visited rows, and can fail a build when anti-hub recall falls below a set value. The draft paper \texttt{turboquant-pro/\allowbreak paper/\allowbreak strata\_findings/\allowbreak main.tex}, marked DRAFT-v0, lists in its appendix ``Recall by Count Decile'' the recall of one compressed index by count decile, lowest first, as $0.7951,0.8120,0.8224,0.8315,0.8349,0.8365,0.8365,0.8327,0.8241,0.7995$. Both tails sit below the middle deciles. The same draft reports that its registered prediction about per-language anti-hub recall was not confirmed at the registered threshold.}
+
+\inproject{\texttt{geometric-observation/\allowbreak articles/\allowbreak 2026-08-03-hubness-\allowbreak does-not-\allowbreak weaken-bell.md} asks whether query-dependent concentration of neighbour counts could let a local hidden-variable model exceed the Bell bound, reading the two measurement settings of a Bell experiment as queries. Under a sealed, preregistered audit with the shared state sampled independently of the settings, each side responding only to its own setting, and every trial counted, the four-term combination stayed at $2.00000$ across $72$ configurations from $d=3$ to $128$. Its correlation with the count skewness was $-0.036$. Rescoring the same trials on coincident registrations alone gave $2.7308$. The article reports the conjecture false as stated, carries the negative result as NEG-15 in the claim ledger, and keeps only a vocabulary for one assumption behind the inequality.}
+
+\buildson{\Cref{sec:ch11:hubs,sec:ch11:centrality,sec:ch11:poisson}. Recall at $k$ in \cref{ch07}. Strata and the minimum over strata in \emph{Data Mining as Observation}, Chapter~10, section~10.4.}
+\usedin{\Cref{ch08}, evaluation that reads a tail rather than a mean. \Cref{ch09}, gates registered before measurement.}
+
+% ---------------------------------------------------------------------------
+\section*{Exercises}
+
+\subsection*{Warm-up}
+
+\begin{exercise}\label{exr:ch11:scale}
+Let $x\sim\Normal(0,\sigma^2I_d)$. Find $\E\norm x^2$ and $\Var\norm x^2$, and show that the relative spread $\sqrt{\Var\norm x^2}/\E\norm x^2$ does not depend on $\sigma$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch11:sum}
+Prove the identity $\sum_xN_k(x)=k|Q|$ of \cref{eq:ch11:nk}. Explain why it means that skewness, not the mean count, is the hubness statistic.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch11:shift}
+Show that adding the same vector $b$ to every stored point and every query leaves all Euclidean counts $N_k$ unchanged. Name a similarity score for which the same shift does change the counts.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch11:nullskew}
+A colleague reports $S_{N_{10}}=0.30$ on a corpus-to-corpus run and concludes that the corpus has mild hubness. Explain what that value means.
+\end{exercise}
+
+\subsection*{By hand}
+
+\begin{exercise}\label{exr:ch11:shell}
+What fraction of the volume of the unit ball in $d=50$ lies within relative distance $\epsilon=0.02$ of its surface? Compare with the lower bound $1-e^{-\epsilon d}$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch11:five2}
+For the five points of \cref{ex:ch11:five}, find each point's two nearest neighbours, the counts $N_2$, their variance, their skewness and their Robin Hood index \cref{eq:ch11:robinhood}.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch11:jlk}
+How large must $m$ be in \cref{eq:ch11:jl-k} to preserve all squared distances among $10{,}000$ points within $\epsilon=0.1$?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch11:ceil}
+A corpus of $5000$ points is measured corpus to corpus at $k=20$. Find the Poisson skewness $1/\sqrt k$ and the no-structure ceiling $c^\star$ of \cref{eq:ch11:ceiling}. The busiest point appears in $190$ lists. What is its hub excess?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch11:model}
+Use the model \cref{eq:ch11:model} with $n=1001$ and $k=10$, so that $k/(n-1)=0.01$. Find $c$, then the expected counts $1000\,p(z)$ of a typical point, $z=0$, and of a point one standard deviation closer to the mean, $z=-1$.
+\end{exercise}
+
+\subsection*{Programming}
+
+\begin{exercise}\label{exr:ch11:prog-norm}
+With a fixed seed, draw $20{,}000$ standard Gaussian vectors in $d=400$ and estimate $\Pr[\abs{\norm x-20}\ge\beta]$ for $\beta=1,2,3$. Compare with the Chebyshev bound $2/\beta^2$ of \cref{eq:ch11:annulus-cheb} and with the exact chi-square value.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch11:prog-hub}
+Compute corpus-to-corpus $N_{10}$ for $2000$ seeded Gaussian points in $d=3$, $30$ and $300$, and report the skewness, the largest count and the fraction of zero counts. Then draw $2000$ points from a $5$-dimensional Gaussian, embed them in $\R^{500}$ by $x\mapsto Ux$ with $U$ a $500\times5$ matrix with orthonormal columns, and show that the counts are identical before and after. What does this say about the dimension that hubness depends on?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch11:prog-jl}
+Reproduce \cref{fig:ch11:jl} for $200$ points of your own data, or of a seeded Gaussian sample, and add the curve of the $95$th percentile of the pairwise distortion. Which of the three curves would you use to choose $m$ for a search index, and why?
+\end{exercise}
+
+\let\sectionmark\savedsectionmarkxi
+
+% checks/ch11_examples.py on Atlas: 105/105 PASS

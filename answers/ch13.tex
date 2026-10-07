@@ -1,1 +1,68 @@
-% placeholder until the drafting agent writes this file
+% Answers to selected exercises, chapter on spectral perturbation (file key ch13).
+% Every number below is recomputed by checks/ch13_examples.py.
+
+\paragraph{Exercise~\ref{exr:ch13:weyl}}
+Here $\norm{E}_2=0.3$, so Weyl's inequality puts the eigenvalues of $A+E$ in
+$[4.7,5.3]$ and $[1.7,2.3]$. Exactly, $A+E$ has trace $7$ and determinant
+$10-0.09=9.91$, so its eigenvalues are $3.5\pm\sqrt{12.25-9.91}=3.5\pm\sqrt{2.34}$,
+that is $5.0297$ and $1.9703$. Each moved by $0.0297$, a tenth of the bound,
+because the perturbation is off-diagonal and its effect starts at second order.
+
+\paragraph{Exercise~\ref{exr:ch13:lines}}
+With unit vectors $q$ and $\hat q$ at angle $\phi$, $Q\T\hat Q=\cos\phi$, so the
+single principal angle is $\phi$. The overlap is $\cos^2\phi$, and by
+\cref{eq:ch13:projid} the projectors differ by $\sin\phi$ in operator norm and by
+$\sqrt2\sin\phi$ in Frobenius norm. Chance is $r/d=\tfrac12$, so a line estimate at
+more than $45^\circ$ from the truth scores below a random line.
+
+\paragraph{Exercise~\ref{exr:ch13:projfrob}}
+Both projectors are symmetric and idempotent with trace $r$, so
+$\norm{\Pi_R-\Pi_{\hat R}}_F^2=\tr\big((\Pi_R-\Pi_{\hat R})^2\big)
+=\tr\Pi_R+\tr\Pi_{\hat R}-2\tr(\Pi_R\Pi_{\hat R})=2r-2ro=2r(1-o)$.
+
+\paragraph{Exercise~\ref{exr:ch13:iters}}
+The tangent shrinks by $\rho^k$, so $k\ge6\ln10/\ln(1/\rho)$. For $\rho=0.9$ this is
+$131.1$, so $132$ steps. For $\rho=0.99$ it is $1374.6$, so $1375$ steps.
+
+\paragraph{Exercise~\ref{exr:ch13:second}}
+The matrix $A+E$ has trace $5$ and determinant $3.91$, so its top eigenvalue is
+$2.5+\sqrt{2.34}=4.0297$. The first-order term of \cref{eq:ch13:eigexp} is
+$v_1\T Ev_1=0$, giving $4$. The second-order term is $0.3^2/(4-1)=0.03$, giving
+$4.03$, within $5\times10^{-4}$ of the exact value. For the eigenvector,
+$\tan2\theta=2\cdot0.3/3=0.2$, so $\theta=\tfrac12\arctan0.2=0.0987$ radians,
+against the first-order $\varepsilon/g=0.1$.
+
+\paragraph{Exercise~\ref{exr:ch13:dk}}
+With $g=1$ and $\varepsilon=0.5$, $\tan2\theta=1$, so $\theta=22.5^\circ$ and
+$\sin\theta=0.3827$. The perturbed eigenvalues are $1.5\pm\sqrt{0.5}$, so
+$\hat\lambda_2=0.7929$. The block is $\{\lambda_1\}=\{2\}$ and the only perturbed
+eigenvalue outside it is $\hat\lambda_2$, so $\delta=2-0.7929=1.2071$ and
+\cref{eq:ch13:dk} gives $0.5/1.2071=0.4142$. That is $\sqrt2-1=\tan22.5^\circ$,
+slightly above the true sine. The population-gap bound is $2\cdot0.5/1=1$, which
+says nothing.
+
+\paragraph{Exercise~\ref{exr:ch13:angles3}}
+An orthonormal basis of $\hat{\mathcal R}$ is $(1,0,1)\T/\sqrt2$ and $e_2$, and
+$Q\T\hat Q=\diag(1/\sqrt2,1)$. The principal cosines are $1$ and $1/\sqrt2$, so the
+angles are $0^\circ$ and $45^\circ$. The overlap is $\tfrac12(1+\tfrac12)=0.75$,
+above the chance value $\tfrac23$. By \cref{eq:ch13:projid},
+$\norm{\Pi-\hat\Pi}_F^2=2\sin^245^\circ=1$.
+
+\paragraph{Exercise~\ref{exr:ch13:deflate}}
+For $k=1$, $Bx_0=(1,-1,1)\T$. If $B^kx_0=(2^{k-1},-2^{k-1},1)\T$, then applying $B$
+gives first entry $2^{k-1}+2^{k-1}=2^k$, second entry $-2^{k-1}-2^{k-1}=-2^k$ and
+third entry $1$, which is the claim for $k+1$. The component along
+$v_2=(1,-1,0)\T/\sqrt2$ has length $\sqrt2\,2^{k-1}$ and the rest has length $1$, so
+$\tan\theta_k=1/(\sqrt2\,2^{k-1})$, halving at each step. The factor is $\tfrac12$, the ratio of the two largest
+eigenvalues $1$ and $2$ of the deflated matrix.
+
+\paragraph{Exercise~\ref{exr:ch13:chance}}
+Let $G$ be the $d\times r$ matrix of the Gaussian vectors, so
+$\Pi_{\hat R}=G(G\T G)^{-1}G\T$. For a fixed orthogonal $U$, the matrix $UG$ has the
+same distribution as $G$, and its projector is $U\Pi_{\hat R}U\T$. So
+$U\,\E[\Pi_{\hat R}]\,U\T=\E[\Pi_{\hat R}]$ for every orthogonal $U$. If $v$ is a unit
+eigenvector of the symmetric matrix $\E[\Pi_{\hat R}]$ with eigenvalue $c$, then $Uv$
+is also an eigenvector with eigenvalue $c$, and $Uv$ can be any unit vector. So every
+vector is an eigenvector for $c$, which means $\E[\Pi_{\hat R}]=cI$. Taking traces,
+$cd=\E[\tr\Pi_{\hat R}]=r$. Finally
+$\E[o]=\tfrac1r\tr\big(\Pi_R\,\E[\Pi_{\hat R}]\big)=\tfrac1r\cdot\tfrac rd\tr\Pi_R=\tfrac rd$.

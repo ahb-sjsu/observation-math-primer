@@ -1,7 +1,8 @@
 \chapter{Statistics for research that registers its predictions first}\label{ch09}
 % Standalone build (jobname ch09) only. The other chapters are not in this build,
 % so their chapter labels are given plain numbers here to keep \cref{chNN}
-% resolvable. In main.tex the real labels are used and this block does nothing.
+% resolvable, numbered in the order main.tex includes them (2026-10-07).
+% In main.tex the real labels are used and this block does nothing.
 \makeatletter
 \providecommand\omp@stubchapter[2]{%
   \@ifundefined{r@#1}{%
@@ -9,9 +10,10 @@
     \global\@namedef{r@#1@cref}{{[chapter][#2][]#2}{}{}{}{}}}{}}
 \edef\omp@jobA{\jobname}\edef\omp@jobB{\detokenize{ch09}}
 \ifx\omp@jobA\omp@jobB
-  \omp@stubchapter{ch01}{1}\omp@stubchapter{ch02}{2}\omp@stubchapter{ch03}{3}%
-  \omp@stubchapter{ch04}{4}\omp@stubchapter{ch05}{5}\omp@stubchapter{ch06}{6}%
-  \omp@stubchapter{ch07}{7}\omp@stubchapter{ch08}{8}\omp@stubchapter{ch10}{10}%
+  \omp@stubchapter{ch01}{1}\omp@stubchapter{ch02}{3}\omp@stubchapter{ch03}{6}%
+  \omp@stubchapter{ch04}{7}\omp@stubchapter{ch05}{8}\omp@stubchapter{ch06}{9}%
+  \omp@stubchapter{ch07}{10}\omp@stubchapter{ch08}{11}\omp@stubchapter{ch10}{13}%
+  \omp@stubchapter{ch11}{5}\omp@stubchapter{ch12}{4}\omp@stubchapter{ch13}{2}%
 \fi
 \let\omp@savedsectionmark\sectionmark
 \renewcommand\sectionmark[1]{}
@@ -56,13 +58,34 @@ The standard error of a difference is where pairing pays. For any two random var
 \Var(A-B)=\Var A+\Var B-2\Cov(A,B),
 \label{eq:ch09:vardiff}
 \end{equation}
-so when the two methods' scores rise and fall together across queries, the difference is far less noisy than either score. Treating paired data as two independent samples discards the covariance term and overstates the standard error.
+so when the two methods' scores rise and fall together across queries, the difference is far less noisy than either score. Treating paired data as two independent samples discards the covariance term. It overstates the standard error when the covariance is positive, which is the usual case, and understates it when the covariance is negative.
 
 \begin{example}[One sample, two standard errors]\label{ex:ch09:paired}
-For the data \eqref{eq:ch09:data}, $\bar A=0.800$ and $\bar B=0.77125$, so the estimate of the mean difference is $\bar d=0.02875$. The squared deviations of the $d_i$ from $\bar d$ sum to $0.0030875$, so $s_d=\sqrt{0.0030875/7}=0.0210$ and the paired standard error is $s_d/\sqrt8=0.00743$. The paired statistic is $t=0.02875/0.00743=3.87$ on seven degrees of freedom. The sample standard deviations of the two columns are $s_A=0.0800$ and $s_B=0.0702$. Treated as independent groups, the standard error of the difference would be $\sqrt{s_A^2/8+s_B^2/8}=0.0376$, about $5.1$ times the paired one. The reason is the correlation of $0.97$ between the columns, which \eqref{eq:ch09:vardiff} subtracts. The two standardized effects are $d_z=0.02875/0.0210=1.37$ and $d=0.02875/0.0753=0.38$. Both are correct answers to different questions. The first says how reliably B loses to A query by query, and the second says how large the shift is relative to the spread of scores across queries.
+For the data \eqref{eq:ch09:data}, $\bar A=0.800$ and $\bar B=0.77125$, so the estimate of the mean difference is $\bar d=0.02875$. The squared deviations of the $d_i$ from $\bar d$ sum to $0.0030875$, so $s_d=\sqrt{0.0030875/7}=0.0210$ and the paired standard error is $s_d/\sqrt8=0.00743$. The paired statistic is $t=0.02875/0.00743=3.87$ on seven degrees of freedom. The sample standard deviations of the two columns are $s_A=0.0800$ and $s_B=0.0702$. Treated as independent groups, the standard error of the difference would be $\sqrt{s_A^2/8+s_B^2/8}=0.0376$, about $5.1$ times the paired one. The reason is the correlation of $0.97$ between the columns, which \eqref{eq:ch09:vardiff} subtracts, and \cref{fig:ch09:sampling} draws both sampling distributions. The two standardized effects are $d_z=0.02875/0.0210=1.37$ and $d=0.02875/0.0753=0.38$. Both are correct answers to different questions. The first says how reliably B loses to A query by query, and the second says how large the shift is relative to the spread of scores across queries.
 \end{example}
 
-\inproject{The registration template is \texttt{geometric-observation/PROTOCOL.md}, section 12.1. It has fields for the prediction (arm ordering, effect floor, power, pilot) and for the design ($n$, the independent unit as \texttt{clusters}, \texttt{stopping: fixed-n}), and it ends with a \texttt{hash} line.}
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer,clip=false,xlabel={mean difference $\bar d$},ylabel={density},ytick=\empty,
+  xmin=-0.06,xmax=0.12,ymin=0,ymax=60,samples=200,domain=-0.06:0.12,
+  xtick={-0.04,0,0.02875,0.08},xticklabels={$-0.04$,$0$,$0.029$,$0.08$},
+  x tick label style={/pgf/number format/fixed}]
+\addplot[pblue,fill=plight] {exp(-0.5*((x-0.02875)/0.00743)^2)/(0.00743*sqrt(2*pi))};
+\addplot[pgray,dashed] {exp(-0.5*((x-0.02875)/0.0376)^2)/(0.0376*sqrt(2*pi))};
+\addplot[pgreen,line width=3.5pt] coordinates {(0.0142,0.0) (0.0433,0.0)}; % data:ci
+\draw[pred,thick] (axis cs:0,0) -- (axis cs:0,45);
+\node[lbl,pred,anchor=east,align=right] at (axis cs:-0.002,40) {zero\ $3.87$ SE away};
+\node[lbl,pblue,anchor=west] at (axis cs:0.042,45) {paired, SE $0.00743$};
+\node[lbl,pgray,anchor=west] at (axis cs:0.055,13) {unpaired, SE $0.0376$};
+\node[lbl,pgreen,anchor=north] at (axis cs:0.02875,-3) {};
+\end{axis}
+\end{tikzpicture}
+\caption{The normal approximation to the sampling distribution of the mean paired difference, with its $95$ percent interval $(0.0142,\ 0.0433)$ in green. With only eight pairs the normal quantile understates the width, and the interval from the $t$ distribution with seven degrees of freedom is $(0.0112,\ 0.0463)$. The dashed curve is what the same data would claim if the pairs were broken, five times wider and covering zero comfortably.}
+\label{fig:ch09:sampling}
+\end{figure}
+
+\inproject{\raggedright The registration template is \texttt{geometric-observation/PROTOCOL.md}, section 12.1. It has fields for the prediction (arm ordering, effect floor, power, pilot) and for the design ($n$, the independent unit as \texttt{clusters}, \texttt{stopping: fixed-n}), and it ends with a \texttt{hash} line.}
 
 \buildson{Primer S, sections S.4 and S.6 (sample statistics, standard error, unbiasedness), and covariance from \cref{ch02}.}
 \usedin{Every later section of this chapter, and the evaluation statistics of \cref{ch08}.}
@@ -85,21 +108,36 @@ The bootstrap standard error is the standard deviation of the replicates. For th
 
 A permutation test makes the null hypothesis into a symmetry and enumerates it. For paired data the null ``A and B are exchangeable within each pair'' says each difference is as likely to have its sign flipped as not.
 \begin{definition}[Sign-flip test]\label{def:ch09:signflip}
-Under the null that each $d_i$ is symmetric about zero, the $2^n$ sign assignments $\varepsilon\in\{\pm1\}^n$ are equally likely. The exact two-sided p-value is
+Under the null that the $d_i$ are independent and each is symmetric about zero, the $2^n$ sign assignments $\varepsilon\in\{\pm1\}^n$ are equally likely. The exact two-sided p-value is
 \begin{equation}
 p=\frac{\#\big\{\varepsilon:\ \big|\sum_i \varepsilon_i|d_i|\big|\ \ge\ \big|\sum_i d_i\big|\big\}}{2^n}.
 \label{eq:ch09:signflip}
 \end{equation}
 \end{definition}
-The smallest value \eqref{eq:ch09:signflip} can take is $2/2^n$, reached when only the observed assignment and its mirror image are as extreme. The design fixes it before any data arrive.
+When no difference is zero, the smallest value \eqref{eq:ch09:signflip} can take is $2/2^n$, reached when only the observed assignment and its mirror image are as extreme. A zero difference gives the same sum under both of its signs and raises that floor. The design fixes it before any data arrive.
 
 \begin{example}[Sign flips and a bootstrap on eight pairs]\label{ex:ch09:signflip}
-In hundredths the differences are $4,1,5,3,5,-1,4,2$. Their sum is $23$ and their absolute values sum to $25$. Flipping a set $S$ of signs, starting from all positive, gives the sum $25-2\sum_{i\in S}|d_i|$. This is at least $23$ only when the flipped absolute values total at most $1$, which happens for the empty set and for each of the two differences of size $1$. That is three assignments, and by symmetry three more reach $-23$ or below. So $p=6/256=0.0234$. The smallest attainable value with eight pairs is $2/256=0.0078$. A paired bootstrap with $10{,}000$ replicates (seed $20261006$) gives the percentile interval $[0.015,\ 0.041]$ for the mean difference and a bootstrap standard error of $0.0069$, close to the plug-in value $0.935\times0.00743=0.00695$.
+In hundredths the differences are $4,1,5,3,5,-1,4,2$. Their sum is $23$ and their absolute values sum to $25$. Flipping a set $S$ of signs, starting from all positive, gives the sum $25-2\sum_{i\in S}|d_i|$. This is at least $23$ only when the flipped absolute values total at most $1$, which happens for the empty set and for each of the two differences of size $1$. That is three assignments, and by symmetry three more reach $-23$ or below. So $p=6/256=0.0234$ (\cref{fig:ch09:perm}). The smallest attainable value with eight pairs is $2/256=0.0078$. A paired bootstrap with $10{,}000$ replicates (seed $20261006$) gives the percentile interval $[0.015,\ 0.041]$ for the mean difference and a bootstrap standard error of $0.0069$, close to the plug-in value $0.935\times0.00743=0.00695$.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer,clip=false,ybar,bar width=4pt,xlabel={sum of signed differences (hundredths)},ylabel={assignments},
+  xmin=-27,xmax=27,ymin=0,ymax=22,xtick={-25,-15,-5,5,15,25}]
+\addplot[pblue,fill=plight] coordinates {(-25,1) (-23,2) (-21,2) (-19,3) (-17,5) (-15,8) (-13,10) (-11,11) (-9,13) (-7,16) (-5,19) (-3,19) (-1,19) (1,19) (3,19) (5,19) (7,16) (9,13) (11,11) (13,10) (15,8) (17,5) (19,3) (21,2) (23,2) (25,1)}; % data:perm
+\addplot[pred,fill=pred] coordinates {(-25,1) (-23,2) (23,2) (25,1)}; % data:permext
+\draw[pred,thick,dashed] (axis cs:23,0) -- (axis cs:23,21);
+\node[lbl,pred,anchor=east] at (axis cs:22,19) {observed $23$};
+\end{axis}
+\end{tikzpicture}
+\caption{The exact sign-flip null distribution of the sum for the eight differences, all $256$ assignments. The six red assignments are at least as extreme as the observed sum, which gives $p=6/256$.}
+\label{fig:ch09:perm}
+\end{figure}
 
 The rule that matters for registration is this. Before quoting any interval, ask which unit the population sampled independently, and resample that unit. Resampling single scores in Example~\ref{ex:ch09:paired} would have broken the pairs and reported the five-times-wider interval. \Cref{sec:ch09:cluster} generalizes the rule to clusters.
 
-\inproject{\texttt{geometric-observation/PROTOCOL.md}, section 5, labels pair-resampling intervals as optimistic floors because the pairs share anchors. The same section requires resampling at the independent unit, with rules over seeds, models over tasks and corpora over queries as its examples.}
+\inproject{\raggedright \texttt{geometric-observation/PROTOCOL.md}, section 5, labels pair-resampling intervals as optimistic floors because the pairs share anchors. The same section requires resampling at the independent unit, with rules over seeds, models over tasks and corpora over queries as its examples.}
 
 \buildson{Primer S, sections S.6, S.7 and S.11 (bootstrap, permutation test, seeds).}
 \usedin{\cref{sec:ch09:cluster} of this chapter, and the paired comparisons of \cref{ch08}.}
@@ -108,7 +146,7 @@ The rule that matters for registration is this. Before quoting any interval, ask
 \section{A family of tests needs a plan, and Holm and Benjamini--Hochberg answer different questions}\label{sec:ch09:multiple}
 \markright{\MakeUppercase{\thesection.\ Holm and Benjamini--Hochberg}}
 
-Primer S, section S.8 showed that Bonferroni holds the family-wise error rate at $\alpha$ by testing each of $m$ hypotheses at $\alpha/m$. Holm's procedure does the same job with uniformly more power, and the Benjamini--Hochberg procedure controls a different quantity.
+Primer S, section S.8 showed that Bonferroni holds the family-wise error rate at $\alpha$ by testing each of $m$ hypotheses at $\alpha/m$. Holm's procedure does the same job and never has less power, and the Benjamini--Hochberg procedure controls a different quantity.
 
 \begin{definition}[Holm step-down]\label{def:ch09:holm}
 Sort the p-values $p_{(1)}\le\dots\le p_{(m)}$. Reject $H_{(1)},\dots,H_{(k)}$ where $k$ is the largest index such that
@@ -117,7 +155,7 @@ p_{(j)}\ \le\ \frac{\alpha}{m-j+1}\quad\text{for every } j\le k.
 \label{eq:ch09:holm}
 \end{equation}
 \end{definition}
-Holm controls the family-wise error rate at $\alpha$ under any dependence among the tests \citep{holm1979}. The first threshold is Bonferroni's, and the later ones are looser, so Holm rejects everything Bonferroni rejects and possibly more.
+Holm controls the family-wise error rate at $\alpha$ under any dependence among the tests \citep{holm1979}. Both procedures rest on the union bound, which \cref{ch12} derives together with the growth of the largest of many null statistics, the reason the best of many tests looks impressive. The first threshold is Bonferroni's, and the later ones are looser, so Holm rejects everything Bonferroni rejects and possibly more.
 
 The \emph{false discovery rate} is the expected fraction of rejections that are false,
 \begin{equation}
@@ -133,15 +171,35 @@ p_{(k)}\ \le\ \frac{k}{m}\,\alpha,
 \end{equation}
 and reject $H_{(1)},\dots,H_{(k)}$. For independent tests this gives $\mathrm{FDR}\le (m_0/m)\alpha\le\alpha$, where $m_0$ is the number of true nulls \citep{benjaminihochberg1995}.
 \end{definition}
+Unlike Holm, Benjamini--Hochberg needs a condition on the dependence. Benjamini and Yekutieli~\citep{benjaminiyekutieli2001} extended the bound to tests whose statistics are positively dependent in a sense they call positive regression dependence on a subset (PRDS), which covers, for example, one-sided tests on positively correlated normal statistics. Under arbitrary dependence the bound can fail, and running the procedure at $\alpha/\sum_{j=1}^m(1/j)$ in place of $\alpha$ restores it.
 The difference is in what is promised. Family-wise control says the chance of any false rejection is at most $\alpha$. False discovery control says that, on average, at most a fraction $\alpha$ of the rejections are false. The first suits a small set of confirmatory claims where one false claim does damage. The second suits a screen, where a few false leads among many are acceptable because each will be tested again.
 
 \begin{example}[Six p-values, three procedures]\label{ex:ch09:mc}
-Take $m=6$ sorted p-values $0.001$, $0.008$, $0.012$, $0.03$, $0.04$ and $0.20$, and $\alpha=0.05$. Bonferroni tests each at $0.05/6=0.00833$ and rejects two. Holm's thresholds are $0.00833$, $0.01$, $0.0125$, $0.0167$ and so on. The first three p-values pass, $0.03>0.0167$ stops the procedure, and Holm rejects three. Benjamini--Hochberg's thresholds are $k\alpha/6$, namely $0.00833$, $0.0167$, $0.025$, $0.0333$, $0.0417$ and $0.05$. The largest $k$ with $p_{(k)}$ under its threshold is $k=5$, since $0.04\le0.0417$ and $0.20>0.05$, so it rejects five. Holm's adjusted p-values, $\max_{j\le i}(m-j+1)p_{(j)}$, are $0.006$, $0.040$, $0.048$, $0.090$, $0.090$ and $0.200$, which says the same thing in a form that can be printed beside each claim.
+Take $m=6$ sorted p-values $0.001$, $0.008$, $0.012$, $0.03$, $0.04$ and $0.20$, and $\alpha=0.05$. Bonferroni tests each at $0.05/6=0.00833$ and rejects two. Holm's thresholds are $0.00833$, $0.01$, $0.0125$, $0.0167$ and so on. The first three p-values pass, $0.03>0.0167$ stops the procedure, and Holm rejects three. Benjamini--Hochberg's thresholds are $k\alpha/6$, namely $0.00833$, $0.0167$, $0.025$, $0.0333$, $0.0417$ and $0.05$. The largest $k$ with $p_{(k)}$ under its threshold is $k=5$, since $0.04\le0.0417$ and $0.20>0.05$, so it rejects five. Holm's adjusted p-values, $\max_{j\le i}(m-j+1)p_{(j)}$, are $0.006$, $0.040$, $0.048$, $0.090$, $0.090$ and $0.200$, which says the same thing in a form that can be printed beside each claim. \Cref{fig:ch09:bh} draws the three procedures.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer,clip=false,xlabel={rank $k$},ylabel={p-value},xmin=0.5,xmax=6.5,ymin=0,ymax=0.065,xtick={1,...,6},
+  scaled y ticks=false,yticklabel style={/pgf/number format/fixed,/pgf/number format/precision=3}]
+\addplot[porange,domain=0.5:6.5,samples=2] {0.05*x/6};
+\addplot[pgray,dashed,domain=0.5:6.5,samples=2] {0.05/6};
+\addplot[pgreen,const plot mark mid,mark=none] coordinates {(1,0.00833) (2,0.01) (3,0.0125) (4,0.01667) (5,0.025) (6,0.05)}; % data:holm
+\addplot[pblue,only marks,mark=*,mark size=2pt,restrict y to domain=0:0.065] coordinates {(1,0.001) (2,0.008) (3,0.012) (4,0.03) (5,0.04) (6,0.2)}; % data:bhp
+\node[lbl,porange,anchor=east] at (axis cs:2.2,0.03) {BH line $k\alpha/m$};
+\node[lbl,pgreen,anchor=west] at (axis cs:0.6,0.055) {Holm staircase $\alpha/(m-k+1)$};
+\node[lbl,pgray,anchor=south east] at (axis cs:6.45,0.0085) {Bonferroni $\alpha/m$};
+\node[lbl,pblue,anchor=east] at (axis cs:6,0.061) {$p_{(6)}=0.20$, off scale};
+\end{axis}
+\end{tikzpicture}
+\caption{The six sorted p-values of Example~\ref{ex:ch09:mc} against three thresholds. Two points lie under the Bonferroni line, Holm's staircase admits the first three before it stops, and the Benjamini--Hochberg line admits everything up to the fifth.}
+\label{fig:ch09:bh}
+\end{figure}
 
 A correction applies to the family that was declared. The registration must say what the family is, because the analyst who decides afterwards which tests ``belong together'' has chosen the denominator after seeing the numerators.
 
-\inproject{\texttt{geometric-observation/PROTOCOL.md}, section 5, registers a family-wise plan for the falsifiable core GO-1 to GO-5 and the vignette battery, with Holm's procedure within each family. Exploratory sections are exempt and must be labelled as exploratory. The machine-checked Bonferroni bound of the companion book is \texttt{observation-data-mining/lean/DataMiningAsObservation/Bonferroni.lean}.}
+\inproject{\raggedright \texttt{geometric-observation/PROTOCOL.md}, section 5, registers a family-wise plan for the falsifiable core GO-1 to GO-5 and the vignette battery, with Holm's procedure within each family. Exploratory sections are exempt and must be labelled as exploratory. The companion book's \texttt{observation-data-mining/lean/DataMiningAsObservation/Bonferroni.lean} machine-checks $1-(1-\alpha/m)^m\le\alpha$, the Bonferroni bound for independent tests. The union bound that covers arbitrary dependence is not what that file proves.}
 
 \buildson{Primer S, section S.8 (family-wise error, Bonferroni).}
 \usedin{\cref{sec:ch09:selection} on forking paths, and the multi-arm comparisons of \cref{ch08}.}
@@ -150,7 +208,7 @@ A correction applies to the family that was declared. The registration must say 
 \section{Power is decided before the data, and a bar in noise units is an effect-size bar}\label{sec:ch09:power}
 \markright{\MakeUppercase{\thesection.\ Power and bars in noise units}}
 
-Power is the probability that a test rejects when a stated alternative is true. For a one-sample $z$ statistic with known spread $\sigma$, a true mean $\delta$ and a two-sided level $\alpha$, ignoring the negligible opposite tail,
+Power is the probability that a test rejects when a stated alternative is true. For a one-sample $z$ statistic with known spread $\sigma$, a true mean $\delta>0$ and a two-sided level $\alpha$, ignoring the opposite tail,
 \begin{equation}
 \text{power}(\delta,n)=\Phi\!\left(\frac{\delta\sqrt n}{\sigma}-z_{1-\alpha/2}\right).
 \label{eq:ch09:power}
@@ -160,11 +218,30 @@ Setting the power to $1-\beta$ and solving for $\delta$ gives the \emph{minimum 
 \mathrm{MDE}=\big(z_{1-\alpha/2}+z_{1-\beta}\big)\frac{\sigma}{\sqrt n},\qquad n=\left(\frac{(z_{1-\alpha/2}+z_{1-\beta})\,\sigma}{\delta}\right)^{2}.
 \label{eq:ch09:mde}
 \end{equation}
-The minimum detectable effect is a property of the design, not of the result. A study whose MDE is larger than any plausible effect is uninformative before it runs.
+Dropping the opposite tail is harmless once $\delta\sqrt n/\sigma$ is above about $1$. At $\delta=0$ the formula gives $0.025$, while the true rejection rate is $\alpha=0.05$. With $\sigma$ estimated from the same data, the $t$ test has somewhat less power than \eqref{eq:ch09:power} at small $n$. The minimum detectable effect is a property of the design, not of the result. For a binary gate, a pass count out of $n$ trials, the normal approximation is replaced by an exact binomial calculation, and \cref{ch12} gives the Clopper--Pearson interval and the matching sample-size calculation. A study whose MDE is larger than any plausible effect has little chance of detecting it, and that is known before it runs.
 
 \begin{example}[What eight pairs can see]\label{ex:ch09:mde}
-Take $\sigma=0.021$ from Example~\ref{ex:ch09:paired} as a pilot value, $\alpha=0.05$ and $80$ percent power, so $z_{0.975}+z_{0.80}=1.960+0.842$. At $n=8$ the MDE is $2.802\times0.021/\sqrt8=0.0208$. A true difference of $0.01$ would be detected with probability $\Phi(0.01\sqrt8/0.021-1.960)=0.27$. Detecting $0.01$ with $80$ percent power needs $n=(2.802\times0.021/0.01)^2=34.6$, so $35$ pairs. The normal quantile is used here, and with $35$ pairs a $t$ quantile would raise the answer by one or two.
+Take $\sigma=0.021$ from Example~\ref{ex:ch09:paired} as a pilot value, $\alpha=0.05$ and $80$ percent power, so $z_{0.975}+z_{0.80}=1.960+0.842$. At $n=8$ the MDE is $2.802\times0.021/\sqrt8=0.0208$. A true difference of $0.01$ would be detected with probability $\Phi(0.01\sqrt8/0.021-1.960)=0.27$. Detecting $0.01$ with $80$ percent power needs $n=(2.802\times0.021/0.01)^2=34.6$, so $35$ pairs (\cref{fig:ch09:power}). The normal quantile is used here, and with $35$ pairs a $t$ quantile would raise the answer by one or two.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer,clip=false,xlabel={true mean difference $\delta$},ylabel={power},xmin=0,xmax=0.03,ymin=0,ymax=1.05,
+  scaled x ticks=false,xticklabel style={/pgf/number format/fixed,/pgf/number format/precision=3}]
+\addplot[pblue] coordinates {(0.0,0.025) (0.0025,0.052) (0.005,0.099) (0.0075,0.171) (0.01,0.27) (0.0125,0.391) (0.015,0.524) (0.0175,0.654) (0.02,0.768) (0.0225,0.858) (0.025,0.92) (0.0275,0.959) (0.03,0.981)}; % data:pow8
+\addplot[pgreen] coordinates {(0.0,0.025) (0.0025,0.105) (0.005,0.291) (0.0075,0.561) (0.01,0.804) (0.0125,0.941) (0.015,0.988) (0.0175,0.999) (0.02,1.0) (0.0225,1.0) (0.025,1.0) (0.0275,1.0) (0.03,1.0)}; % data:pow35
+\addplot[pred,only marks,mark=*,mark size=2pt] coordinates {(0.01,0.27) (0.0208,0.8)}; % data:powpts
+\draw[guide] (axis cs:0,0.8) -- (axis cs:0.03,0.8);
+\node[lbl,pblue,anchor=west] at (axis cs:0.0215,0.62) {$n=8$};
+\node[lbl,pgreen,anchor=east] at (axis cs:0.0085,0.85) {$n=35$};
+\node[lbl,pred,anchor=west] at (axis cs:0.0105,0.22) {$0.27$ at $\delta=0.01$};
+\node[lbl,pred,anchor=north west] at (axis cs:0.0212,0.79) {MDE $0.0208$};
+\end{axis}
+\end{tikzpicture}
+\caption{Power \eqref{eq:ch09:power} against the true difference for $\sigma=0.021$ at two sample sizes. Eight pairs reach $80$ percent power only at $0.0208$, and a true difference of $0.01$ needs thirty-five.}
+\label{fig:ch09:power}
+\end{figure}
 
 The programme's bars are often written not as ``the estimate is more than two of its own standard errors from zero'' but as ``the effect is at least $k$ times the noise scale''. The two look alike and behave very differently. Let the per-unit spread be $\sigma$, the standardized effect $\delta=\mu/\sigma$, and the standardized estimate $\hat\delta$ approximately $\Normal(\delta,1/n)$. A bar $\hat\delta\ge k$ passes with probability
 \begin{equation}
@@ -173,19 +250,21 @@ The programme's bars are often written not as ``the estimate is more than two of
 \end{equation}
 As $n$ grows this tends to $1$ if $\delta>k$, to $\tfrac12$ if $\delta=k$, and to $0$ if $\delta<k$. Sample size sharpens the step at $\delta=k$ and does not move it. Below the bar, more data makes the test less likely to pass.
 
-\begin{figure}[t]
+\begin{figure}[tbp]
 \centering
 \begin{tikzpicture}
-\begin{axis}[width=0.72\linewidth,height=5.2cm,xlabel={true standardized effect $\delta$},ylabel={pass probability},
-  xmin=0.3,xmax=0.7,ymin=0,ymax=1,legend pos=north west,legend style={font=\small},samples=81,domain=0.3:0.7,
-  extra x ticks={0.5},extra x tick style={grid=major}]
-\addplot[thick,blue] {1/(1+exp(-1.702*(x-0.5)*sqrt(40)))};
-\addplot[thick,red,dashed] {1/(1+exp(-1.702*(x-0.5)*sqrt(640)))};
-\addplot[only marks,mark=*,mark size=1.5pt] coordinates {(0.45,0.376) (0.55,0.624) (0.45,0.103) (0.55,0.897)};
-\legend{$n=40$,$n=640$}
+\begin{axis}[primer,clip=false,xlabel={true standardized effect $\delta$},ylabel={pass probability},
+  xmin=0.3,xmax=0.7,ymin=0,ymax=1.05]
+\addplot[pblue] coordinates {(0.3,0.103) (0.31,0.115) (0.32,0.127) (0.33,0.141) (0.34,0.156) (0.35,0.171) (0.36,0.188) (0.37,0.205) (0.38,0.224) (0.39,0.243) (0.4,0.264) (0.41,0.285) (0.42,0.306) (0.43,0.329) (0.44,0.352) (0.45,0.376) (0.46,0.4) (0.47,0.425) (0.48,0.45) (0.49,0.475) (0.5,0.5) (0.51,0.525) (0.52,0.55) (0.53,0.575) (0.54,0.6) (0.55,0.624) (0.56,0.648) (0.57,0.671) (0.58,0.694) (0.59,0.715) (0.6,0.736) (0.61,0.757) (0.62,0.776) (0.63,0.795) (0.64,0.812) (0.65,0.829) (0.66,0.844) (0.67,0.859) (0.68,0.873) (0.69,0.885) (0.7,0.897)}; % data:bar40
+\addplot[porange] coordinates {(0.3,0.0) (0.31,0.0) (0.32,0.0) (0.33,0.0) (0.34,0.0) (0.35,0.0) (0.36,0.0) (0.37,0.001) (0.38,0.001) (0.39,0.003) (0.4,0.006) (0.41,0.011) (0.42,0.021) (0.43,0.038) (0.44,0.065) (0.45,0.103) (0.46,0.156) (0.47,0.224) (0.48,0.306) (0.49,0.4) (0.5,0.5) (0.51,0.6) (0.52,0.694) (0.53,0.776) (0.54,0.844) (0.55,0.897) (0.56,0.935) (0.57,0.962) (0.58,0.979) (0.59,0.989) (0.6,0.994) (0.61,0.997) (0.62,0.999) (0.63,0.999) (0.64,1.0) (0.65,1.0) (0.66,1.0) (0.67,1.0) (0.68,1.0) (0.69,1.0) (0.7,1.0)}; % data:bar640
+\addplot[only marks,mark=*,mark size=1.8pt,black] coordinates {(0.45,0.376) (0.55,0.624) (0.45,0.103) (0.55,0.897)}; % data:bardots
+\draw[guide] (axis cs:0.5,0) -- (axis cs:0.5,1.05);
+\node[lbl,pblue,anchor=west] at (axis cs:0.61,0.70) {$n=40$};
+\node[lbl,porange,anchor=west] at (axis cs:0.56,0.40) {$n=640$};
+\node[lbl,pgray,anchor=west] at (axis cs:0.505,0.08) {bar $k=0.5$};
 \end{axis}
 \end{tikzpicture}
-\caption{Pass probability \eqref{eq:ch09:barpower} of the bar $\hat\delta\ge0.5$. The curves use the logistic approximation $\Phi(z)\approx1/(1+e^{-1.702z})$, and the dots are the exact values of Example~\ref{ex:ch09:bar}. More data steepens the step at the bar and does not move it.}
+\caption{Pass probability \eqref{eq:ch09:barpower} of the bar $\hat\delta\ge0.5$, with the four values of Example~\ref{ex:ch09:bar} as dots. More data steepens the step at the bar and does not move it, so below the bar the larger study passes less often.}
 \label{fig:ch09:bar}
 \end{figure}
 
@@ -193,17 +272,17 @@ As $n$ grows this tends to $1$ if $\delta>k$, to $\tfrac12$ if $\delta=k$, and t
 Let the bar be $k=0.5$. If the true effect is $\delta=0.45$, \eqref{eq:ch09:barpower} gives pass probability $\Phi(-0.05\sqrt{40})=0.38$ at $n=40$ and $\Phi(-0.05\sqrt{640})=0.10$ at $n=640$. If $\delta=0.55$ the same two designs pass with probability $0.62$ and $0.90$. Compare the ordinary bar ``the estimate exceeds two of its standard errors'', which for $\delta=0.45$ passes with probability $\Phi(0.45\sqrt{40}-2)=0.80$ at $n=40$ and essentially $1$ at $n=640$. \Cref{fig:ch09:bar} draws the first case.
 \end{example}
 
-Two consequences follow, and a registration should state both. First, a miss on an effect-size bar is a statement about the size of the effect, not a power failure. A design should be sized on whichever prediction is ordinary, such as the two-standard-error bar, and the registration should say which prediction the sample buys and which it does not. Second, the noise scale $\sigma$ appears in the bar and in the estimate alike, so it cancels from \eqref{eq:ch09:barpower}. The power table can be written before the pilot that measures $\sigma$, and the design can be sealed first. Sealing first means nothing the pilot measures can reach back into a bar or a sample size.
+Two consequences follow, and a registration should state both. First, a miss on an effect-size bar is evidence about the size of the effect, not proof that the effect lies below the bar. Sampling variation alone can produce a miss when the true effect exceeds the bar. In \cref{ex:ch09:bar} an effect of $0.55$ misses the bar of $0.5$ with probability $0.38$ at $n=40$ and $0.10$ at $n=640$, so a single miss near the bar is weak evidence on its own, and \eqref{eq:ch09:barpower} says exactly how weak. What more data cannot do is make an effect at or below the bar pass reliably. That is the sense in which a miss is not a power failure. A design should be sized on whichever prediction is ordinary, such as the two-standard-error bar, and the registration should say which prediction the sample buys and which it does not. Second, the noise scale $\sigma$ appears in the bar and in the estimate alike, so it cancels from \eqref{eq:ch09:barpower}. That approximation treats $\hat\delta$ as normal with variance $1/n$. When $\sigma$ is estimated from the same $n$ units, the variance of $\hat\delta$ is about $(1+\delta^2/2)/n$ for large $n$, which flattens the step slightly, and as $n$ grows the step still sits at the bar. The power table can be written before the pilot that measures $\sigma$, and the design can be sealed first. Sealing first means nothing the pilot measures can reach back into a bar or a sample size.
 
-The same arithmetic explains why every tolerance should be written in units of the noise it judges. Suppose a check recovers a planted coefficient whose estimator has standard error $0.101$, and the check demands recovery within an absolute $0.06$. A perfectly correct pipeline passes only when $|\Normal(0,0.101^2)|<0.06$, which has probability $2\Phi(0.06/0.101)-1=0.45$. The check fails a correct pipeline more often than not, and a gate that fails correct pipelines gets loosened until it catches nothing. Restated as four standard errors, a tolerance of $0.404$, the same pipeline passes with probability $2\Phi(4)-1=0.99994$. When a check fails, compute the standard error before touching the threshold.
+The same arithmetic explains why every tolerance should be written in units of the noise it judges. Suppose a check recovers a planted coefficient whose estimator is unbiased and normal with standard error $0.101$, and the check demands recovery within an absolute $0.06$. A perfectly correct pipeline passes only when $|\Normal(0,0.101^2)|<0.06$, which has probability $2\Phi(0.06/0.101)-1=0.45$. The check fails a correct pipeline more often than not, and a gate that fails correct pipelines gets loosened until it catches nothing. Restated as four standard errors, a tolerance of $0.404$, the same pipeline passes with probability $2\Phi(4)-1=0.99994$. When a check fails, compute the standard error before touching the threshold.
 
-\inproject{\texttt{geometric-observation/PROTOCOL.md}, section 5.1, ``Power before bars''. Binary gates need a power statement at the bar, and continuous bars must be a multiple of the noise scale or a pilot value, with a house floor of $1.3\times$ over a pilot value and no bar sealed within about one standard deviation of one. \texttt{claims/REGISTRY-ACCOUNTING.md}, row 052, records a miss by $1.1$ percent ($0.1316$ against a bar of $0.1331$), the case the protocol calls ``the 052 lesson''.}
+\inproject{\raggedright \texttt{geometric-observation/PROTOCOL.md}, section 5.1, ``Power before bars''. Binary gates need a power statement at the bar, and continuous bars must be a multiple of the noise scale or a pilot value, with a house floor of $1.3\times$ over a pilot value and no bar sealed within about one standard deviation of one. \texttt{claims/REGISTRY-ACCOUNTING.md}, row 052, records a miss by $1.1$ percent ($0.1316$ against a bar of $0.1331$), the case the protocol calls ``the 052 lesson''.}
 
 \buildson{Primer S, section S.7 (type I and II errors, power), and the normal distribution of \cref{ch02}.}
 \usedin{\cref{sec:ch09:equiv,sec:ch09:seal} of this chapter, and the gate design of the evaluation chapter, \cref{ch08}.}
 
 % ---------------------------------------------------------------------------
-\section{An absent effect is shown by an equivalence test, never by a large p-value}\label{sec:ch09:equiv}
+\section{A negligible effect is shown by an equivalence test, never by a large p-value}\label{sec:ch09:equiv}
 \markright{\MakeUppercase{\thesection.\ Equivalence tests}}
 
 A p-value above $0.05$ says the data are compatible with no effect. It does not say there is no effect, since the same data may be compatible with a large one. The programme often needs the second statement. A nuisance direction should not matter, a reparameterization should change nothing, a shuffled control should do nothing. Such claims need a test whose null is ``the effect is large'' and whose rejection means ``the effect is small''.
@@ -214,7 +293,7 @@ Fix an equivalence band $(-\Delta,\Delta)$ before the data, anchored on somethin
 z_1=\frac{\hat\mu+\Delta}{\operatorname{SE}},\qquad z_2=\frac{\hat\mu-\Delta}{\operatorname{SE}},\qquad p_{\text{TOST}}=\max\big(1-\Phi(z_1),\ \Phi(z_2)\big).
 \label{eq:ch09:tost}
 \end{equation}
-Equivalence is declared when $p_{\text{TOST}}\le\alpha$. This is the same as requiring the whole $1-2\alpha$ confidence interval to lie inside the band,
+Equivalence is declared when $p_{\text{TOST}}\le\alpha$. These $z$ statistics assume an estimate that is close to normal with a well-estimated standard error. With few units, $t$ quantiles replace the normal ones. Under that assumption the rule is the same as requiring the whole $1-2\alpha$ confidence interval to lie inside the band,
 \begin{equation}
 \big[\hat\mu-z_{1-\alpha}\operatorname{SE},\ \hat\mu+z_{1-\alpha}\operatorname{SE}\big]\subset(-\Delta,\Delta).
 \label{eq:ch09:tostci}
@@ -223,10 +302,32 @@ Equivalence is declared when $p_{\text{TOST}}\le\alpha$. This is the same as req
 The procedure is due to \citet{schuirmann1987} and is explained for applied readers by \citet{lakens2017}. Note the $90$ percent interval at $\alpha=0.05$. Each one-sided test spends $\alpha$, and only one of the two nulls can be true.
 
 \begin{example}[Equivalent, and merely not significant]\label{ex:ch09:tost}
-Let the band be $\Delta=0.01$. A study estimates $\hat\mu=0.003$ with $\operatorname{SE}=0.004$. Then $z_1=3.25$ and $z_2=-1.75$, so $p_{\text{TOST}}=\max(0.0006,\ 0.040)=0.040$, and equivalence is shown at $0.05$. The $90$ percent interval is $(-0.0036,\ 0.0096)$, inside the band. A second study estimates $\hat\mu=0.01$ with $\operatorname{SE}=0.008$. Its ordinary two-sided p-value is $0.21$, not significant. Its $90$ percent interval is $(-0.0032,\ 0.0232)$, which runs well outside the band, and $p_{\text{TOST}}=0.50$. The second study has not shown the effect absent. It has shown that it cannot tell.
+Let the band be $\Delta=0.01$. A study estimates $\hat\mu=0.003$ with $\operatorname{SE}=0.004$. Then $z_1=3.25$ and $z_2=-1.75$, so $p_{\text{TOST}}=\max(0.0006,\ 0.040)=0.040$, and equivalence is shown at $0.05$. The $90$ percent interval is $(-0.0036,\ 0.0096)$, inside the band. A second study estimates $\hat\mu=0.01$ with $\operatorname{SE}=0.008$. Its ordinary two-sided p-value is $0.21$, not significant. Its $90$ percent interval is $(-0.0032,\ 0.0232)$, which runs well outside the band, and $p_{\text{TOST}}=0.50$. The second study has not shown the effect absent. It has shown that it cannot tell. A third study with $\hat\mu=0.03$ and $\operatorname{SE}=0.004$ has $90$ percent interval $(0.0234,\ 0.0366)$, wholly outside the band, and shows the effect present. \Cref{fig:ch09:tost} draws all three.
 \end{example}
 
-The rule for a registration is to name the band and the anchor in advance, report the interval, and use the three-way verdict that the interval supports. Inside the band means negligible. Outside it entirely means present. Straddling it means not determined, and that is a result to report, not a null to report.
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer,clip=false,xlabel={effect},ytick=\empty,axis y line=none,xmin=-0.02,xmax=0.06,ymin=0.4,ymax=3.6,
+  scaled x ticks=false,xticklabel style={/pgf/number format/fixed,/pgf/number format/precision=2}]
+\fill[plight] (axis cs:-0.01,0.4) rectangle (axis cs:0.01,3.6);
+\draw[guide] (axis cs:-0.01,0.4) -- (axis cs:-0.01,3.6);
+\draw[guide] (axis cs:0.01,0.4) -- (axis cs:0.01,3.6);
+\addplot[pgreen,line width=2pt] coordinates {(-0.0036,3) (0.0096,3)}; % data:tost1
+\addplot[porange,line width=2pt] coordinates {(-0.0032,2) (0.0232,2)}; % data:tost2
+\addplot[pred,line width=2pt] coordinates {(0.0234,1) (0.0366,1)}; % data:tost3
+\addplot[only marks,mark=*,mark size=2pt,black] coordinates {(0.003,3) (0.01,2) (0.03,1)}; % data:tost
+\node[lbl,pgreen,anchor=west] at (axis cs:0.0115,3.25) {inside, negligible};
+\node[lbl,porange,anchor=west] at (axis cs:0.0245,2.25) {straddles, not determined};
+\node[lbl,pred,anchor=west] at (axis cs:0.038,1.25) {outside, present};
+\node[lbl,pgray] at (axis cs:0,0.6) {band $\pm\Delta$};
+\end{axis}
+\end{tikzpicture}
+\caption{Three $90$ percent intervals against the equivalence band $\pm0.01$. Only the top interval shows the effect negligible. The middle one has an ordinary p-value of $0.21$ and still shows nothing, and the bottom one, estimate $0.03$ with standard error $0.004$, lies wholly outside.}
+\label{fig:ch09:tost}
+\end{figure}
+
+The rule for a registration is to name the band and the anchor in advance, report the interval, and use the three-way verdict that the interval supports. Inside the band means negligible. Outside it entirely means present at a size of at least $\Delta$. Straddling it means not determined, and that is a result to report, not a null to report. An equivalence test shows an effect smaller than $\Delta$, never an effect of exactly zero.
 
 \buildson{Primer S, section S.7, and the confidence interval of S.6.}
 \usedin{The invariance and nuisance claims of \cref{ch06}, and the shuffled-consumer controls of \cref{ch08}.}
@@ -242,7 +343,7 @@ For a regression slope on $G$ clusters of equal size $\bar m$, with within-clust
 \frac{\Var_{\text{true}}(\hat\beta)}{\Var_{\text{naive}}(\hat\beta)}\ \approx\ 1+(\bar m-1)\,\rho_x\,\rho_u
 \label{eq:ch09:moulton}
 \end{equation}
-\citep{cameronmiller2015}. When the regressor is constant within each cluster, $\rho_x=1$, and the factor is the familiar design effect $1+(\bar m-1)\rho_u$. When the regressor varies independently within clusters, $\rho_x=0$ and clustering costs nothing for that coefficient. The same outcome data can need a large correction for one coefficient and none for another.
+\citep{cameronmiller2015}. The approximation assumes equal cluster sizes and a single within-cluster correlation for each of the regressor and the error. When the regressor is constant within each cluster, $\rho_x=1$, and the factor is the familiar design effect $1+(\bar m-1)\rho_u$. When the regressor varies independently within clusters, $\rho_x=0$ and, to this approximation, clustering costs nothing for that coefficient. The same outcome data can need a large correction for one coefficient and none for another.
 
 \begin{definition}[Cluster-robust variance]\label{def:ch09:crve}
 For a linear model $y=X\beta+u$ with clusters $g=1,\dots,G$, the cluster-robust variance estimator is
@@ -250,17 +351,36 @@ For a linear model $y=X\beta+u$ with clusters $g=1,\dots,G$, the cluster-robust 
 \widehat{\Var}_{\text{CR}}(\hat\beta)=(X\T X)^{-1}\Big(\sum_{g=1}^{G}X_g\T\hat u_g\hat u_g\T X_g\Big)(X\T X)^{-1},
 \label{eq:ch09:crve}
 \end{equation}
-where $X_g$ and $\hat u_g$ are the rows and residuals of cluster $g$. Its reliability is governed by $G$, not by the number of rows.
+where $X_g$ and $\hat u_g$ are the rows and residuals of cluster $g$. It assumes that clusters are independent of each other and allows any dependence within one. It is consistent as $G$ grows, so its reliability is governed by $G$, not by the number of rows.
 \end{definition}
 A nonparametric alternative resamples whole clusters with replacement and refits, which is the bootstrap of \cref{sec:ch09:resample} applied at the right unit. With few clusters both methods are unreliable, and \citet{cameronmiller2015} discuss the wild cluster bootstrap for that case.
 
 \begin{example}[Twenty problems, fifty subjects each]\label{ex:ch09:cluster}
-A study has $G=20$ problems with $\bar m=50$ subjects each, $1000$ rows. The covariate is a property of the problem, so $\rho_x=1$, and the error has within-problem correlation $\rho_u=0.1$. By \eqref{eq:ch09:moulton} the variance is inflated by $1+49\times0.1=5.9$ and the standard error by $\sqrt{5.9}=2.43$. The $1000$ rows carry the information of about $169$ independent ones for this coefficient. A simulation of $2000$ such studies with true slope zero (seed 7) gives a ratio of $2.49$ between the actual spread of the slope and the average naive standard error, and the naive $5$ percent test rejects the true null in $43$ percent of them. The approximation predicts $2\Phi(-1.96/2.43)=0.42$. Had the covariate varied within problems with $\rho_x=0.3$, the factor would have been $1+49\times0.3\times0.1=2.47$.
+A study has $G=20$ problems with $\bar m=50$ subjects each, $1000$ rows. The covariate is a property of the problem, so $\rho_x=1$, and the error has within-problem correlation $\rho_u=0.1$. By \eqref{eq:ch09:moulton} the variance is inflated by $1+49\times0.1=5.9$ and the standard error by $\sqrt{5.9}=2.43$. The $1000$ rows carry the information of about $169$ independent ones for this coefficient. A simulation of $2000$ such studies with true slope zero (seed 7) gives a ratio of $2.49$ between the actual spread of the slope and the average naive standard error, and the naive $5$ percent test rejects the true null in $43$ percent of them. The approximation predicts $2\Phi(-1.96/2.43)=0.42$. Had the covariate varied within problems with $\rho_x=0.3$, the factor would have been $1+49\times0.3\times0.1=2.47$ (\cref{fig:ch09:moulton}).
 \end{example}
 
-Three practical rules follow. Size a corpus by counting the clusters that carry the covariate, not the rows. Split held-out folds by the same cluster, because a row-level split leaks the cluster's shared part across the fold boundary. And watch for a symptom. A null distribution whose mean sits far above its theoretical value (a $\chi^2$ statistic averaging much more than its degrees of freedom) is often clustering showing through. A permutation null computed on the real clustered data absorbs the dependence automatically, which is one reason to prefer it where it can be built.
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer,clip=false,xlabel={rows per cluster $\bar m$},ylabel={variance inflation},xmin=1,xmax=100,ymin=0,ymax=11]
+\addplot[pred,domain=1:100,samples=2] {1+(x-1)*0.1};
+\addplot[porange,domain=1:100,samples=2] {1+(x-1)*0.03};
+\addplot[pgreen,domain=1:100,samples=2] {1};
+\addplot[only marks,mark=*,mark size=2pt,black] coordinates {(50,5.9) (50,2.47)}; % data:moulton
+\node[lbl,pred,anchor=east] at (axis cs:55,8.0) {covariate per cluster, $\rho_x=1$};
+\node[lbl,porange,anchor=west] at (axis cs:80,2.5) {$\rho_x=0.3$};
+\node[lbl,pgreen,anchor=south west] at (axis cs:55,1.1) {varies within, $\rho_x=0$};
+\node[lbl,anchor=east] at (axis cs:48,5.9) {$5.9$};
+\node[lbl,anchor=east] at (axis cs:48,2.75) {$2.47$};
+\end{axis}
+\end{tikzpicture}
+\caption{The Moulton factor \eqref{eq:ch09:moulton} with $\rho_u=0.1$. The same outcome data inflate the variance of a cluster-level coefficient almost sixfold at fifty rows per cluster and leave a within-cluster coefficient untouched.}
+\label{fig:ch09:moulton}
+\end{figure}
 
-\inproject{\texttt{geometric-observation/PROTOCOL.md}, section 5, requires both naive and clustered intervals to be reported, with claims resting on the clustered ones. Fewer than eight clusters triggers a mandatory few-cluster caveat and the wild cluster bootstrap where feasible. The \texttt{[replicated]} class in section 1 requires ``cluster-aware statistics''.}
+Three practical rules follow. Size a corpus by counting the clusters that carry the covariate, not the rows. Split held-out folds by the same cluster, because a row-level split leaks the cluster's shared part across the fold boundary. And watch for a symptom. A null distribution whose mean sits far above its theoretical value (a $\chi^2$ statistic averaging much more than its degrees of freedom) is often clustering showing through. A permutation null accounts for the dependence only when the permutation scheme preserves it. The units permuted must be exchangeable under the null hypothesis. Permuting whole clusters, or permuting within clusters when the hypothesis concerns a within-cluster effect, keeps the dependent rows together. Permuting individual rows freely across clusters breaks the dependence and reproduces the naive, too-small standard error. A registration should therefore name the permutation unit and say why it is exchangeable under the null.
+
+\inproject{\raggedright \texttt{geometric-observation/PROTOCOL.md}, section 5, requires both naive and clustered intervals to be reported, with claims resting on the clustered ones. Fewer than eight clusters triggers a mandatory few-cluster caveat and the wild cluster bootstrap where feasible. The \texttt{[replicated]} class in section 1 requires ``cluster-aware statistics''.}
 
 \buildson{Least squares from \cref{ch01} and Primer L, and covariance from \cref{ch02}.}
 \usedin{The cross-model and cross-corpus comparisons of \cref{ch08}.}
@@ -276,23 +396,39 @@ The failures in this section are dangerous because no p-value reports them. Each
 \Pr\Big[\min_{j\le K}p_j\le0.05\Big]=1-0.95^{K},
 \label{eq:ch09:forking}
 \end{equation}
-which is $0.226$ for $K=5$ and $0.642$ for $K=20$. Real forks are correlated and the true figure is smaller, but it is not $0.05$. Registration removes the forks by choosing one path before the data exist. Every step that touched a target should be listed, and anything the list shows was touched should not be called held out.
+which is $0.226$ for $K=5$ and $0.642$ for $K=20$. Forks computed on the same data are usually positively dependent, and then the true figure is smaller, though still at least $0.05$. The bound that holds under any dependence is the union bound $\min(1,\,0.05K)$. \Cref{ch12} shows how fast the best of many null statistics grows with their number. Registration removes the forks by choosing one path before the data exist. Every step that touched a target should be listed, and anything the list shows was touched should not be called held out.
 
-\paragraph{Attenuation.} Measurement error in a regressor biases the slope toward zero. If the true regressor is $x$ and the observed one is $w=x+e$, with $e$ independent noise of variance $\sigma_e^2$, the least-squares slope of $y$ on $w$ converges to
+\paragraph{Attenuation.} Measurement error in a regressor biases the slope toward zero. If the true regressor is $x$ and the observed one is $w=x+e$, with $e$ noise of variance $\sigma_e^2$ independent of $x$ and of the error in $y$, the least-squares slope of $y$ on $w$ converges to
 \begin{equation}
 \beta_w=\lambda\,\beta,\qquad \lambda=\frac{\sigma_x^2}{\sigma_x^2+\sigma_e^2}\in(0,1],
 \label{eq:ch09:atten}
 \end{equation}
-where $\lambda$ is the reliability of $w$ \citep{fuller1987}. The estimate is not noisier in a way an interval reveals. It is biased, and the interval is centred on the wrong value.
+where $\lambda$ is the reliability of $w$ \citep{fuller1987}. This is the case of one regressor with independent error. With several regressors, error in one can bias the others in either direction, and error correlated with $x$ need not attenuate. The estimate is not noisier in a way an interval reveals. It is biased, and the interval is centred on the wrong value.
 \begin{example}[A slope two-thirds of its size]\label{ex:ch09:atten}
-With $\beta=2$, $\sigma_x^2=1$ and $\sigma_e^2=0.5$, the reliability is $\lambda=1/1.5=2/3$ and the slope converges to $1.333$. A simulation with $200{,}000$ points (seed 11) returns $1.331$.
+With $\beta=2$, $\sigma_x^2=1$ and $\sigma_e^2=0.5$, the reliability is $\lambda=1/1.5=2/3$ and the slope converges to $1.333$. A simulation with $200{,}000$ points (seed 11) returns $1.331$, and \cref{fig:ch09:atten} shows forty points (seed 2026).
 \end{example}
 
-Attenuation of a slope biases a study toward failing. The dangerous case is attenuation of a \emph{scale}. When a pipeline measures a spread and every later bar is a multiple of that spread, an attenuated spread lowers every bar. Suppose the true spread is $1.0$, the bar is half a spread, and the true effect is $0.4$. The effect fails the true bar of $0.5$. If the instrument reads the spread at $0.6$, the bar becomes $0.3$ and the same effect passes. Nothing hit an edge, nothing was censored, and no diagnostic fired. Censoring announces itself as a pile-up at a boundary. Attenuation does not. So of any pipeline that produces a scale, a threshold or a calibration, ask what would make it come out low and whether anything would notice. Then build the check that notices, and show it firing on planted data while every other check passes. A related trap is comparing two quantities that share units but whose magnitudes are set by different design quantities. Standardize each by its own measured spread first, and if one side's spread is missing, report that prediction as not tested rather than borrowing the other side's.
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer,clip=false,xlabel={regressor},ylabel={$y$},xmin=-2.5,xmax=2.5,ymin=-5.5,ymax=5.5]
+\addplot[pblue,only marks,mark=*,mark size=1.3pt] coordinates {(-0.79,-1.38) (0.24,-0.15) (-1.9,-4.62) (1.4,4.24) (0.64,1.87) (-0.29,0.14) (-0.31,1.56) (0.3,-0.21) (-0.27,2.02) (-0.23,2.7) (0.72,3.06) (0.51,1.86) (-0.06,-0.79) (-0.09,0.82) (0.16,-0.12) (-0.61,-1.25) (-0.4,-1.1) (0.55,1.38) (-0.13,1.03) (-1.37,-3.3) (-0.48,-1.94) (0.66,0.31) (-0.23,-1.43) (-0.15,-1.73) (0.64,0.37) (1.82,4.94) (-0.71,-2.02) (1.35,2.95) (-1.23,-3.68) (0.17,0.52) (-1.17,-4.08) (1.35,2.0) (0.83,3.92) (1.14,1.69) (-0.89,-0.65) (0.68,1.82) (-0.52,-1.19) (-0.46,-1.57) (0.51,2.3) (0.88,1.58)}; % data:attx
+\addplot[pred,only marks,mark=o,mark size=1.5pt] coordinates {(0.29,-1.38) (-0.27,-0.15) (-1.86,-4.62) (1.72,4.24) (0.9,1.87) (-1.16,0.14) (-0.78,1.56) (0.17,-0.21) (-0.87,2.02) (0.25,2.7) (1.14,3.06) (-0.87,1.86) (-1.34,-0.79) (-0.99,0.82) (0.24,-0.12) (0.82,-1.25) (-0.67,-1.1) (0.73,1.38) (-0.88,1.03) (-2.11,-3.3) (-1.86,-1.94) (0.64,0.31) (0.44,-1.43) (-0.4,-1.73) (1.63,0.37) (1.96,4.94) (-0.74,-2.02) (1.71,2.95) (-0.89,-3.68) (0.99,0.52) (-1.74,-4.08) (-0.27,2.0) (0.92,3.92) (0.71,1.69) (-0.9,-0.65) (1.86,1.82) (-1.3,-1.19) (0.08,-1.57) (1.18,2.3) (1.2,1.58)}; % data:attw
+\addplot[pblue,domain=-2.5:2.5,samples=2] {2*x};
+\addplot[pred,dashed,domain=-2.5:2.5,samples=2] {4/3*x};
+\node[lbl,pblue,anchor=west] at (axis cs:2.55,5) {true $x$, slope $2$};
+\node[lbl,pred,anchor=west] at (axis cs:2.55,3.33) {noisy $w$, slope $\tfrac43$};
+\end{axis}
+\end{tikzpicture}
+\caption{Forty points plotted against the true regressor (filled) and against the same regressor read with error (open), with the population slopes $2$ and $4/3$. The noisy reading spreads the points sideways and flattens the fitted line, and nothing in the picture announces it. On these forty points the fitted slopes are $2.37$ and $1.36$.}
+\label{fig:ch09:atten}
+\end{figure}
+
+Attenuation of a slope biases a study toward failing when the bar asks for a large slope. When the claim is that a slope is small, as in an equivalence test, attenuation biases it toward passing. The other dangerous case is attenuation of a \emph{scale}. When a pipeline measures a spread and every later bar is a multiple of that spread, an attenuated spread lowers every bar. Suppose the true spread is $1.0$, the bar is half a spread, and the true effect is $0.4$. The effect fails the true bar of $0.5$. If the instrument reads the spread at $0.6$, the bar becomes $0.3$ and the same effect passes. Nothing hit an edge, nothing was censored, and no diagnostic fired. Censoring announces itself as a pile-up at a boundary. Attenuation does not. So of any pipeline that produces a scale, a threshold or a calibration, ask what would make it come out low and whether anything would notice. Then build the check that notices, and show it firing on planted data while every other check passes. A related trap is comparing two quantities that share units but whose magnitudes are set by different design quantities. Standardize each by its own measured spread first, and if one side's spread is missing, report that prediction as not tested rather than borrowing the other side's.
 
 \paragraph{Provenance and re-derivation.} Two habits close the remaining doors. A measured value that will set thresholds downstream should carry a tag saying where it came from, and its consumer should refuse a value of the wrong origin, so that a rehearsal on simulated data cannot write the scale for a real study. Simulated output belongs at a different path, not at the real path with a flag inside. When testing that such a guard fires, read the error and confirm it is the guard that fired, since a refusal for the wrong reason (a missing file, say) proves nothing about the guard. Second, a number quoted faithfully from a record is not thereby correct. If the record \emph{derived} it, as a count, a rate or an ``impossible at any sample size'', re-derive it under an explicit model, by simulation or in a proof assistant (\cref{ch10}), before repeating it.
 
-\inproject{The DPE paper's ladder of probes, \texttt{discovery-philosophy-engineering/paper/dpe.tex}, Table ``The ladder of probes'', separates Fit, Holdout and Transfer and states that ``a result earns only the rung it has reached''. \texttt{geometric-observation/prereg/GO-P-2026-052-coordinated-gaussian.md} logs a pilot in which a grid ``quantiz[ed] the effect'' to one grid step before sealing.}
+\inproject{\raggedright The DPE paper's ladder of probes, \texttt{discovery-philosophy-engineering/paper/dpe.tex}, Table ``The ladder of probes'', separates Fit, Holdout and Transfer and states that ``a result earns only the rung it has reached''. \texttt{geometric-observation/prereg/GO-P-2026-052-coordinated-gaussian.md} logs a pilot in which a grid ``quantiz[ed] the effect'' to one grid step before sealing.}
 
 \buildson{\cref{sec:ch09:multiple} (multiplicity), least squares from \cref{ch01}.}
 \usedin{\cref{sec:ch09:seal}, and the evaluation protocol of \cref{ch08}.}
@@ -308,15 +444,34 @@ Everything above can be done honestly or dishonestly with the same code. Registr
 \text{seal}(\text{reg})=\big(h(\text{reg}),\ \text{commit id},\ t_{\text{commit}}\big),\qquad t_{\text{commit}}<t_{\text{first governed measurement}}.
 \label{eq:ch09:seal}
 \end{equation}
-Amendments are allowed only if dated, logged and made before the outcome is seen.
+Amendments are allowed only if dated, logged and made before the outcome is seen. \Cref{fig:ch09:cycle} shows the whole cycle.
 
 \begin{example}[A one-character change]\label{ex:ch09:hash}
 The one-line registration
 \begin{center}
 \texttt{demo-001: primary = mean paired difference; bar = 2 SE; n = 35; alpha = 0.05}
 \end{center}
-followed by a newline has SHA-256 digest beginning \texttt{34b0bff6623a63cb}. Changing \texttt{n = 35} to \texttt{n = 36} gives a digest beginning \texttt{40fbf8c7c7886ca5}, and $135$ of the $256$ bits differ. A reader holding the first digest can tell at once that the sample size was changed, without knowing what it was changed to.
+followed by a newline has SHA-256 digest beginning \texttt{34b0bff6623a63cb}. Changing \texttt{n = 35} to \texttt{n = 36} gives a digest beginning \texttt{40fbf8c7c7886ca5}, and $135$ of the $256$ bits differ. A reader holding the first digest can tell at once that the registration was changed, though the digest does not say what changed or how.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[node distance=5mm]
+\node[block,text width=24mm] (reg) {register\\ \footnotesize estimand, bar, $n$, family, power};
+\node[block,text width=22mm,right=of reg,draw=porange,fill=porange!10] (seal) {seal\\ \footnotesize SHA-256, commit, time};
+\node[block,text width=17mm,right=of seal] (run) {governed run};
+\node[block,text width=20mm,right=of run] (grade) {grade by the\\ sealed rule};
+\node[block,text width=17mm,above right=2mm and 6mm of grade,draw=pgreen,fill=pgreen!12] (hit) {hit\\ \footnotesize ledger row};
+\node[block,text width=17mm,below right=2mm and 6mm of grade,draw=pred,fill=pred!8] (miss) {miss\\ \footnotesize ledger row};
+\draw[flow] (reg) -- (seal); \draw[flow] (seal) -- (run); \draw[flow] (run) -- (grade);
+\draw[flow] (grade.east) -- (hit.west); \draw[flow] (grade.east) -- (miss.west);
+\draw[pgray,thick,dashed] ($(seal.east)!0.5!(run.west)+(0,1.3)$) -- ($(seal.east)!0.5!(run.west)+(0,-1.3)$)
+  node[lbl,below] {data first exist here};
+\draw[flow,pgray,dashed] (miss.south) |- ++(-3,-0.6) -| node[lbl,pos=0.25,below] {revise as a new registration, new ID} (reg.south);
+\end{tikzpicture}
+\caption{The registration-first cycle. Everything left of the dashed line is fixed before the data exist. A hit and a miss enter the ledger as rows of the same size, and a revision after a miss is a new registration with a new number, never an edit of the sealed one.}
+\label{fig:ch09:cycle}
+\end{figure}
 
 \paragraph{A registry with no unexplained holes.} Sealing one registration does not stop an analyst from sealing ten and reporting the one that worked. That is the file drawer. If twenty studies of a true null each test at $0.05$, one is expected to pass, and if only passes are reported, every reported result is false. The defence is to number registrations consecutively and give every assigned number a disposition, namely reported, superseded by a named successor, or never used, with the reason. A reader can then count. The completeness claim is a claim about the sequence,
 \begin{equation}
@@ -344,11 +499,11 @@ Tag & Minimum evidence, as \texttt{geometric-observation/PROTOCOL.md} section 1 
 \label{tab:ch09:classes}
 \end{table}
 
-The statistics of this chapter attach to the tags in a definite way. A \texttt{[demonstrated]} claim needs the registered estimand, the registered bar with its power statement, and the registered family for multiplicity. A \texttt{[replicated]} claim adds independence at the level of the cluster, which is \cref{sec:ch09:cluster}. A claim that an effect is absent needs an equivalence band, which is \cref{sec:ch09:equiv}. A claim that a held-out set predicted something needs the audit of \cref{sec:ch09:selection}. And the protocol separates gates that test the physics from gates that test the instrument. A physics miss refutes the claim. An instrument miss voids the run, which is logged and may be rerun only under a dated amendment.
+The statistics of this chapter attach to the tags in a definite way. A \texttt{[demonstrated]} claim needs the registered estimand, the registered bar with its power statement, and the registered family for multiplicity. A \texttt{[replicated]} claim adds independence at the level of the cluster, which is \cref{sec:ch09:cluster}. A claim that an effect is negligible needs an equivalence band, which is \cref{sec:ch09:equiv}. A claim that a held-out set predicted something needs the audit of \cref{sec:ch09:selection}. And the protocol separates gates that test the physics from gates that test the instrument. A physics miss refutes the claim. An instrument miss voids the run, which is logged and may be rerun only under a dated amendment.
 
 The DPE paper names the method's six verbs as formalize, derive, search, probe, witness and revise. Registration is what makes \emph{probe} a test rather than a demonstration, because the probe's outcome was not available when its pass condition was written. \emph{Witness} and \emph{revise} are what happen after a sealed miss. The failure is reduced to the smallest case that produces it, and the revision is recorded as a new registration with a new number rather than as an edit to the old one.
 
-\inproject{\texttt{geometric-observation/claims/REGISTRY-ACCOUNTING.md} gives every assigned \texttt{GO-P-2026-NNN} identifier a disposition. IDs 029 and 030 are listed as ``never-run'', a numbering skip ``absent from full git history'', and superseded registrations such as 001 to 002 keep their misses in the ledger. \texttt{geometric-observation/claims/LEDGER.md} carries row OT-5 as \texttt{[refuted]} at the same size as its passing neighbours. A sealed registration ends with its digest, for example \texttt{prereg/GO-P-2026-052-coordinated-gaussian.md}, \texttt{hash: sha256:b3a32cd1\ldots}. The six verbs are in \texttt{discovery-philosophy-engineering/paper/dpe.tex}, section ``Conclusion''. The companion book checks the two hash properties in Lean, \texttt{observation-data-mining/lean/DataMiningAsObservation/Seal.lean}.}
+\inproject{\raggedright \texttt{geometric-observation/claims/REGISTRY-ACCOUNTING.md} gives every assigned \texttt{GO-P-2026-NNN} identifier a disposition. IDs 029 and 030 are listed as ``never-run'', a numbering skip ``absent from full git history'', and superseded registrations such as 001 to 002 keep their misses in the ledger. \texttt{geometric-observation/claims/LEDGER.md} carries row OT-5 as \texttt{[refuted]} at the same size as its passing neighbours. A sealed registration ends with its digest, for example \texttt{prereg/GO-P-2026-052-coordinated-gaussian.md}, \texttt{hash: sha256:b3a32cd1\ldots}. The six verbs are in \texttt{discovery-philosophy-engineering/paper/dpe.tex}, section ``Conclusion''. The companion book's \texttt{observation-data-mining/lean/DataMiningAsObservation/Seal.lean} checks in Lean that a changed digest implies a changed file and that a collision must exist when there are fewer digests than files. That collisions are hard to find for SHA-256 is an assumption, and the file does not prove it.}
 
 \buildson{Every earlier section of this chapter, and Primer S, section S.11 (seeds). The companion book's chapter 0, section 0.12 and appendix D define hash, commit hash and seal.}
 \usedin{\cref{ch10}, where the \texttt{[proved]} class meets machine-checked proof, and the evaluation protocol of \cref{ch08}.}
@@ -412,4 +567,4 @@ Reproduce Example~\ref{ex:ch09:cluster} with a cluster bootstrap. For one simula
 
 \makeatletter\let\sectionmark\omp@savedsectionmark\makeatother
 
-% Check record: checks/ch09_examples.py on Atlas, 2026-10-07: 71/71 PASS (final count recorded in the report)
+% Check record: checks/ch09_examples.py on Atlas, 2026-10-07: 123/123 PASS (includes the 18 pasted figure data sets)

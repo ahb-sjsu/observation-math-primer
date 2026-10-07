@@ -1,25 +1,25 @@
 % Answers to selected exercises, chapter 05. Every number is checked in checks/ch05_examples.py.
 
-\paragraph{Exercise 5.1}
+\paragraph{Exercise~\ref{exr:ch05:diag}}
 $\Sigma^{-1}=\diag(\tfrac19,1)$. Then $(3,0)$ gives $9/9=1$ and $(0,1)$ gives $1$, so both are at distance $1$. The unit ball is the ellipse $x_1^2/9+x_2^2\le1$, with semi-axis $3$ along $x_1$ and $1$ along $x_2$.
 
-\paragraph{Exercise 5.2}
+\paragraph{Exercise~\ref{exr:ch05:psd}}
 Take $G=\diag(1,0)$, $x=(0,0)$ and $y=(0,1)$. Then $d_G(x,y)=0$ with $x\ne y$, so the identity of indiscernibles fails. Nonnegativity, symmetry and the triangle inequality still hold, because $d_G(x,y)=\abs{x_1-y_1}$. The function is a pseudometric, and it is a true metric on the quotient that identifies points with equal first coordinate.
 
-\paragraph{Exercise 5.3}
+\paragraph{Exercise~\ref{exr:ch05:onedim}}
 With $n=1$ the only eigenvalue of $s_1^{-1}s_2$ is $s_2/s_1$, so $d_{AI}=\abs{\ln(s_2/s_1)}$. Then $d_{AI}(I,\diag(9,1))=\ln9=2.197$ and $d_{AI}(\diag(100,1),\diag(108,1))=\ln1.08=0.0770$. The Frobenius distance is $8$ in both cases. It cannot tell a ninefold change from an $8\%$ change.
 
-\paragraph{Exercise 5.4}
+\paragraph{Exercise~\ref{exr:ch05:rim}}
 $d_{\mathbb H}(0,x)=\ln\frac{1+0.99}{1-0.99}=\ln199=5.293$.
 
-\paragraph{Exercise 5.5}
+\paragraph{Exercise~\ref{exr:ch05:pullback}}
 $J=\begin{pmatrix}1&0\\x_2&x_1\end{pmatrix}$. At $(1,2)$, $J=\begin{pmatrix}1&0\\2&1\end{pmatrix}$ and $P_C=\begin{pmatrix}5&2\\2&1\end{pmatrix}$, which has determinant $1$ and is positive definite. At $(0,2)$, $J=\begin{pmatrix}1&0\\2&0\end{pmatrix}$ and $P_C=\begin{pmatrix}5&0\\0&0\end{pmatrix}$, with kernel spanned by $e_2$. The fiber through $(0,2)$ is the set where $x_1=0$ and $x_1x_2=0$, which is the whole line $x_1=0$. Its tangent is $e_2$, matching the kernel. The rank of $J$ drops from $2$ to $1$ on that line, so the constant-rank picture holds near points on the line but not across it.
 
-\paragraph{Exercise 5.6}
+\paragraph{Exercise~\ref{exr:ch05:poisson}}
 $\log p_\lambda(k)=k\ln\lambda-\lambda-\ln k!$, so the score is $k/\lambda-1$ and $F=\Var(K)/\lambda^2=1/\lambda$. Exactly, $\KL{\mathrm{Pois}(4)}{\mathrm{Pois}(4.4)}=4\ln\frac{4}{4.4}+4.4-4=0.01876$. The quadratic approximation is $\tfrac12\cdot0.4^2/4=0.02$.
 
-\paragraph{Exercise 5.7}
+\paragraph{Exercise~\ref{exr:ch05:inverse}}
 The eigenvalues of $S_1S_2^{-1}$ are the reciprocals of those of $S_2^{-1}S_1$, which are the eigenvalues of $(S_1^{-1}S_2)^{-1}$. Replacing each $\lambda_i$ by $1/\lambda_i$ only changes the sign of $\ln\lambda_i$, so the sum of squares in \eqref{eq:ch05:aidist} is unchanged. Distances between covariances and between the corresponding precision matrices are the same, so the choice of parametrization does not matter. Finally $d_{AI}(I,\diag(e,e^{-1}))=\sqrt{1+1}=\sqrt2$.
 
-\paragraph{Exercise 5.9}
+\paragraph{Exercise~\ref{exr:ch05:star}}
 In the star, the leaf-to-leaf path is two unit resistors in series, so $R=2$, and the centre-to-leaf resistance is $1$. The formula $1/d_i+1/d_j$ gives $1+1=2$ for two leaves, which matches, and $\tfrac14+1=1.25$ for the centre and a leaf, which does not. Equation \eqref{eq:ch05:degenerate} is a limit for large neighbourhood graphs sampled from a manifold, and a five-node star is neither large nor of that kind.

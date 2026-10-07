@@ -109,6 +109,11 @@ check("ex Huffman: mean length 1.5", close((pp * np.array([1, 2, 2])).sum(), 1.5
 check("ex Huffman: Kraft sum = 1", close(2 ** -1 + 2 ** -2 + 2 ** -2, 1.0, 1e-12))
 check("ex binary R(D): 1-h(0.1)=0.531 bits", close(1 - hb(0.1), 0.531))
 check("ex binary R(D): h(0.1)=0.469", close(hb(0.1), 0.469))
+# hypothesis audit: sending a fraction r of the bits and guessing the rest
+# gives Hamming distortion (1-r)/2, so D=0.1 needs r=0.8 bits per source bit
+r_drop = 1 - 2 * 0.1
+check("ex binary R(D): drop-bits scheme meets D=0.1 at 0.8 bits", close(r_drop, 0.8, 1e-12) and close((1 - r_drop) / 2, 0.1, 1e-12))
+check("ex binary R(D): drop-bits rate 0.8 exceeds R(0.1)=0.531", r_drop > 1 - hb(0.1))
 
 # ---------------------------------------------------------------- section 5
 check("ex scalar RD: sigma^2=1, D=1/4 gives 1 bit", close(0.5 * np.log2(1 / 0.25), 1.0, 1e-12))
@@ -159,6 +164,7 @@ check("ex R_C: optimal Sigma has rate 1 bit",
       close(0.5 * np.log2(np.linalg.det(Sx) / np.linalg.det(Sig)), 1.0, 1e-9))
 check("ex R_C: optimal Sigma = [[0.5,0.25],[0.25,1.625]]",
       np.allclose(Sig, [[0.5, 0.25], [0.25, 1.625]], atol=1e-9))
+check("ex R_C: unread x2 error variance falls from 2 to 1.625", close(Sx[1, 1], 2.0, 1e-12) and close(Sig[1, 1], 1.625, 1e-9))
 check("ex R_C: Sigma_x - Sigma* is PSD rank one",
       np.linalg.eigvalsh(Sx - Sig).min() > -1e-9 and np.linalg.matrix_rank(Sx - Sig, tol=1e-9) == 1)
 
@@ -392,6 +398,58 @@ lg = np.where(ok_, 0.5 * np.log2(0.5 * (1 + (1 - ag)) / np.where(ok_, det_, 1.0)
 i_, j_ = np.unravel_index(np.argmin(lg), lg.shape)
 check("ex trade-off: grid minimum at a=0.5858, c=0", close(ag[i_, 0], 0.5858, 1e-3) and abs(cg[0, j_]) < 1e-9)
 check("ex trade-off: grid minimum value 0.7716", close(lg[i_, j_], 0.7716))
+
+# ---------------------------------------------------------------- figure data
+import os
+import re
+
+EMIT = "--emit" in sys.argv
+SERIES = {}
+
+
+def series(name, xs, ys, fmt="{:.4g}"):
+    pts = [(float(a), float(b)) for a, b in zip(xs, ys)]
+    SERIES[name] = pts
+    if EMIT:
+        print(f"DATA {name}: " + " ".join("(" + fmt.format(a) + "," + fmt.format(b) + ")" for a, b in pts))
+
+
+def hb0(p_):
+    return 0.0 if p_ <= 0 or p_ >= 1 else hb(p_)
+
+
+ps = np.linspace(0, 1, 41)
+series("binent", ps, [hb0(v) for v in ps])
+check("fig binary entropy: peak 1 at 1/2", close(hb0(0.5), 1.0, 1e-12))
+avals = np.linspace(0.05, 0.95, 19)
+series("klfwd", avals, [1 - hb(v) for v in avals])
+series("klrev", avals, [-1 - 0.5 * np.log2(v * (1 - v)) for v in avals])
+check("fig KL: forward at 0.9 is 0.531, reverse 0.737",
+      close(1 - hb(0.9), 0.531) and close(-1 - 0.5 * np.log2(0.9 * 0.1), 0.737))
+Ds = np.linspace(0.05, 1.0, 20)
+series("gaussrd", Ds, [0.5 * np.log2(1 / v) for v in Ds])
+Dh = np.linspace(0.05, 0.3, 6)
+series("ecsq", Dh, [0.5 * np.log2(1 / v) + 0.5 * np.log2(np.pi * np.e / 6) for v in Dh])
+check("fig info diagram: H(X|Y)=H(Y|X)=0.8113, I=0.1887, sum 1.8113",
+      close(HYgX, 0.8113) and close(1 - IXY, 0.8113) and close(2 * 0.8113 + 0.1887, 1.8113 + 0.0, 1e-3))
+check("fig identity vs consumer: columns (3,1) at theta 0.25 and (2,0) at theta 0.5, both D=0.5",
+      close(min(3, 0.25) + min(1, 0.25), 0.5, 1e-12) and close(min(2, 0.5) + 0.0, 0.5, 1e-12))
+check("fig identity vs consumer: per-column bits 1.792, 1.0 and 1.0, 0",
+      close(0.5 * np.log2(3 / 0.25), 1.792) and close(0.5 * np.log2(1 / 0.25), 1.0, 1e-12) and close(0.5 * np.log2(2 / 0.5), 1.0, 1e-12))
+
+for cand in ["ch03_information_theory.tex", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "chapters", "ch03_information_theory.tex")]:
+    if os.path.exists(cand):
+        tex = open(cand, encoding="utf8").read()
+        tags = re.findall(r"coordinates\s*\{([^}]*)\}\s*;?\s*%\s*data:(\w+)", tex)
+        for body, name in tags:
+            pts = [tuple(map(float, m)) for m in re.findall(r"\(\s*([-\d.eE+]+)\s*,\s*([-\d.eE+]+)\s*\)", body)]
+            ref = SERIES.get(name)
+            ok = ref is not None and len(ref) == len(pts) and all(
+                abs(px - rx) <= 1e-3 * max(1, abs(rx)) and abs(py - ry) <= 1e-3 * max(1, abs(ry))
+                for (px, py), (rx, ry) in zip(pts, ref))
+            check(f"figure series '{name}' in chapter matches computed data", ok)
+        check("figure series found in chapter", len(tags) > 0)
+        break
 
 n = len(RESULTS)
 k = sum(RESULTS)

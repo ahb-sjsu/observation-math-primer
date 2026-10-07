@@ -1,1 +1,1130 @@
-\chapter{Spectral perturbation}\label{ch13}
+\chapter{Eigenvalues move a little when a matrix moves a little, and eigenvectors move by the noise over the gap}\label{ch13}
+% Standalone build (jobname ch13) only. The other chapters are not in that build,
+% so their chapter labels get plain numbers here to keep \cref{chNN} resolvable
+% (numbers as main.tex prints them). In main.tex this block does nothing.
+\makeatletter
+\providecommand\omp@stubchapterxiii[2]{%
+  \@ifundefined{r@#1}{%
+    \global\@namedef{r@#1}{{#2}{}{}{}{}}%
+    \global\@namedef{r@#1@cref}{{[chapter][#2][]#2}{}{}{}{}}}{}}
+\edef\omp@jobA{\jobname}\edef\omp@jobB{\detokenize{ch13}}
+\ifx\omp@jobA\omp@jobB
+  \omp@stubchapterxiii{ch01}{1}\omp@stubchapterxiii{ch02}{3}\omp@stubchapterxiii{ch12}{4}%
+  \omp@stubchapterxiii{ch11}{5}\omp@stubchapterxiii{ch05}{8}\omp@stubchapterxiii{ch06}{9}%
+  \omp@stubchapterxiii{ch07}{10}%
+\fi
+\makeatother
+% Short running heads for the long sentence-style section titles, as in the
+% linear algebra chapter. The original \sectionmark is restored at the end.
+\let\ompSavedSectionmarkxiii\sectionmark
+\providecommand{\ompnexthead}[1]{\def\ompheadtext{#1}%
+  \renewcommand{\sectionmark}[1]{\markright{\MakeUppercase{\thesection.\ \ompheadtext}}}}
+\chaptermark{Spectral perturbation}
+
+Every matrix the programme diagonalizes is an estimate. A read operator comes
+from a blind probe that averages finite-difference gradients. A covariance comes
+from a finite sample. A graph Laplacian comes from a finite neighbourhood graph.
+The eigenvalues and eigenvectors that the papers report are those of the
+estimate, and the question this chapter answers is how far they can sit from
+the eigenvalues and eigenvectors of the matrix the estimate stands for.
+
+The answer has two halves, and the title states both. Eigenvalues of a symmetric
+matrix are stable. A symmetric perturbation of operator norm $\varepsilon$ moves
+every eigenvalue by at most $\varepsilon$, whatever the symmetric matrix. Eigenvectors are stable only relative
+to the distance between neighbouring eigenvalues, the \emph{eigengap}. A
+perturbation of size $\varepsilon$ can turn an eigenvector by an angle of about
+$\varepsilon/\text{gap}$, and when the gap is zero the eigenvector is not a
+well-defined object at all. The chapter then measures the distance between two
+subspaces by principal angles and by the overlap that the programme's probe
+reports, states the Davis--Kahan theorem that turns ``noise over gap'' into a
+bound, applies it to sample covariances, and ends with how spectra are computed
+in practice.
+
+The chapter builds on \cref{ch01}, which proves the spectral theorem, the
+Courant--Fischer theorem and the facts about orthogonal projectors used here,
+and on Primer~L, sections~L.7 and L.8 of \emph{Data Mining as Observation},
+which introduce eigenvectors, power iteration and the singular value
+decomposition. Throughout, $A$ and $E$ are symmetric $d\times d$ matrices, the
+eigenvalues are listed in decreasing order $\lambda_1(A)\ge\dots\ge\lambda_d(A)$,
+and two norms are used,
+\begin{equation}\label{eq:ch13:norms}
+\begin{gathered}
+\norm{E}_2=\max_{\norm{x}=1}\norm{Ex}=\max_i\abs{\lambda_i(E)},\qquad
+\norm{E}_F^2=\sum_{i,j}E_{ij}^2=\sum_i\lambda_i(E)^2,\\
+\norm{E}_2\le\norm{E}_F\le\sqrt d\,\norm{E}_2 .
+\end{gathered}
+\end{equation}
+The first is the operator norm, the largest stretch $E$ applies to a unit
+vector. The second is the Frobenius norm of Primer~L, section~L.8. Every number
+in the examples, exercise answers and figures is recomputed by
+\texttt{checks/ch13\_examples.py}.
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Weyl's inequality}
+\section{Each eigenvalue moves by no more than the size of the perturbation}\label{sec:ch13:weyl}
+
+Start with the good news. Adding a symmetric perturbation $E$ to a symmetric
+matrix $A$ can move its eigenvalues, but not far. The bound uses nothing about
+$A$, neither its size nor its eigenvectors.
+
+\begin{theorem}[Weyl's inequality]\label{thm:ch13:weyl}
+For symmetric $A$ and $E$ and every $i=1,\dots,d$,
+\begin{equation}\label{eq:ch13:weyl}
+\lambda_i(A)+\lambda_d(E)\ \le\ \lambda_i(A+E)\ \le\ \lambda_i(A)+\lambda_1(E),
+\qquad\text{hence}\qquad
+\abs{\lambda_i(A+E)-\lambda_i(A)}\le\norm{E}_2 .
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+For every unit vector $x$, the Rayleigh bounds of \cref{ch01} give
+$x\T Ex\le\lambda_1(E)$, so $x\T(A+E)x\le x\T Ax+\lambda_1(E)$. The
+Courant--Fischer theorem of \cref{ch01} writes $\lambda_i$ as a maximum over
+$i$-dimensional subspaces of a minimum of the Rayleigh quotient. An inequality
+that holds for every $x$ survives the minimum over each subspace and then the
+maximum over subspaces, so $\lambda_i(A+E)\le\lambda_i(A)+\lambda_1(E)$. The
+lower bound follows the same way from $x\T Ex\ge\lambda_d(E)$.
+\end{proof}
+
+The inequality is usually credited to Weyl's 1912 paper on the asymptotic
+distribution of eigenvalues \cite{weyl1912}, the same paper that proved the
+eigenvalue-counting law now also called Weyl's law. Horn and Johnson give the
+general form $\lambda_{i+j-1}(A+E)\le\lambda_i(A)+\lambda_j(E)$
+\cite{hornjohnson2012}. In words, \cref{eq:ch13:weyl} says that each eigenvalue,
+viewed as a function of the symmetric matrix, is Lipschitz with constant one in
+the operator norm. A Frobenius-norm version controls all the eigenvalues at once.
+It is the Hoffman--Wielandt inequality \cite{hornjohnson2012},
+\begin{equation}\label{eq:ch13:hw}
+\sum_{i=1}^d\big(\lambda_i(A+E)-\lambda_i(A)\big)^2\le\norm{E}_F^2 .
+\end{equation}
+
+Weyl's inequality says how far an eigenvalue can move. For a small perturbation
+of a \emph{simple} eigenvalue, one with no other eigenvalue equal to it, a Taylor
+expansion says how far it does move. With $v_1,\dots,v_d$ the orthonormal
+eigenvectors of $A$,
+\begin{equation}\label{eq:ch13:eigexp}
+\lambda_i(A+tE)=\lambda_i+t\,v_i\T Ev_i+t^2\sum_{j\ne i}\frac{(v_j\T Ev_i)^2}{\lambda_i-\lambda_j}+O(t^3).
+\end{equation}
+The first-order term is the Rayleigh quotient of the perturbation along the old
+eigenvector. The second-order term already has the differences
+$\lambda_i-\lambda_j$ in its denominators. Those differences rule everything
+about eigenvectors in the next section.
+
+\begin{example}[A two-by-two perturbation, three ways]\label{ex:ch13:weyl}
+Let $A=\diag(3,1)$ and
+$E=\begin{pmatrix}0.1&0.2\\0.2&-0.1\end{pmatrix}$. The perturbation has trace
+$0$ and determinant $-0.05$, so its eigenvalues are $\pm\sqrt{0.05}=\pm0.2236$
+and $\norm{E}_2=0.2236$. The sum
+$A+E=\begin{pmatrix}3.1&0.2\\0.2&0.9\end{pmatrix}$ has trace $4$ and determinant
+$2.79-0.04=2.75$, so its eigenvalues are $2\pm\sqrt{4-2.75}=2\pm\sqrt{1.25}$,
+that is $3.1180$ and $0.8820$. Each moved by $0.1180$, inside Weyl's bound of
+$0.2236$. The squared moves add to $0.0279$, below $\norm{E}_F^2=0.01+0.04+0.04+0.01=0.1$,
+as \cref{eq:ch13:hw} requires. The first-order terms of \cref{eq:ch13:eigexp}
+are the diagonal entries $3.1$ and $0.9$. The second-order terms are
+$\pm0.2^2/(3-1)=\pm0.02$, giving $3.12$ and $0.88$, each within $0.002$ of the
+exact values.
+\end{example}
+
+The symmetry of both matrices is essential. The nonsymmetric matrix
+$\begin{pmatrix}0&1\\ \varepsilon&0\end{pmatrix}$ is a perturbation of size
+$\varepsilon$ of a matrix whose eigenvalues are both $0$, and its eigenvalues are
+$\pm\sqrt\varepsilon$. For $\varepsilon=10^{-4}$ they are $\pm0.01$, a hundred
+times the perturbation. Nothing like \cref{eq:ch13:weyl} holds for general
+matrices, which is one more reason the programme works with symmetric read
+operators and covariances. Part of the bound survives when only $A$ is
+symmetric. By the Bauer--Fike theorem every eigenvalue of $A+E$, for any $E$,
+then lies within $\norm{E}_2$ of \emph{some} eigenvalue of $A$
+\cite{hornjohnson2012}, but the eigenvalues may become complex and the pairing
+by index is lost.
+
+\Cref{fig:ch13:crossing} shows Weyl's inequality and its limit in one picture.
+The path $A(t)=\diag(t,-t)$ has eigenvalues $\pm\abs t$, which cross at $t=0$.
+Adding $E=\varepsilon\begin{pmatrix}0&1\\1&0\end{pmatrix}$ with
+$\varepsilon=0.1$ gives eigenvalues $\pm\sqrt{t^2+\varepsilon^2}$. They never
+touch, and they never stray more than $\varepsilon$ from $\pm\abs t$. The right
+panel tracks the top eigenvector. Far from the crossing it hardly moves. Near
+$t=0$ it turns through almost $90^\circ$ over a window of width about
+$\varepsilon$, and for smaller $\varepsilon$ the turn is faster. With
+$\varepsilon=0$ the top eigenvector jumps from $e_2$ to $e_1$ at $t=0$.
+Eigenvalues are continuous functions of a symmetric matrix. Eigenvectors are not
+continuous at a crossing. Near a matrix whose eigenvalue $\lambda_i$ is simple,
+the unit eigenvector $v_i$, with its sign fixed, is a continuous and even
+smooth function of the matrix.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.47\linewidth, height=0.40\linewidth,
+  xmin=-1, xmax=1, ymin=-1.15, ymax=1.15, xlabel={\small $t$},
+  ylabel={\small eigenvalues}, title={\small eigenvalues stay within $\varepsilon$}]
+\addplot[guide, thick] coordinates {(-1,1) (0,0) (1,1)};
+\addplot[guide, thick] coordinates {(-1,-1) (0,0) (1,-1)};
+\addplot[thick,pblue] coordinates {(-1,1.005) (-0.95,0.9552) (-0.9,0.9055) (-0.85,0.8559) (-0.8,0.8062) (-0.75,0.7566) (-0.7,0.7071) (-0.65,0.6576) (-0.6,0.6083) (-0.55,0.559) (-0.5,0.5099) (-0.45,0.461) (-0.4,0.4123) (-0.35,0.364) (-0.3,0.3162) (-0.25,0.2693) (-0.2,0.2236) (-0.15,0.1803) (-0.1,0.1414) (-0.05,0.1118) (0,0.1) (0.05,0.1118) (0.1,0.1414) (0.15,0.1803) (0.2,0.2236) (0.25,0.2693) (0.3,0.3162) (0.35,0.364) (0.4,0.4123) (0.45,0.461) (0.5,0.5099) (0.55,0.559) (0.6,0.6083) (0.65,0.6576) (0.7,0.7071) (0.75,0.7566) (0.8,0.8062) (0.85,0.8559) (0.9,0.9055) (0.95,0.9552) (1,1.005)};
+\addplot[thick,pblue] coordinates {(-1,-1.005) (-0.95,-0.9552) (-0.9,-0.9055) (-0.85,-0.8559) (-0.8,-0.8062) (-0.75,-0.7566) (-0.7,-0.7071) (-0.65,-0.6576) (-0.6,-0.6083) (-0.55,-0.559) (-0.5,-0.5099) (-0.45,-0.461) (-0.4,-0.4123) (-0.35,-0.364) (-0.3,-0.3162) (-0.25,-0.2693) (-0.2,-0.2236) (-0.15,-0.1803) (-0.1,-0.1414) (-0.05,-0.1118) (0,-0.1) (0.05,-0.1118) (0.1,-0.1414) (0.15,-0.1803) (0.2,-0.2236) (0.25,-0.2693) (0.3,-0.3162) (0.35,-0.364) (0.4,-0.4123) (0.45,-0.461) (0.5,-0.5099) (0.55,-0.559) (0.6,-0.6083) (0.65,-0.6576) (0.7,-0.7071) (0.75,-0.7566) (0.8,-0.8062) (0.85,-0.8559) (0.9,-0.9055) (0.95,-0.9552) (1,-1.005)};
+\node[lbl,pblue] at (axis cs:0.45,0.75) {$\sqrt{t^2+\varepsilon^2}$};
+\node[lbl,pgray] at (axis cs:-0.55,0.25) {$\pm\abs t$};
+\end{axis}
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.47\linewidth, height=0.40\linewidth,
+  xmin=-1, xmax=1, ymin=0, ymax=92, ytick={0,45,90}, xlabel={\small $t$},
+  ylabel={\small angle of top eigenvector (deg)}, title={\small the eigenvector turns}]
+\addplot[pred, dashed, thick] coordinates {(-1,90) (0,90) (0,0) (1,0)};
+\addplot[thick,porange] coordinates {(-1,89.43) (-0.9,89.36) (-0.8,89.28) (-0.7,89.18) (-0.6,89.05) (-0.5,88.85) (-0.4,88.57) (-0.3,88.09) (-0.2,87.14) (-0.15,86.2) (-0.125,85.45) (-0.1,84.35) (-0.075,82.53) (-0.05,79.1) (-0.025,70.67) (0,45) (0.025,19.33) (0.05,10.9) (0.075,7.466) (0.1,5.655) (0.125,4.545) (0.15,3.797) (0.2,2.855) (0.3,1.907) (0.4,1.431) (0.5,1.145) (0.6,0.9546) (0.7,0.8183) (0.8,0.716) (0.9,0.6365) (1,0.5729)};
+\addplot[thick,pblue] coordinates {(-1,87.14) (-0.95,87) (-0.9,86.83) (-0.85,86.65) (-0.8,86.44) (-0.75,86.2) (-0.7,85.93) (-0.65,85.63) (-0.6,85.27) (-0.55,84.85) (-0.5,84.35) (-0.45,83.74) (-0.4,82.98) (-0.35,82.03) (-0.3,80.78) (-0.25,79.1) (-0.2,76.72) (-0.15,73.15) (-0.1,67.5) (-0.05,58.28) (0,45) (0.05,31.72) (0.1,22.5) (0.15,16.85) (0.2,13.28) (0.25,10.9) (0.3,9.217) (0.35,7.973) (0.4,7.018) (0.45,6.264) (0.5,5.655) (0.55,5.152) (0.6,4.731) (0.65,4.373) (0.7,4.065) (0.75,3.797) (0.8,3.563) (0.85,3.355) (0.9,3.17) (0.95,3.005) (1,2.855)};
+\node[lbl,pblue] at (axis cs:0.5,22) {$\varepsilon=0.1$};
+\node[lbl,porange] at (axis cs:-0.32,58) {$\varepsilon=0.02$};
+\node[lbl,pred,anchor=west] at (axis cs:0.05,70) {$\varepsilon=0$};
+\end{axis}
+\end{tikzpicture}
+\caption{Along the path $\diag(t,-t)+\varepsilon\begin{pmatrix}0&1\\1&0\end{pmatrix}$
+the eigenvalues never move more than $\varepsilon$ from the unperturbed values,
+shown dashed. The top eigenvector, measured as an angle from $e_1$, swings through
+$90^\circ$ in a window of width about $\varepsilon$ around the near-crossing, and
+jumps when $\varepsilon=0$.}
+\label{fig:ch13:crossing}
+\end{figure}
+
+\inproject{By Weyl's inequality, the identity $\norm{\hat P-P}_2=\norm{\Xi}_2$ in
+\nolinkurl{geometric-observation/crucible/OT3-NOISY-THEOREM.md}, Theorem~N2a, also
+bounds the error of every estimated eigenvalue of the read operator by the operator
+norm of the reading noise. A name clash needs a warning.
+\nolinkurl{geometric-observation/paper/observation-theory.tex}, the section on rate labelled
+\texttt{sec:rate} (GO-4), invokes \emph{Weyl's law}
+$N(\lambda)\sim c\,\mathrm{Vol}(M)\lambda^{d_M/2}$, which counts the Laplacian
+eigenvalues of a manifold below a level. That is a different theorem from
+\cref{eq:ch13:weyl}, though it comes from the same 1912 paper.}
+
+\buildson{\Cref{ch01}, the Rayleigh bounds and the Courant--Fischer theorem.
+Primer~L, section~L.7.}
+\usedin{\Cref{sec:ch13:dk}, where Weyl's inequality turns the Davis--Kahan
+theorem into a statement about the unperturbed spectrum alone.
+\Cref{sec:ch13:highdim}, the spread of sample eigenvalues. \Cref{ch05}, the
+spectra of graph Laplacians built from samples.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Eigenvector sensitivity}
+\section{An eigenvector turns by the perturbation divided by the eigengap}\label{sec:ch13:turn}
+
+The second-order term of \cref{eq:ch13:eigexp} warned that eigenvalue
+differences sit in denominators. For eigenvectors they appear at first order.
+The cleanest place to see it is a $2\times2$ matrix, where the turn can be
+computed exactly.
+
+Let $A=\diag(\lambda_1,\lambda_2)$ with eigengap $g=\lambda_1-\lambda_2>0$, and
+perturb it off the diagonal by $E=\varepsilon\begin{pmatrix}0&1\\1&0\end{pmatrix}$.
+Subtracting the mean eigenvalue $m=(\lambda_1+\lambda_2)/2$, which changes no
+eigenvector, leaves
+\begin{equation}\label{eq:ch13:rot}
+A+E-mI=\begin{pmatrix}g/2&\varepsilon\\ \varepsilon&-g/2\end{pmatrix}
+=\rho\begin{pmatrix}\cos2\theta&\sin2\theta\\ \sin2\theta&-\cos2\theta\end{pmatrix},
+\qquad \rho=\sqrt{g^2/4+\varepsilon^2},\qquad \tan2\theta=\frac{2\varepsilon}{g}.
+\end{equation}
+The matrix on the right is $\rho$ times a reflection across the line at angle
+$\theta$, and that line is its eigenvector with the eigenvalue $+\rho$. So the
+top eigenvector of $A+E$ is $(\cos\theta,\sin\theta)\T$, turned by
+\begin{equation}\label{eq:ch13:theta}
+\theta=\tfrac12\arctan\frac{2\varepsilon}{g}\ \approx\ \frac{\varepsilon}{g}\quad\text{for }\varepsilon\ll g .
+\end{equation}
+The angle depends on $\varepsilon$ and $g$ only through their ratio. The
+eigenvalues meanwhile are $m\pm\rho$, each within $\varepsilon$ of
+$\lambda_1$ and $\lambda_2$, as Weyl requires. A perturbation that is small
+compared with the eigenvalues can still be large compared with their
+difference, and then the eigenvector turns up to its ceiling of $45^\circ$. That
+ceiling belongs to this off-diagonal family. A diagonal perturbation can
+reverse the order of the eigenvalues, and then the top eigenvector turns by
+$90^\circ$. Adding $\diag(0,0.2)$ to $\diag(2.01,1.99)$ gives $\diag(2.01,2.19)$,
+whose top eigenvector is $e_2$.
+
+\begin{example}[Same push, two gaps]\label{ex:ch13:turn}
+Take $\varepsilon=0.2$. With $A=\diag(3,1)$ the gap is $2$, so
+$\tan2\theta=0.2$ and $\theta=5.65^\circ$. The first-order value $\varepsilon/g=0.1$
+radians is $5.73^\circ$. The eigenvalues move to $2\pm\sqrt{1.04}$, that is
+$3.0198$ and $0.9802$. With $A=\diag(2.01,1.99)$ the gap is $0.02$, so
+$\tan2\theta=20$ and $\theta=43.57^\circ$. The eigenvalues move to
+$2\pm\sqrt{0.0001+0.04}$, that is $2.2002$ and $1.7998$, by less than $0.2$ as
+before. The same perturbation leaves the first eigenvector almost in place and
+turns the second almost as far as it can go.
+\end{example}
+
+\Cref{fig:ch13:turn} plots \cref{eq:ch13:theta} against $\varepsilon$ for three
+gaps. The initial slope of each curve is $1/g$ radians per unit of
+$\varepsilon$, which is the $1/\text{gap}$ blow-up. The curves for small gaps
+reach a large angle almost at once and then saturate.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=1, ymin=0, ymax=47, ytick={0,15,30,45},
+  xlabel={\small perturbation size $\varepsilon$},
+  ylabel={\small eigenvector turn $\theta$ (deg)}]
+\addplot[guide] coordinates {(0,45) (1,45)};
+\addplot[thick,pred] coordinates {(0,0) (0.04,19.33) (0.08,29) (0.12,33.69) (0.16,36.32) (0.2,37.98) (0.24,39.12) (0.28,39.94) (0.32,40.56) (0.36,41.05) (0.4,41.44) (0.44,41.76) (0.48,42.03) (0.52,42.25) (0.56,42.45) (0.6,42.62) (0.64,42.77) (0.68,42.9) (0.72,43.01) (0.76,43.12) (0.8,43.21) (0.84,43.3) (0.88,43.37) (0.92,43.44) (0.96,43.51) (1,43.57)};
+\addplot[thick,porange] coordinates {(0,0) (0.04,4.545) (0.08,8.872) (0.12,12.82) (0.16,16.31) (0.2,19.33) (0.24,21.92) (0.28,24.12) (0.32,26) (0.36,27.61) (0.4,29) (0.44,30.2) (0.48,31.24) (0.52,32.16) (0.56,32.97) (0.6,33.69) (0.64,34.33) (0.68,34.91) (0.72,35.43) (0.76,35.9) (0.8,36.32) (0.84,36.71) (0.88,37.07) (0.92,37.4) (0.96,37.7) (1,37.98)};
+\addplot[thick,pblue] coordinates {(0,0) (0.04,1.145) (0.08,2.287) (0.12,3.421) (0.16,4.545) (0.2,5.655) (0.24,6.748) (0.28,7.821) (0.32,8.872) (0.36,9.899) (0.4,10.9) (0.44,11.87) (0.48,12.82) (0.52,13.74) (0.56,14.62) (0.6,15.48) (0.64,16.31) (0.68,17.11) (0.72,17.88) (0.76,18.62) (0.8,19.33) (0.84,20.02) (0.88,20.67) (0.92,21.31) (0.96,21.92) (1,22.5)};
+\node[lbl,pred,anchor=south] at (axis cs:0.22,39.2) {$g=0.1$};
+\node[lbl,porange,anchor=north west] at (axis cs:0.6,33.3) {$g=0.5$};
+\node[lbl,pblue,anchor=north west] at (axis cs:0.62,15.4) {$g=2$};
+\end{axis}
+\end{tikzpicture}
+\caption{The top eigenvector of $\diag(\lambda_1,\lambda_2)+\varepsilon\begin{pmatrix}0&1\\1&0\end{pmatrix}$
+turns by $\tfrac12\arctan(2\varepsilon/g)$. With gap $g=0.1$ a push of
+$0.04$ already turns it by $19^\circ$, while with gap $2$ a push of $1$ turns it by
+$22.5^\circ$. Each curve starts with slope $1/g$.}
+\label{fig:ch13:turn}
+\end{figure}
+
+For a general symmetric matrix the same picture holds direction by direction.
+Differentiating $(A+tE)v_i(t)=\lambda_i(t)v_i(t)$ at $t=0$ gives
+$Ev_i+Av_i'=\lambda_i'v_i+\lambda_iv_i'$. Taking the inner product with $v_j$ for
+$j\ne i$ and using $v_j\T A=\lambda_jv_j\T$ gives
+$v_j\T Ev_i=(\lambda_i-\lambda_j)\,v_j\T v_i'$, and taking it with $v_i$ gives
+$\lambda_i'=v_i\T Ev_i$, the first-order term of \cref{eq:ch13:eigexp}. Keeping the
+eigenvector at unit length makes $v_i\T v_i'=0$. So, for a simple eigenvalue,
+\begin{equation}\label{eq:ch13:vecexp}
+v_i(t)=v_i+t\sum_{j\ne i}\frac{v_j\T Ev_i}{\lambda_i-\lambda_j}\,v_j+O(t^2).
+\end{equation}
+Each other eigenvector $v_j$ is mixed in with weight equal to the coupling
+$v_j\T Ev_i$ divided by the eigengap $\lambda_i-\lambda_j$. When the couplings
+are comparable, the nearest eigenvalue dominates. When $\lambda_j=\lambda_i$ the formula breaks down, which is
+the crossing of \cref{fig:ch13:crossing}.
+
+\begin{example}[Each direction pays its own gap]\label{ex:ch13:vecexp}
+Let $A=\diag(3,2,0)$ and let $E$ have $E_{12}=E_{21}=0.02$, $E_{13}=E_{31}=0.03$
+and zeros elsewhere. By \cref{eq:ch13:vecexp} the top eigenvector moves from $e_1$
+to about $e_1+\tfrac{0.02}{3-2}e_2+\tfrac{0.03}{3-0}e_3=(1,0.02,0.01)\T$. The
+smaller coupling produces the larger turn, because it acts across the smaller
+gap. The exact eigenvector, scaled to first entry $1$, is
+$(1,0.01999,0.01000)\T$.
+\end{example}
+
+\inproject{\nolinkurl{geometric-observation/crucible/OT3-NOISY-THEOREM.md}, Theorem~N2b,
+rotates a planted rank-one read operator $\lambda uu\T$ by an angle $\theta$, shows the
+two noisy transcripts cannot be told apart once $\theta$ is of order
+$\sigma/\lambda$, and concludes that ``noise prices accuracy at rate
+$\Theta(\sigma/\gamma)$''. That is the noise-over-gap rule of
+\cref{eq:ch13:theta}, read as a lower bound that no estimator can beat.}
+
+\buildson{\Cref{sec:ch13:weyl}. Reflections and rotations in the plane from
+\cref{ch01}.}
+\usedin{\Cref{sec:ch13:dk,sec:ch13:sample}. \Cref{ch06}, the probe's recovery of a
+read subspace.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Principal angles and overlap}
+\section{Principal angles measure the distance between subspaces, and a random subspace overlaps a fixed one by $r/d$ on average}\label{sec:ch13:angles}
+
+Turned eigenvectors come in groups. A probe estimates a read subspace of
+dimension $r$, not a single vector, and two subspaces of the same dimension can
+agree along some directions and disagree along others. One angle is not enough
+to describe that. A list of angles is.
+
+\begin{definition}[Principal angles]\label{def:ch13:angles}
+Let $\mathcal R$ and $\hat{\mathcal R}$ be $r$-dimensional subspaces of $\R^d$ with
+orthonormal bases $Q,\hat Q\in\R^{d\times r}$. The \emph{principal angles}
+$0\le\phi_1\le\dots\le\phi_r\le\pi/2$ are defined by the singular values of
+$Q\T\hat Q$,
+\begin{equation}\label{eq:ch13:angles}
+Q\T\hat Q=U\,\diag(\cos\phi_1,\dots,\cos\phi_r)\,W\T,\qquad
+\sin\Theta=\diag(\sin\phi_1,\dots,\sin\phi_r).
+\end{equation}
+\end{definition}
+
+Changing either basis multiplies $Q\T\hat Q$ by an orthogonal matrix on one side,
+which leaves the singular values alone, so the angles belong to the subspaces.
+The first principal angle is the smallest angle between any vector of
+$\mathcal R$ and any vector of $\hat{\mathcal R}$, and each later angle is the
+smallest available after removing the pairs already used
+\cite{golubvanloan2013}. The orthogonal projectors $\Pi=QQ\T$ and
+$\hat\Pi=\hat Q\hat Q\T$ of \cref{ch01} turn the angles into three norms,
+\begin{equation}\label{eq:ch13:projid}
+\begin{gathered}
+\tr(\Pi\hat\Pi)=\norm{Q\T\hat Q}_F^2=\sum_{i=1}^r\cos^2\phi_i,\qquad
+\norm{\Pi-\hat\Pi}_F^2=2\sum_{i=1}^r\sin^2\phi_i=2\norm{\sin\Theta}_F^2,\\
+\norm{\Pi-\hat\Pi}_2=\sin\phi_r .
+\end{gathered}
+\end{equation}
+The first identity is the cyclic rule,
+$\tr(QQ\T\hat Q\hat Q\T)=\tr\big((Q\T\hat Q)(Q\T\hat Q)\T\big)$, and the sum of
+squared singular values is the squared Frobenius norm. The second expands the
+square, $\norm{\Pi-\hat\Pi}_F^2=\tr\Pi+\tr\hat\Pi-2\tr(\Pi\hat\Pi)=2r-2\sum\cos^2\phi_i$.
+The third, that the operator-norm distance between the projectors is the sine of
+the \emph{largest} angle, is a standard result \cite{stewartsun1990,golubvanloan2013}. The
+programme summarizes the list of angles by one number.
+
+\begin{definition}[Subspace overlap]\label{def:ch13:overlap}
+For $r$-dimensional subspaces with projectors $\Pi_R$ and $\Pi_{\hat R}$,
+\begin{equation}\label{eq:ch13:overlap}
+o(\mathcal R,\hat{\mathcal R})=\frac1r\tr\big(\Pi_R\Pi_{\hat R}\big)=\frac1r\sum_{i=1}^r\cos^2\phi_i\ \in[0,1].
+\end{equation}
+\end{definition}
+
+The overlap is $1$ when the subspaces coincide and $0$ when they are orthogonal.
+It is an average of squared cosines. It is not the cosine of an average angle,
+and it does not say which directions were missed. A value of $o$ cannot be
+read without a reference value. That reference is what a subspace chosen at
+random would score.
+
+Let $\hat{\mathcal R}$ be uniformly random, for example the span of $r$
+independent standard Gaussian vectors. Its distribution does not change when
+it is rotated, so the matrix $\E[\Pi_{\hat R}]$ satisfies
+$U\,\E[\Pi_{\hat R}]\,U\T=\E[\Pi_{\hat R}]$ for every orthogonal $U$. The same
+argument that \cref{ch01} uses for a randomly rotated vector shows that it is a
+multiple of $I$, and its trace is $r$. Therefore
+\begin{equation}\label{eq:ch13:chance}
+\E[\Pi_{\hat R}]=\frac rd\,I,\qquad
+\E\big[o(\mathcal R,\hat{\mathcal R})\big]=\frac1r\tr\Big(\Pi_R\,\frac rd I\Big)=\frac rd .
+\end{equation}
+The chance overlap is $r/d$. A natural rescaling reads an overlap against it,
+$(o-r/d)/(1-r/d)$, which is $0$ at the chance mean, $1$ at perfect recovery and
+negative below the chance mean.
+
+\begin{example}[An exact shared direction, barely above chance]\label{ex:ch13:angles}
+In $\R^3$ let $\mathcal R$ be spanned by $e_1,e_2$ and $\hat{\mathcal R}$ by $e_1$
+and $(0,3,4)\T/5$. Then
+$Q\T\hat Q=\begin{pmatrix}1&0\\0&3/5\end{pmatrix}$, so the principal angles have
+cosines $1$ and $\tfrac35$. The first angle is $0$, a shared direction. The
+second is $\arccos0.6=53.13^\circ$. The overlap is
+$\tfrac12(1+\tfrac9{25})=\tfrac{17}{25}=0.68$. Chance is $\tfrac23=0.667$, so
+this pair, which shares a whole direction exactly, is only just above what a
+random plane scores, and the rescaled value is $(0.68-\tfrac23)/(1-\tfrac23)=0.04$.
+The identities \cref{eq:ch13:projid} give $\norm{\Pi-\hat\Pi}_F^2=2\cdot\tfrac{16}{25}=\tfrac{32}{25}$
+and $\norm{\Pi-\hat\Pi}_2=\tfrac45=\sin53.13^\circ$. In $\R^2$, two lines at
+$60^\circ$ have overlap $\cos^260^\circ=\tfrac14$, below the chance value
+$\tfrac12$. A particular estimate can do worse than a random one.
+\end{example}
+
+The chance value is an average. \Cref{fig:ch13:chance} shows the whole
+distribution of the overlap between a fixed $4$-dimensional subspace and a
+random one, in $d=8$, $16$ and $32$ dimensions. Each histogram is centred at
+$r/d$ and narrows as $d$ grows, which is concentration of measure, the subject
+of \cref{ch11}. In $d=8$ the top one percent of random overlaps lies above
+$0.693$. A recovered $4$-dimensional subspace of $\R^8$ with overlap $0.65$
+would fail a one-percent test against chance, since about $4$ percent of random
+subspaces score at least that much. The same number in $\R^{32}$ lies far above
+$0.296$, the largest of the $20{,}000$ random overlaps there.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=0.85, ymin=0, ymax=0.112,
+  xlabel={\small overlap $o$ of a random subspace ($r=4$)},
+  ylabel={\small fraction of draws per $0.01$ bin},
+  yticklabel style={/pgf/number format/fixed}, scaled y ticks=false]
+\addplot[thick,pblue] coordinates {(0.015,0.0000) (0.025,0.0003) (0.035,0.0018) (0.045,0.0073) (0.055,0.0174) (0.065,0.0326) (0.075,0.0525) (0.085,0.0709) (0.095,0.0882) (0.105,0.1021) (0.115,0.1051) (0.125,0.0980) (0.135,0.0917) (0.145,0.0831) (0.155,0.0674) (0.165,0.0524) (0.175,0.0412) (0.185,0.0297) (0.195,0.0221) (0.205,0.0133) (0.215,0.0086) (0.225,0.0065) (0.235,0.0027) (0.245,0.0027) (0.255,0.0014) (0.265,0.0006) (0.275,0.0002) (0.285,0.0002) (0.295,0.0001) (0.305,0.0000)};
+\addplot[thick,porange] coordinates {(0.045,0.0000) (0.055,0.0001) (0.065,0.0003) (0.075,0.0004) (0.085,0.0010) (0.095,0.0027) (0.105,0.0037) (0.115,0.0065) (0.125,0.0089) (0.135,0.0136) (0.145,0.0182) (0.155,0.0225) (0.165,0.0307) (0.175,0.0328) (0.185,0.0394) (0.195,0.0461) (0.205,0.0535) (0.215,0.0563) (0.225,0.0606) (0.235,0.0610) (0.245,0.0611) (0.255,0.0602) (0.265,0.0562) (0.275,0.0525) (0.285,0.0537) (0.295,0.0449) (0.305,0.0401) (0.315,0.0331) (0.325,0.0309) (0.335,0.0249) (0.345,0.0197) (0.355,0.0156) (0.365,0.0120) (0.375,0.0092) (0.385,0.0072) (0.395,0.0059) (0.405,0.0046) (0.415,0.0025) (0.425,0.0022) (0.435,0.0019) (0.445,0.0009) (0.455,0.0007) (0.465,0.0004) (0.475,0.0005) (0.485,0.0002) (0.495,0.0001) (0.505,0.0002) (0.515,0.0001) (0.525,0.0000) (0.535,0.0000) (0.545,0.0000) (0.555,0.0001) (0.565,0.0000)};
+\addplot[thick,pgreen] coordinates {(0.145,0.0000) (0.155,0.0001) (0.165,0.0001) (0.175,0.0001) (0.185,0.0001) (0.195,0.0001) (0.205,0.0001) (0.215,0.0001) (0.225,0.0005) (0.235,0.0003) (0.245,0.0005) (0.255,0.0006) (0.265,0.0012) (0.275,0.0013) (0.285,0.0018) (0.295,0.0029) (0.305,0.0026) (0.315,0.0053) (0.325,0.0065) (0.335,0.0058) (0.345,0.0087) (0.355,0.0104) (0.365,0.0135) (0.375,0.0157) (0.385,0.0192) (0.395,0.0220) (0.405,0.0244) (0.415,0.0274) (0.425,0.0312) (0.435,0.0340) (0.445,0.0358) (0.455,0.0394) (0.465,0.0435) (0.475,0.0443) (0.485,0.0459) (0.495,0.0466) (0.505,0.0486) (0.515,0.0476) (0.525,0.0466) (0.535,0.0435) (0.545,0.0407) (0.555,0.0398) (0.565,0.0365) (0.575,0.0316) (0.585,0.0295) (0.595,0.0239) (0.605,0.0236) (0.615,0.0198) (0.625,0.0154) (0.635,0.0132) (0.645,0.0103) (0.655,0.0087) (0.665,0.0074) (0.675,0.0062) (0.685,0.0042) (0.695,0.0031) (0.705,0.0022) (0.715,0.0014) (0.725,0.0011) (0.735,0.0010) (0.745,0.0006) (0.755,0.0006) (0.765,0.0003) (0.775,0.0003) (0.785,0.0003) (0.795,0.0001) (0.805,0.0001) (0.815,0.0001) (0.825,0.0001) (0.835,0.0001) (0.845,0.0000)};
+\addplot[guide] coordinates {(0.125,0) (0.125,0.112)};
+\addplot[guide] coordinates {(0.25,0) (0.25,0.112)};
+\addplot[guide] coordinates {(0.5,0) (0.5,0.112)};
+\node[lbl,pblue,anchor=west] at (axis cs:0.135,0.104) {$d=32$};
+\node[lbl,porange,anchor=west] at (axis cs:0.27,0.064) {$d=16$};
+\node[lbl,pgreen,anchor=west] at (axis cs:0.53,0.050) {$d=8$};
+\node[lbl,pgray,anchor=north west] at (axis cs:0.5,0.112) {$r/d$};
+\end{axis}
+\end{tikzpicture}
+\caption{The overlap between a fixed four-dimensional subspace and $20{,}000$
+random ones is centred at the chance value $r/d$, marked by the dashed lines, and
+narrows as the dimension grows. An overlap is informative only against this
+distribution for its own $r$ and $d$.}
+\label{fig:ch13:chance}
+\end{figure}
+
+\inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex}, appendix
+``The price of a misidentified observer'', reads the probe's subspace overlap
+$o=\tfrac1r\tr(\Pi_R\Pi_{\hat R})$ and, under the projector model with
+$\Sigma_x=I$, turns it into the omission floor $D_{\mathrm{floor}}=r(1-o)$, which is
+$\norm{\sin\Theta}_F^2$ by \cref{eq:ch13:projid}. The measured median $o=0.647$ on
+Llama-3.2-3B certifies a floor of $0.353$ of the read energy under the conditions
+the paper states. \nolinkurl{readscope/readscope/metrics.py}, function
+\texttt{subspace\_overlap}, computes $\norm{U_{\mathrm{true}}\T\hat U}_F^2/r$ and
+reports it next to the chance value $r/d$ and the rescaled ``resolution''
+$(o-r/d)/(1-r/d)$.}
+
+\inproject{\nolinkurl{geometric-observation/paper/ot-estimation-control.tex}, Campaign~6,
+and the row GO-EC-6 of \nolinkurl{geometric-observation/claims/LEDGER.md} place two
+consumers' read subspaces at controlled principal angles and measure the price of
+serving both from one budget. The ratio runs $1.000$, $1.037$, $1.123$ and $1.149$ at
+$0^\circ$, $30^\circ$, $60^\circ$ and $90^\circ$, with ledger status \texttt{[predicted]}.}
+
+\buildson{\Cref{ch01}, orthogonal projectors, the trace and randomly rotated vectors.
+Primer~L, section~L.8 (singular values).}
+\usedin{\Cref{sec:ch13:dk,sec:ch13:sample}. \Cref{ch06}, the blind probe and the
+omission floor. \Cref{ch11}, concentration of random overlaps.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{The Davis--Kahan theorem}
+\section{The Davis--Kahan theorem bounds the turn of an eigenspace by the perturbation over the eigengap}\label{sec:ch13:dk}
+
+\Cref{eq:ch13:theta} computed the turn exactly in two dimensions, and
+\cref{eq:ch13:vecexp} approximated it for small perturbations. The Davis--Kahan
+theorem gives a bound that needs neither, for a whole block of eigenvectors at
+once. Its hypotheses matter, so they are stated in full.
+
+Fix indices $1\le r\le s\le d$ and let $V=(v_r,\dots,v_s)$ hold the orthonormal
+eigenvectors of $A$ for the eigenvalues $\lambda_r,\dots,\lambda_s$, and
+$\hat V=(\hat v_r,\dots,\hat v_s)$ those of $\hat A=A+E$ for
+$\hat\lambda_r,\dots,\hat\lambda_s$. The block may contain repeated eigenvalues.
+The theorem bounds the principal angles between the two column spaces.
+
+\begin{theorem}[Davis--Kahan $\sin\theta$ theorem]\label{thm:ch13:dk}
+Let $\hat\lambda_0=+\infty$ and $\hat\lambda_{d+1}=-\infty$, and let
+\begin{equation}\label{eq:ch13:delta}
+\delta=\min\big\{\abs{\hat\lambda-\lambda}\ :\ \lambda\in[\lambda_s,\lambda_r],\ \
+\hat\lambda\in(-\infty,\hat\lambda_{s+1}]\cup[\hat\lambda_{r-1},\infty)\big\}.
+\end{equation}
+If $\delta>0$, then
+\begin{equation}\label{eq:ch13:dk}
+\norm{\sin\Theta(\hat V,V)}_F\le\frac{\norm{E}_F}{\delta},\qquad
+\norm{\sin\Theta(\hat V,V)}_2\le\frac{\norm{E}_2}{\delta}.
+\end{equation}
+\end{theorem}
+
+Davis and Kahan prove the bound for every unitarily invariant norm, which
+includes both of these \cite{daviskahan1970}. The form above, with the
+eigenvalue condition written as one number $\delta$, follows Yu, Wang and
+Samworth \cite{yuwangsamworth2015}. Read the hypothesis carefully. The number
+$\delta$ separates the \emph{true} eigenvalues of the block from the
+\emph{perturbed} eigenvalues outside it. To use the theorem one must already know
+something about the spectrum of $\hat A$. Statisticians usually know the true
+spectrum, or assume it, and want a bound that uses it alone. Weyl's inequality
+supplies one at the price of a factor of two.
+
+\begin{proposition}[Population-gap form]\label{prop:ch13:dkpop}
+Let $g=\min(\lambda_{r-1}-\lambda_r,\ \lambda_s-\lambda_{s+1})>0$, with
+$\lambda_0=+\infty$ and $\lambda_{d+1}=-\infty$. Then
+\begin{equation}\label{eq:ch13:dkpop}
+\norm{\sin\Theta(\hat V,V)}_2\le\frac{2\norm{E}_2}{g}.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+If $\norm{E}_2\ge g/2$ the right side is at least $1$, and no sine exceeds $1$.
+Otherwise Weyl's inequality gives $\hat\lambda_{r-1}\ge\lambda_{r-1}-\norm{E}_2$
+and $\hat\lambda_{s+1}\le\lambda_{s+1}+\norm{E}_2$, so
+$\delta\ge g-\norm{E}_2\ge g/2$. Insert this in \cref{eq:ch13:dk}.
+\end{proof}
+
+For the Frobenius norm the same idea, carried out more carefully, is the
+variant of Yu, Wang and Samworth \cite{yuwangsamworth2015},
+\begin{equation}\label{eq:ch13:yws}
+\norm{\sin\Theta(\hat V,V)}_F\le\frac{2\min\big(\sqrt{s-r+1}\,\norm{E}_2,\ \norm{E}_F\big)}{g}.
+\end{equation}
+Four remarks keep the theorem honest. The gap $g$ separates the block from the
+rest of the spectrum. Eigenvalues \emph{inside} the block may be equal, and the
+bound is then about the subspace, never about individual eigenvectors, which are
+not defined. The bounds are upper bounds and can be loose. They become vacuous
+once $\norm{E}_2$ reaches $g/2$, which says nothing about the eigenspace, not that
+it has been lost. And the conclusion is about $\sin\Theta$, so through
+\cref{eq:ch13:projid} it bounds the projector distance $\norm{\Pi-\hat\Pi}$ and the
+overlap deficit $1-o$.
+
+\begin{example}[A repeated eigenvalue inside the block]\label{ex:ch13:dk}
+Let $A=\diag(9,9,1)$ and $E=3(e_1e_3\T+e_3e_1\T)$, so $\norm{E}_2=3$ and
+$\norm{E}_F=3\sqrt2$. The top two-dimensional eigenspace of $A$ is the span of
+$e_1,e_2$. Its individual eigenvectors are not defined, since $9$ is repeated,
+and the eigengap to the rest is $g=9-1=8$. In $A+E$ the coordinates $1$ and $3$
+form the block $\begin{pmatrix}9&3\\3&1\end{pmatrix}$, with trace $10$ and
+determinant $0$, so eigenvalues $10$ and $0$ and top eigenvector
+$(3,1)\T/\sqrt{10}$. The eigenvalues of $A+E$ are $10$, $9$, $0$, each within
+$3$ of $9,9,1$. Its top eigenspace is spanned by $e_2$ and $(3,0,1)\T/\sqrt{10}$,
+and the principal cosines against $\operatorname{span}(e_1,e_2)$ are $1$ and
+$3/\sqrt{10}$. So $\sin^2\phi_2=0.1$, $\norm{\sin\Theta}_2=\norm{\sin\Theta}_F=0.3162$
+and $\phi_2=18.43^\circ$, which also follows from $\tan2\phi_2=6/8$ in
+\cref{eq:ch13:rot}. The overlap is $0.95$.
+
+The bounds rank as follows. In \cref{thm:ch13:dk} the block's true eigenvalues
+are $\{9\}$ and the nearest perturbed eigenvalue outside is $\hat\lambda_3=0$, so
+$\delta=9$ and the operator bound is $3/9=0.333$, close to the truth $0.316$. The
+Frobenius bound is $3\sqrt2/9=0.471$. The population-gap bound
+\cref{eq:ch13:dkpop} is $2\cdot3/8=0.75$, and \cref{eq:ch13:yws} gives
+$2\cdot3\sqrt2/8=1.06$, which says nothing. Knowing the perturbed spectrum buys
+a sharper bound. Not knowing it costs the factor of two and more.
+\end{example}
+
+\Cref{fig:ch13:dk} returns to the $2\times2$ family of \cref{eq:ch13:rot}. Since
+the angle depends only on $x=\varepsilon/g$, every gap collapses onto one curve.
+For this family $\delta=g/2+\sqrt{g^2/4+\varepsilon^2}$, so \cref{eq:ch13:dk}
+reads $\sin\theta\le x/(\tfrac12+\sqrt{\tfrac14+x^2})$. That bound follows the
+exact curve closely for small $x$ and stays below $1$. The population-gap bound
+$2x$ is twice as steep and is vacuous from $x=\tfrac12$ on.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=1.5, ymin=0, ymax=1.05,
+  xlabel={\small perturbation over gap, $\varepsilon/g$},
+  ylabel={\small $\sin\theta$}]
+\addplot[guide] coordinates {(0,1) (1.5,1)};
+\addplot[thick,pred,dashed] coordinates {(0,0) (0.05,0.1) (0.1,0.2) (0.15,0.3) (0.2,0.4) (0.25,0.5) (0.3,0.6) (0.35,0.7) (0.4,0.8) (0.45,0.9) (0.5,1)};
+\addplot[thick,porange] coordinates {(0,0) (0.05,0.04988) (0.1,0.09902) (0.15,0.1468) (0.2,0.1926) (0.25,0.2361) (0.3,0.277) (0.35,0.3152) (0.4,0.3508) (0.45,0.3837) (0.5,0.4142) (0.55,0.4424) (0.6,0.4684) (0.65,0.4924) (0.7,0.5146) (0.75,0.5352) (0.8,0.5542) (0.85,0.5719) (0.9,0.5884) (0.95,0.6037) (1,0.618) (1.05,0.6314) (1.1,0.6439) (1.15,0.6556) (1.2,0.6667) (1.25,0.677) (1.3,0.6868) (1.35,0.696) (1.4,0.7047) (1.45,0.713) (1.5,0.7208)};
+\addplot[thick,pblue] coordinates {(0,0) (0.05,0.04981) (0.1,0.09854) (0.15,0.1452) (0.2,0.1891) (0.25,0.2298) (0.3,0.2669) (0.35,0.3006) (0.4,0.331) (0.45,0.3583) (0.5,0.3827) (0.55,0.4046) (0.6,0.4242) (0.65,0.4418) (0.7,0.4576) (0.75,0.4719) (0.8,0.4848) (0.85,0.4965) (0.9,0.5071) (0.95,0.5168) (1,0.5257) (1.05,0.5339) (1.1,0.5414) (1.15,0.5483) (1.2,0.5547) (1.25,0.5606) (1.3,0.5661) (1.35,0.5713) (1.4,0.576) (1.45,0.5805) (1.5,0.5847)};
+\addplot[only marks, mark=*, mark size=1.6pt, pblue] coordinates {(0.2,0.1891) (0.5,0.3827) (1,0.5257) (0.04,0.0399) (0.1,0.09854) (0.2,0.1891) (0.6,0.4242) (0.01,0.009999) (0.025,0.02498) (0.05,0.04981) (0.15,0.1452)};
+\node[lbl,pred,anchor=south east] at (axis cs:0.37,0.76) {$2\varepsilon/g$};
+\node[lbl,porange,anchor=south east] at (axis cs:1.45,0.72) {Davis--Kahan with $\delta$};
+\node[lbl,pblue,anchor=north west] at (axis cs:0.9,0.49) {exact};
+\end{axis}
+\end{tikzpicture}
+\caption{For the two-by-two family the exact turn, the Davis--Kahan bound with the
+mixed gap $\delta$, and the population-gap bound $2\varepsilon/g$ all depend only
+on $\varepsilon/g$. The dots are eigenvector computations at gaps $0.1$, $0.5$ and
+$2$, and they lie on one curve.}
+\label{fig:ch13:dk}
+\end{figure}
+
+\inproject{\nolinkurl{geometric-observation/crucible/PREREG-OP3.md}, section ``The a-priori
+prediction'', converts the sampling error of the probe's operator into a subspace
+angle by ``Davis--Kahan'' in the form $\sin\Theta_r(\hat S_n)\le2\norm{\hat S_n-\E[\hat S]}_{\mathrm{op}}/\mathrm{gap}_r$,
+which is \cref{eq:ch13:dkpop}. \nolinkurl{geometric-observation/crucible/OT3-NOISY-THEOREM.md},
+Theorem~N2a, uses ``the Davis--Kahan theorem in the Yu--Wang--Samworth form'' to get
+$\E\norm{\sin\Theta_s}_2\le2\E\norm{\Xi}_2/\gamma_s$, and its verification note lists
+Davis--Kahan among the cited results that are hand-applied and not machine-checked.}
+
+\inproject{The same preregistration's shakedown records a lesson of the repeated-eigenvalue
+kind. The aggregate recovery of the single top direction stalled near $0.44$
+while the four-dimensional recovery climbed to $0.83$. The per-mode view showed
+the top planted direction recovered to $\cos\theta=1.00$ inside the subspace, with the
+estimator's ``internal ordering'' misplacing which direction ranked first.
+Subspaces separated by a gap are stable against perturbations small compared
+with that gap. The order of nearly equal eigenvalues inside them is not.}
+
+\buildson{\Cref{sec:ch13:weyl,sec:ch13:turn,sec:ch13:angles}.}
+\usedin{\Cref{sec:ch13:sample,sec:ch13:highdim}. \Cref{ch06}, where the probe's
+recovered read subspace is compared with the true one.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Sample covariance eigenvectors}
+\section{A sample covariance's eigenvectors approach the true ones at the rate of the sampling noise over the eigengap}\label{sec:ch13:sample}
+
+The perturbation that matters most in practice is estimation error. Draw
+$x_1,\dots,x_n$ independently from $\Normal(0,\Sigma)$, with the mean known to be
+$0$ to keep the algebra short, and form
+\begin{equation}\label{eq:ch13:samplecov}
+\hat\Sigma=\frac1n\sum_{k=1}^nx_kx_k\T,\qquad \E[\hat\Sigma]=\Sigma,\qquad E=\hat\Sigma-\Sigma .
+\end{equation}
+The estimate is unbiased, but every entry fluctuates. By Isserlis' theorem for
+Gaussian fourth moments \cite{isserlis1918},
+$\E[x_ix_jx_kx_l]=\Sigma_{ij}\Sigma_{kl}+\Sigma_{ik}\Sigma_{jl}+\Sigma_{il}\Sigma_{jk}$, so
+$\Var(x_ix_j)=\Sigma_{ii}\Sigma_{jj}+\Sigma_{ij}^2$. Averaging $n$ independent copies
+divides that by $n$, and summing over all entries gives the size of the whole
+perturbation,
+\begin{equation}\label{eq:ch13:frob}
+\E\norm{\hat\Sigma-\Sigma}_F^2=\frac{(\tr\Sigma)^2+\tr(\Sigma^2)}{n}.
+\end{equation}
+Combined with \cref{eq:ch13:yws} and Jensen's inequality
+$\E\norm{E}_F\le(\E\norm{E}_F^2)^{1/2}$, the top-$r$ eigenspace of $\hat\Sigma$ obeys
+\begin{equation}\label{eq:ch13:samplerate}
+\E\norm{\sin\Theta}_F\le\frac{2}{g}\sqrt{\frac{(\tr\Sigma)^2+\tr(\Sigma^2)}{n}} .
+\end{equation}
+The rate in $n$ is $n^{-1/2}$ and the constant is set by the eigengap. The bound is
+crude. Its numerator grows like $d$ for a covariance near the identity, while the
+error that actually reaches the top eigenvector is much smaller. The first-order
+formula \cref{eq:ch13:vecexp} shows why. In the eigenbasis of $\Sigma$ the
+coordinates are independent with variances $\lambda_j$, so the coupling
+$v_j\T Ev_1=\tfrac1n\sum_k(v_j\T x_k)(v_1\T x_k)$ has mean $0$ and variance
+$\lambda_j\lambda_1/n$. Each direction contributes its own noise over its own gap.
+To first order in $1/n$, which is accurate once every term below is small and
+$\lambda_1$ is simple,
+\begin{equation}\label{eq:ch13:samplefo}
+\E\sin^2\theta_1\ \approx\ \frac1n\sum_{j\ge2}\frac{\lambda_1\lambda_j}{(\lambda_1-\lambda_j)^2}.
+\end{equation}
+
+The eigenvalues have a bias of their own. The largest eigenvalue
+$\lambda_1(S)=\max_{\norm u=1}u\T Su$ is a maximum of linear functions of $S$ and
+so is convex. Jensen's inequality then gives
+$\E[\lambda_1(\hat\Sigma)]\ge\lambda_1(\E\hat\Sigma)=\lambda_1(\Sigma)$. On
+average the top sample eigenvalue overestimates the top population eigenvalue,
+by an amount that shrinks with $n$. A single sample can still fall below it. This is not in conflict with Weyl's inequality, which bounds
+the error by $\norm E_2$ and says nothing about its sign.
+
+\begin{example}[A spiked covariance in twenty dimensions]\label{ex:ch13:sample}
+Let $d=20$ and $\Sigma=\diag(1+g,1,\dots,1)$. For $g=2$ the numerator of
+\cref{eq:ch13:frob} is $(\tr\Sigma)^2+\tr\Sigma^2=22^2+(9+19)=512$, and
+\cref{eq:ch13:samplerate} gives $\E\sin\theta_1\le\sqrt{512/n}$, which is $0.800$
+at $n=800$ and $0.566$ at $n=1600$. The approximation \cref{eq:ch13:samplefo} has
+$19$ equal terms $\lambda_1\lambda_j/g^2=3/4$, so
+$\sin\theta_1\approx\sqrt{19\cdot3/n}/2$, which is $0.0944$ at $n=1600$ and
+$0.0667$ at $n=3200$. The simulation of \cref{fig:ch13:sample}, $200$ seeded
+repetitions per point, measures mean angles $0.0935$ and $0.0661$. For $g=0.5$
+the approximation gives $\sqrt{19\cdot1.5/3200}/0.5=0.1887$ at $n=3200$, and the
+simulation gives $0.1852$. The ratio between the two gaps is $2.80$ in the
+simulation and $(\sqrt{1.5}/0.5)/(\sqrt3/2)=2.83$ by \cref{eq:ch13:samplefo}, not
+the ratio $4$ of the gaps, because the larger spike also carries more noise. At
+$n=25$ the mean top sample eigenvalue is $3.32$ when $\lambda_1=1.5$ and $4.24$
+when $\lambda_1=3$, both well above the truth.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmode=log, ymode=log, xmin=20, xmax=4000, ymin=0.05, ymax=2.2,
+  log basis x=10, xlabel={\small sample size $n$},
+  ylabel={\small mean $\sin\theta_1$}]
+\addplot[guide] coordinates {(20,1) (4000,1)};
+\addplot[thick,pred,dashed] coordinates {(25,1) (50,1) (100,1) (200,1) (400,1) (800,1) (1600,0.8793) (3200,0.6259)};
+\addplot[thick,pblue,dashed] coordinates {(25,1) (50,1) (100,1) (200,0.779) (400,0.5572) (800,0.3875) (1600,0.268) (3200,0.1905)};
+\addplot[thick,pred,mark=*,mark size=1.4pt] coordinates {(25,0.9126) (50,0.8953) (100,0.83) (200,0.7095) (400,0.5185) (800,0.3626) (1600,0.2614) (3200,0.1852)};
+\addplot[thick,pblue,mark=*,mark size=1.4pt] coordinates {(25,0.6481) (50,0.4996) (100,0.3601) (200,0.2616) (400,0.1834) (800,0.132) (1600,0.09352) (3200,0.0661)};
+\node[lbl,pred,anchor=north] at (axis cs:60,0.80) {gap $0.5$};
+\node[lbl,pblue,anchor=north east] at (axis cs:380,0.17) {gap $2$};
+\node[lbl,pblue,anchor=south west] at (axis cs:22,1.04) {bound, gap $2$};
+\node[lbl,pred,anchor=south east] at (axis cs:3900,1.04) {bound, gap $0.5$};
+\end{axis}
+\end{tikzpicture}
+\caption{The top sample eigenvector of a spiked covariance in $d=20$ approaches
+the true one at the rate $n^{-1/2}$, the slope of the right half of each curve,
+and the smaller gap pays the larger angle at every $n$. The dashed curves are the
+population-gap Davis--Kahan bound with the measured noise norm, in the colour of
+their gap. Both are capped at $1$, and both lie above the
+measured angles.}
+\label{fig:ch13:sample}
+\end{figure}
+
+At small $n$ with gap $0.5$ the mean sine is about $0.9$, near the value
+$0.97$ that a uniformly random direction in $\R^{20}$ gives. The sample has not yet separated the spike from the
+bulk, and Davis--Kahan, whose bound is still capped at $1$ there, agrees that
+nothing is guaranteed. The bound \cref{eq:ch13:dkpop} with the measured
+$\E\norm E_2$ becomes informative at $n=1600$ for gap $0.5$ and at $n=200$ for gap
+$2$.
+
+Sharper statements about $\norm{\hat\Sigma-\Sigma}_2$ come from matrix analogues of
+the scalar tail bounds of \cref{ch12}. For Gaussian data with $n\ge d$ they put its
+typical size at most at the order of $\norm\Sigma_2\sqrt{d/n}$, and at that
+order when $\Sigma$ is close to a multiple of $I$. This chapter does not prove
+them and uses the simulation instead.
+
+\inproject{\nolinkurl{geometric-observation/crucible/PREREG-OP3.md} applies this section
+to the blind probe. The probe averages $n$ sketched gradient outer products whose
+expectation is $(1+1/k)S+(\tr S/k)I$. That matrix is an affine function $aS+bI$ of
+the population operator, and $(aS+bI)v=(a\lambda+b)v$ whenever $Sv=\lambda v$, so it
+has exactly the eigenvectors of $S$. The a-priori prediction, an aggregate angle
+decaying as $m^{-1/2}$, was refuted by the shakedown before any bar sealed. Recovery
+was ordered down the spectrum. The corrected law applies the noise-over-gap rule mode
+by mode, $\sin^2\theta_i\propto1/(n\,w_i^4)$ with the eigengap proportional to $w_i^2$,
+which is \cref{eq:ch13:samplefo} in that setting. \nolinkurl{geometric-observation/crucible/PREREG-OP3B.md}
+sealed corrected bars, and \nolinkurl{geometric-observation/crucible/OP3B-SEAL-NOTES.md}
+records the grading on fresh seeds. The collapse exponent and the recovery level
+passed, the front-advance bar failed, and the campaign is recorded as ``FAIL as
+sealed'' with the owed prediction still live.}
+
+\buildson{\Cref{sec:ch13:turn,sec:ch13:dk}. \Cref{ch02}, Gaussian vectors. Primer~S
+of \emph{Data Mining as Observation}, the variance of a sample mean.}
+\usedin{\Cref{sec:ch13:highdim}. \Cref{ch06}, the sample size a probe needs.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Sample spectra in high dimension}
+\section{In high dimension a sample covariance's eigenvalues spread out even when the truth is isotropic}\label{sec:ch13:highdim}
+
+\Cref{sec:ch13:sample} held $d$ fixed and let $n$ grow. Data in the programme
+often has $d$ in the hundreds or thousands and $n$ not much larger. Then even the
+eigenvalues, the stable half of the story, look wrong in a systematic way.
+
+Take $\Sigma=I$, so every population eigenvalue is $1$ and every direction is an
+eigenvector. Setting $\Sigma=I$ in \cref{eq:ch13:frob} gives
+$\E\norm{\hat\Sigma-I}_F^2=(d^2+d)/n$. The cross term in
+$\norm{\hat\Sigma}_F^2=\norm{I}_F^2+2\tr(\hat\Sigma-I)+\norm{\hat\Sigma-I}_F^2$ has mean
+$0$, so the first two moments of the $d$ sample eigenvalues $\hat\lambda_i$ are exact,
+\begin{equation}\label{eq:ch13:spread}
+\E\Big[\frac1d\sum_i\hat\lambda_i\Big]=1,\qquad
+\E\Big[\frac1d\sum_i\hat\lambda_i^2\Big]=1+\frac{d+1}{n}.
+\end{equation}
+The sample eigenvalues average to the truth, but their spread around it is
+about $(d+1)/n$ in variance. It vanishes only when $n\gg d$. With $d/n$ fixed, the
+sample spectrum stays spread however much data arrives.
+
+The limiting shape of that spread is a classical result. As $d$ and $n$ grow with
+$d/n\to\gamma\in(0,1]$, the histogram of the eigenvalues of $\hat\Sigma$ converges to
+the Marchenko--Pastur law \cite{marchenkopastur1967}, with density
+\begin{equation}\label{eq:ch13:mp}
+f_\gamma(x)=\frac{\sqrt{(b-x)(x-a)}}{2\pi\gamma x}\ \ \text{on }[a,b],\qquad
+a=(1-\sqrt\gamma)^2,\qquad b=(1+\sqrt\gamma)^2 .
+\end{equation}
+Its mean is $1$ and its variance is $\gamma$, matching \cref{eq:ch13:spread} to
+first order. This book uses the law only as a named fact. Its proof needs
+tools that are not developed here.
+
+\begin{example}[Two hundred dimensions, eight hundred samples]\label{ex:ch13:mp}
+With $d=200$ and $n=800$, $\gamma=\tfrac14$, so the law predicts eigenvalues
+between $a=(1-\tfrac12)^2=0.25$ and $b=(1+\tfrac12)^2=2.25$, and
+\cref{eq:ch13:spread} predicts a mean square of $1+201/800=1.2513$. One seeded
+draw, shown in \cref{fig:ch13:mp}, has smallest eigenvalue $0.265$, largest
+$2.297$, mean $1.011$ and mean square $1.280$. Averaged over $100$ draws the mean
+square is within $0.3$ percent of $1.2513$. The sample covariance has condition
+number $8.66$, although the true covariance has condition number $1$.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=2.6, ymin=0, ymax=1.0,
+  xlabel={\small eigenvalue of $\hat\Sigma$}, ylabel={\small density}]
+\addplot[const plot, fill=plight, draw=pblue, thick] coordinates {(0.00,0.000) (0.10,0.000) (0.20,0.200) (0.30,0.800) (0.40,0.750) (0.50,0.900) (0.60,0.850) (0.70,0.650) (0.80,0.750) (0.90,0.600) (1.00,0.550) (1.10,0.600) (1.20,0.500) (1.30,0.400) (1.40,0.500) (1.50,0.300) (1.60,0.400) (1.70,0.300) (1.80,0.300) (1.90,0.250) (2.00,0.250) (2.10,0.050) (2.20,0.100) (2.30,0.000) (2.40,0.000) (2.50,0.000) (2.60,0.000)} \closedcycle;
+\addplot[thick,porange] coordinates {(0.2500,0.0000) (0.3000,0.6626) (0.3500,0.7928) (0.4000,0.8384) (0.4500,0.8488) (0.5000,0.8422) (0.5500,0.8266) (0.6000,0.8063) (0.6500,0.7835) (0.7000,0.7595) (0.7500,0.7351) (0.8000,0.7106) (0.8500,0.6864) (0.9000,0.6626) (0.9500,0.6393) (1.0000,0.6164) (1.0500,0.5941) (1.1000,0.5722) (1.1500,0.5508) (1.2000,0.5299) (1.2500,0.5093) (1.3000,0.4891) (1.3500,0.4692) (1.4000,0.4496) (1.4500,0.4302) (1.5000,0.4109) (1.5500,0.3918) (1.6000,0.3727) (1.6500,0.3536) (1.7000,0.3344) (1.7500,0.3150) (1.8000,0.2954) (1.8500,0.2753) (1.9000,0.2546) (1.9500,0.2331) (2.0000,0.2105) (2.0500,0.1863) (2.1000,0.1597) (2.1500,0.1291) (2.2000,0.0904) (2.2500,0.0000)};
+\addplot[thick,pgreen] coordinates {(1,0) (1,1.0)};
+\addplot[guide] coordinates {(0.25,0) (0.25,1.0)};
+\addplot[guide] coordinates {(2.25,0) (2.25,1.0)};
+\node[lbl,pgreen,anchor=west] at (axis cs:1.02,0.93) {true eigenvalues, all $1$};
+\node[lbl,porange,anchor=west] at (axis cs:1.55,0.47) {Marchenko--Pastur};
+\node[lbl,pgray,anchor=south] at (axis cs:2.25,0.12) {$b$};
+\node[lbl,pgray,anchor=south] at (axis cs:0.25,0.88) {$a$};
+\end{axis}
+\end{tikzpicture}
+\caption{All $200$ population eigenvalues equal $1$, yet the sample covariance from
+$800$ draws spreads its eigenvalues from $0.27$ to $2.30$. The histogram follows
+the Marchenko--Pastur density for $\gamma=d/n=\tfrac14$, whose edges $a$ and $b$ are
+dashed.}
+\label{fig:ch13:mp}
+\end{figure}
+
+Three consequences follow for the programme's estimates. First, a top sample
+eigenvalue near $2.25$ is what noise alone produces at $\gamma=\tfrac14$. By
+itself it is not evidence of a direction the data prefers. Second, the top sample
+eigenvector of isotropic data points in an arbitrary direction, and Davis--Kahan
+agrees, since with $g=0$ it guarantees nothing. Davis--Kahan guarantees that a
+spike in the true covariance is located once its eigengap is large compared with
+$\norm{\hat\Sigma-\Sigma}_2$, which here is about $b-1=1.25$. That condition is
+sufficient, not necessary. With $\Sigma=\diag(2,1,\dots,1)$, a gap of $1$, the
+same $d=200$ and $n=800$ give $\norm{\hat\Sigma-\Sigma}_2\approx1.23$, yet over
+$50$ seeded draws the top sample eigenvector has mean squared cosine $0.61$ with
+$e_1$, against $1/200$ for a random direction. Third, whitening by $\hat\Sigma^{-1/2}$, as in
+\cref{ch01}, stretches the direction of the smallest sample eigenvalue by
+$1/\sqrt{0.265}\approx1.94$ relative to the truth, so whitened quantities inherit the
+error of the least reliable eigenvalues. Why high-dimensional samples behave so
+differently from low-dimensional intuition, including the concentration that
+narrows \cref{fig:ch13:chance}, is the subject of \cref{ch11}.
+
+\inproject{\nolinkurl{geometric-observation/crucible/OT3-NOISY-THEOREM.md}, Theorem~N2a,
+bounds the reading noise by $\E\norm{\Xi}_2\le C\sigma\sqrt d$, so the error floor of the
+recovered eigenspace grows like $\sigma\sqrt d/\gamma_s$. The $\sqrt d$ is the same
+dimensional growth of a noise matrix's operator norm that spreads the spectrum in
+\cref{fig:ch13:mp}.}
+
+\buildson{\Cref{sec:ch13:weyl,sec:ch13:sample}. \Cref{ch01}, the condition number
+and whitening.}
+\usedin{\Cref{ch11}, concentration in high dimension. \Cref{ch07}, where a
+principal-component rotation estimated from data precedes quantization.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{The power method}
+\section{The power method converges at the ratio of the two largest eigenvalues}\label{sec:ch13:power}
+
+The rest of the chapter is about computing spectra. Primer~L, section~L.7,
+introduces power iteration on the matrix with rows $(2,1)$ and $(1,2)$. Here it
+gets its convergence rate, which is another appearance of the eigengap.
+
+\begin{theorem}[Rate of the power method]\label{thm:ch13:power}
+Let $A$ be symmetric with $\abs{\lambda_1}>\abs{\lambda_2}\ge\dots\ge\abs{\lambda_d}$
+(eigenvalues ordered by magnitude here), and let $x_0$ have $c_1=v_1\T x_0\ne0$. The
+iterates $x_k=A^kx_0/\norm{A^kx_0}$ make an angle $\theta_k$ with $v_1$ that satisfies
+\begin{equation}\label{eq:ch13:power}
+\tan\theta_k\le\Big(\frac{\abs{\lambda_2}}{\abs{\lambda_1}}\Big)^k\tan\theta_0 .
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Write $x_0=\sum_jc_jv_j$. Then $A^kx_0=\sum_jc_j\lambda_j^kv_j$, and
+$\tan\theta_k$ is the length of the part outside $v_1$ over the length along it,
+\[
+\tan\theta_k=\frac{\big(\sum_{j\ge2}c_j^2\lambda_j^{2k}\big)^{1/2}}{\abs{c_1}\abs{\lambda_1}^k}
+\le\Big(\frac{\abs{\lambda_2}}{\abs{\lambda_1}}\Big)^k\frac{\big(\sum_{j\ge2}c_j^2\big)^{1/2}}{\abs{c_1}} .\qedhere
+\]
+\end{proof}
+
+The eigenvalue estimate converges faster. For $\lambda_1>0$ the largest
+eigenvalue, the Rayleigh quotient of the iterate satisfies
+\begin{equation}\label{eq:ch13:rq}
+\lambda_1-x_k\T Ax_k=\frac{\sum_{j\ge2}(\lambda_1-\lambda_j)c_j^2\lambda_j^{2k}}{\sum_jc_j^2\lambda_j^{2k}}
+\le(\lambda_1-\lambda_d)\tan^2\theta_k ,
+\end{equation}
+so its error falls with the \emph{square} of the ratio per step. By
+\cref{eq:ch13:power}, the number of steps that reduces $\tan\theta$ by a factor
+$10^{-p}$ is at most $p\ln10/\ln(\abs{\lambda_1}/\abs{\lambda_2})$, rounded up.
+The bound is attained when the start has no component beyond $v_1$ and $v_2$.
+A ratio of $0.9$ then needs $132$ steps for $p=6$, and a ratio of $0.99$ needs $1375$.
+A small relative eigengap makes the power method slow, as it made the eigenvector
+sensitive in \cref{sec:ch13:turn}.
+
+\begin{example}[Primer L's iteration, with its rate]\label{ex:ch13:power}
+For $A=\begin{pmatrix}2&1\\1&2\end{pmatrix}$, with $\lambda_1=3$, $\lambda_2=1$,
+$v_1=(1,1)\T/\sqrt2$ and $v_2=(1,-1)\T/\sqrt2$, the start $e_1$ has equal
+components along $v_1$ and $v_2$, so $\tan\theta_0=1$. Exactly,
+$A^ke_1=\tfrac12\big(3^k(1,1)\T+(1,-1)\T\big)$, which gives Primer~L's iterates
+$(2,1)$, $(5,4)$ and $(14,13)$. Their angles to $v_1$ have tangents
+$\tfrac13$, $\tfrac19$ and $\tfrac1{27}$, so \cref{eq:ch13:power} holds with
+equality. The Rayleigh quotient error is $2/(3^{2k}+1)$, which is
+$2/730=0.00274$ at $k=3$, while the angle there still has tangent $0.037$.
+\end{example}
+
+The theorem needs a gap between $\abs{\lambda_1}$ and $\abs{\lambda_2}$. Blum,
+Hopcroft and Kannan point out that the method is useful without one
+\cite{blumhopcroftkannan2020}, provided the goal is a direction with a large
+Rayleigh quotient rather than a particular eigenvector. For positive semidefinite
+$A$, let $W$ be the span of the eigenvectors with $\lambda_j\ge(1-\epsilon)\lambda_1$
+and let the unit start $x_0$ have $\abs{v_1\T x_0}\ge\eta>0$. The proof of \cref{thm:ch13:power}, with the
+sum split at $W$ instead of at $v_1$, gives
+\begin{equation}\label{eq:ch13:gapfree}
+\norm{(I-\Pi_W)x_k}\le\frac{(1-\epsilon)^k}{\eta}\le\frac{e^{-\epsilon k}}{\eta}.
+\end{equation}
+For $\epsilon=0.1$ and $\eta=0.05$ the right side drops below $0.1$ once
+$k\ge\ln\big(1/(\epsilon\eta)\big)/\epsilon$, that is after $53$ steps, however close
+$\lambda_2$ is to $\lambda_1$. A random Gaussian start has $\eta$ of order
+$1/\sqrt d$ with probability bounded away from zero, as Blum, Hopcroft and Kannan
+show, and \cref{ch11} explains why random directions behave this way.
+
+To find the second eigenvector, \emph{deflate}. Once $\lambda_1$ and $v_1$ are known,
+the matrix $A-\lambda_1v_1v_1\T$ has the same eigenvectors with $\lambda_1$ replaced
+by $0$, and when $\abs{\lambda_2}>\abs{\lambda_3}$ the power method applied to it
+converges to $v_2$ at the rate $\abs{\lambda_3}/\abs{\lambda_2}$. Errors propagate. If the computed $\hat v_1$ is off by
+an angle $\theta$, the deflated matrix differs from the exact one by
+$\lambda_1(v_1v_1\T-\hat v_1\hat v_1\T)$, whose operator norm is $\lambda_1\sin\theta$
+by \cref{eq:ch13:projid}, and Weyl's inequality then allows each later eigenvalue
+to be off by that much. Computing many eigenvectors one at a time this way
+accumulates error, which is why practical codes iterate on a block. Subspace
+iteration repeats $X\leftarrow\operatorname{orth}(AX)$ on a $d\times r$ block and,
+when $\abs{\lambda_r}>\abs{\lambda_{r+1}}$ and the starting block is not deficient
+in the top-$r$ eigenspace, converges to it at the rate $\abs{\lambda_{r+1}}/\abs{\lambda_r}$
+\cite{golubvanloan2013}.
+
+\begin{example}[Deflation in three dimensions]\label{ex:ch13:deflate}
+The matrix $A$ with rows $(3,1,0)$, $(1,3,0)$, $(0,0,1)$ has eigenvalues $4,2,1$
+and top eigenvector $v_1=(1,1,0)\T/\sqrt2$. Deflating gives
+\[
+B=A-4v_1v_1\T=\begin{pmatrix}1&-1&0\\-1&1&0\\0&0&1\end{pmatrix},
+\]
+with eigenvalues $2,1,0$. From $x_0=(1,0,1)\T$ the iterates are
+$Bx_0=(1,-1,1)\T$, $B^2x_0=(2,-2,1)\T$ and in general
+$B^kx_0=(2^{k-1},-2^{k-1},1)\T$, which turns toward $v_2=(1,-1,0)\T/\sqrt2$ with
+$\tan\theta_k=1/(\sqrt2\,2^{k-1})$, halving each step as the ratio $\tfrac12$ predicts.
+\end{example}
+
+\Cref{fig:ch13:power} runs the power method on a $40\times40$ symmetric matrix
+with $\lambda_1=1$, $\lambda_2=\rho$ and the remaining $38$ eigenvalues spread
+evenly from $0.6\rho$ down to $0$, from one random start. After a few steps,
+during which the small eigenvalues die out quickly, each curve settles onto the
+slope $\log_{10}\rho$ of \cref{eq:ch13:power}. The fitted slopes agree with
+$\log_{10}\rho$ to within $0.01$.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=60, ymin=-8.2, ymax=1.5,
+  xlabel={\small iteration $k$}, ylabel={\small $\log_{10}\tan\theta_k$}]
+\addplot[guide] coordinates {(0,0.972) (27.9,-7.43)};
+\addplot[guide] coordinates {(0,0.972) (60,-4.84)};
+\addplot[guide] coordinates {(0,0.972) (60,-0.365)};
+\addplot[thick,pblue,mark=*,mark size=1.1pt] coordinates {(0,0.972) (2,-0.309) (4,-1.307) (6,-2.044) (8,-2.666) (10,-3.271) (12,-3.873) (14,-4.475) (16,-5.077) (18,-5.679) (20,-6.281) (22,-6.892) (24,-7.526) (26,-7.827)};
+\addplot[thick,porange,mark=*,mark size=1.1pt] coordinates {(0,0.972) (2,0.100) (4,-0.490) (6,-0.819) (8,-1.033) (10,-1.230) (12,-1.424) (14,-1.618) (16,-1.811) (18,-2.005) (20,-2.199) (22,-2.393) (24,-2.587) (26,-2.780) (28,-2.974) (30,-3.168) (32,-3.362) (34,-3.556) (36,-3.750) (38,-3.943) (40,-4.137) (42,-4.331) (44,-4.525) (46,-4.719) (48,-4.912) (50,-5.106) (52,-5.300) (54,-5.494) (56,-5.688) (58,-5.882) (60,-6.075)};
+\addplot[thick,pred,mark=*,mark size=1.1pt] coordinates {(0,0.972) (2,0.249) (4,-0.192) (6,-0.372) (8,-0.436) (10,-0.483) (12,-0.528) (14,-0.573) (16,-0.617) (18,-0.662) (20,-0.706) (22,-0.751) (24,-0.795) (26,-0.840) (28,-0.885) (30,-0.929) (32,-0.974) (34,-1.018) (36,-1.063) (38,-1.107) (40,-1.152) (42,-1.196) (44,-1.241) (46,-1.286) (48,-1.330) (50,-1.375) (52,-1.419) (54,-1.464) (56,-1.508) (58,-1.553) (60,-1.597)};
+\node[lbl,pblue,anchor=north east] at (axis cs:18,-6.2) {$\rho=0.5$};
+\node[lbl,porange,anchor=north east] at (axis cs:44,-4.7) {$\rho=0.8$};
+\node[lbl,pred,anchor=north east] at (axis cs:50,-1.6) {$\rho=0.95$};
+\end{axis}
+\end{tikzpicture}
+\caption{The power method's error falls geometrically at the ratio $\rho=\lambda_2/\lambda_1$.
+The dashed lines are the bound $\rho^k\tan\theta_0$ of the theorem, and each
+measured curve runs below its line and parallel to it after the first few steps.
+At $\rho=0.5$ the curve stops after $26$ steps near $10^{-8}$, where an angle
+computed from its cosine reaches the limit of double precision.}
+\label{fig:ch13:power}
+\end{figure}
+
+\inproject{\nolinkurl{observation-theory-campaigns/analysis/aicsi/aicsi.py}, function
+\texttt{top\_rsv}, computes the consumer's precoder, the top right singular vector of a
+channel matrix $H$, by alternating multiplication by $H$ and its adjoint, which is the
+power method on $H^{*}H$, for a fixed $\texttt{PI\_ITERS}=6$ steps from a uniform start.
+By \cref{eq:ch13:power} six steps are accurate only when the channel's top two singular
+values are well separated, which the file's comment describes as ``a dominant singular
+direction''.}
+
+\buildson{Primer~L, section~L.7 (power iteration). \Cref{sec:ch13:weyl,sec:ch13:angles}.}
+\usedin{\Cref{sec:ch13:large}. \Cref{ch05}, eigenvectors of graph Laplacians.}
+
+% ---------------------------------------------------------------------------
+\ompnexthead{Krylov and randomized methods}
+\section{For large matrices, Krylov methods and random sketches find the top of the spectrum from a few products}\label{sec:ch13:large}
+
+A dense eigendecomposition of a $d\times d$ matrix costs on the order of $d^3$
+operations. For a covariance of a few hundred dimensions that is nothing. For a
+graph Laplacian on $32{,}000$ points, or a matrix that is only available as a
+routine computing $x\mapsto Ax$, it is out of reach. Two families of methods
+avoid it. This section gives the intuition only. Golub and Van Loan
+\cite{golubvanloan2013} and Halko, Martinsson and Tropp \cite{halkomartinssontropp2011}
+give the analysis.
+
+The power method throws information away. After $k$ steps it keeps only $A^kx_0$,
+although it has computed $x_0,Ax_0,\dots,A^{k-1}x_0$ along the way. The span of
+those vectors is the \emph{Krylov subspace}
+\begin{equation}\label{eq:ch13:krylov}
+\mathcal K_k(A,x_0)=\operatorname{span}\{x_0,Ax_0,\dots,A^{k-1}x_0\}=\{p(A)x_0:\ p\ \text{a polynomial of degree}<k\}.
+\end{equation}
+The Lanczos method builds an orthonormal basis $Q_k$ of $\mathcal K_k$ one vector at
+a time, using only products with $A$, and takes the eigenvalues of the small
+$k\times k$ matrix $Q_k\T AQ_k$ as approximations, called \emph{Ritz values}. The
+power method's iterate is one element of the Krylov subspace, $p(A)x_0$ with
+$p(t)=t^{k-1}$. Lanczos picks the best element, so in exact arithmetic its top
+Ritz value is never worse than the power method's Rayleigh quotient after the
+same number of products, and with a small relative gap it is usually far better, because a
+well-chosen polynomial separates $\lambda_1$ from $\lambda_2$ much faster than
+$t^{k-1}$ does \cite{golubvanloan2013}. In floating point the Lanczos vectors lose
+orthogonality, and production codes add reorthogonalization or restarts.
+
+\begin{example}[One product, two answers]\label{ex:ch13:krylov}
+Let $A=\diag(3,2,1)$ and $x_0=(1,1,1)\T$. One product gives $Ax_0=(3,2,1)\T$. The
+power method reports its Rayleigh quotient $(27+8+1)/(9+4+1)=36/14=2.5714$. The
+Krylov subspace $\mathcal K_2$ is spanned by $(1,1,1)\T$ and $(3,2,1)\T$, or
+equally by $(1,1,1)\T$ and $(1,0,-1)\T$. With $K$ holding those two vectors,
+$K\T K=\diag(3,2)$ and $K\T AK=\begin{pmatrix}6&2\\2&4\end{pmatrix}$, so the Ritz
+values solve $\det(K\T AK-\mu K\T K)=6\mu^2-24\mu+20=0$, a pencil of the kind
+\cref{ch01} treats. The larger root is $2+\sqrt6/3=2.8165$. A second power step,
+$A^2x_0=(9,4,1)\T$, reaches only $276/98=2.8163$. One product used well beats
+two products used the power method's way.
+\end{example}
+
+Randomized methods take a different route to the same place. To approximate the
+top-$k$ part of an $m\times n$ matrix $A$, multiply it by a random Gaussian
+matrix $\Omega$ with $k+p$ columns, where $p$ is a small oversampling such as $5$
+or $10$, and orthonormalize,
+\begin{equation}\label{eq:ch13:rsvd}
+Y=(AA\T)^qA\,\Omega,\qquad Y=QR,\qquad B=Q\T A,\qquad A\approx Q\,B=Q\,(\tilde U\Sigma_{\!s}\tilde V\T).
+\end{equation}
+The columns of $Y$ are random combinations of the columns of $A$, so they land
+mostly in its dominant left singular subspace. The small matrix $B$ has only
+$k+p$ rows and its singular value decomposition is cheap. The $q$ extra
+multiplications by $AA\T$ are the power method again, applied to a whole block.
+They raise the singular values to the power $2q+1$, which sharpens the
+separation between the kept and the discarded part when the spectrum decays
+slowly. Halko, Martinsson and Tropp prove that the expected error is close to the
+best possible, $\sigma_{k+1}$ by the Eckart--Young theorem of Primer~L, section~L.8,
+with a factor that depends on $k$, $p$, $q$ and the tail of the spectrum
+\cite{halkomartinssontropp2011}.
+
+\begin{example}[A sketch that is exact]\label{ex:ch13:sketch}
+Let $A$ have rows $(1,1)$, $(2,2)$, $(2,2)$, a rank-one matrix
+$(1,2,2)\T(1,1)$ with singular value $3\sqrt2=4.243$. A sketch with the single
+column $\Omega=(1,0)\T$ gives $Y=A\Omega=(1,2,2)\T$, so $Q=(1,2,2)\T/3$, and
+$QQ\T A=A$ exactly. Whenever $A$ has rank $k$ and $\Omega$ has $k$ columns in
+general position, $Y$ spans the range of $A$ and the sketch loses nothing. The
+randomness is there so that ``general position'' holds with probability one
+without knowing $A$.
+\end{example}
+
+\Cref{fig:ch13:rsvd} measures the error of a rank-$10$ randomized approximation
+of a $300\times200$ matrix, relative to the optimum $\sigma_{11}$, for two
+spectra. When the singular values decay fast, as $0.7^{j-1}$, the plain sketch with
+$q=0$ is already within $3$ percent of optimal. When they decay slowly, as
+$j^{-1/2}$, the plain sketch is $1.79$ times the optimum, and one or two power
+steps bring it to $1.09$ and then $1.02$.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=-0.2, xmax=3.2, ymin=0.9, ymax=1.9, xtick={0,1,2,3},
+  xlabel={\small power steps $q$}, ylabel={\small error $/\ \sigma_{k+1}$}]
+\addplot[guide] coordinates {(-0.2,1) (3.2,1)};
+\addplot[thick,porange,mark=*,mark size=1.6pt] coordinates {(0,1.7947) (1,1.0924) (2,1.0171) (3,1.0128)};
+\addplot[thick,pblue,mark=*,mark size=1.6pt] coordinates {(0,1.0211) (1,1.0000) (2,1.0000) (3,1.0000)};
+\node[lbl,porange,anchor=south west] at (axis cs:0.25,1.6) {slow decay $j^{-1/2}$};
+\node[lbl,pblue,anchor=north] at (axis cs:2,0.98) {fast decay $0.7^{j-1}$};
+\node[lbl,pgray,anchor=south east] at (axis cs:3.15,1.0) {optimum};
+\end{axis}
+\end{tikzpicture}
+\caption{A randomized rank-ten approximation with five oversampling columns is
+nearly optimal at once for a fast-decaying spectrum. For a slowly decaying one it
+needs one or two power steps. Each point is the mean over $20$ seeded sketches.}
+\label{fig:ch13:rsvd}
+\end{figure}
+
+\inproject{\nolinkurl{geometric-observation/experiments/go4_budget_inversion.py} computes
+the bottom eigenpairs of a normalized graph Laplacian on up to $32{,}000$ points with a
+preconditioned block iterative eigensolver (LOBPCG) started from a seeded random block.
+The notes in \nolinkurl{geometric-observation/experiments/GO4-budget-inversion-NOTES.md}
+record that it was checked against shift-invert \texttt{eigsh} to $\max\abs{\Delta\lambda}=3\times10^{-15}$
+at $N=4000$, and that the measurement uses quantities ``invariant to sign /
+degenerate-subspace rotation''. That is the lesson of \cref{sec:ch13:dk} built into the
+code. Eigenvectors inside a block of nearly equal eigenvalues are not stable, so the
+measurement depends only on the subspace.}
+
+\buildson{\Cref{sec:ch13:power}. Primer~L, section~L.8 (Eckart--Young). \Cref{ch01},
+generalized eigenproblems.}
+\usedin{\Cref{ch05}, spectral embeddings of graphs by their low Laplacian
+eigenvectors.}
+
+\let\sectionmark\ompSavedSectionmarkxiii
+\section*{Exercises}
+
+\subsection*{Warm-up}
+
+\begin{exercise}\label{exr:ch13:weyl}
+Let $A=\diag(5,2)$ and $E=\begin{pmatrix}0&0.3\\0.3&0\end{pmatrix}$. Use Weyl's
+inequality to give intervals for the eigenvalues of $A+E$, then compute them
+exactly.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch13:lines}
+Two lines through the origin of $\R^2$ meet at angle $\phi$. Write their overlap
+and the operator-norm distance of their projectors in terms of $\phi$, and compare
+the overlap with chance.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch13:projfrob}
+Show that $\norm{\Pi_R-\Pi_{\hat R}}_F^2=2r(1-o)$ for $r$-dimensional subspaces with
+overlap $o$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch13:iters}
+How many power-method steps reduce $\tan\theta$ by a factor of $10^{6}$ when
+$\abs{\lambda_2/\lambda_1}=0.9$? When it is $0.99$?
+\end{exercise}
+
+\subsection*{By hand}
+
+\begin{exercise}\label{exr:ch13:second}
+For $A=\diag(4,1)$ and $E=\begin{pmatrix}0&0.3\\0.3&0\end{pmatrix}$, compare the
+exact top eigenvalue of $A+E$ with the first- and second-order terms of
+\cref{eq:ch13:eigexp}, and the exact turn of the top eigenvector with the
+first-order value $\varepsilon/g$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch13:dk}
+For $A=\diag(2,1)$ and $E=\begin{pmatrix}0&0.5\\0.5&0\end{pmatrix}$, compute the
+exact $\sin\theta$ of the top eigenvector, the Davis--Kahan bound with $\delta$
+from \cref{eq:ch13:delta}, and the population-gap bound \cref{eq:ch13:dkpop}.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch13:angles3}
+In $\R^3$, find the principal angles, the overlap and $\norm{\Pi-\hat\Pi}_F^2$ for
+$\mathcal R=\operatorname{span}(e_1,e_2)$ and
+$\hat{\mathcal R}=\operatorname{span}\big((1,0,1)\T,e_2\big)$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch13:deflate}
+For the deflated matrix $B$ of Example~\ref{ex:ch13:deflate} and the start
+$x_0=(1,0,1)\T$, prove $B^kx_0=(2^{k-1},-2^{k-1},1)\T$ by induction and find
+$\tan\theta_k$ against $v_2$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch13:chance}
+Prove $\E[\Pi_{\hat R}]=(r/d)I$ for the span $\hat{\mathcal R}$ of $r$ independent
+$\Normal(0,I_d)$ vectors, and deduce the chance overlap $r/d$.
+\end{exercise}
+
+\subsection*{Programming}
+
+\begin{exercise}\label{exr:ch13:simsample}
+Reproduce \cref{fig:ch13:sample} for $d=20$ and $\Sigma=\diag(3,1,\dots,1)$. Fit the
+log-log slope of the mean $\sin\theta_1$ over $n\ge400$, and compare each point
+with \cref{eq:ch13:samplefo}.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch13:mpcode}
+For $\Sigma=I_{100}$ and $n\in\{200,1000\}$, compute the extreme eigenvalues of
+$\hat\Sigma$ and compare them with the Marchenko--Pastur edges. Check
+\cref{eq:ch13:spread} by averaging over $50$ draws.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch13:rsvdcode}
+Implement \cref{eq:ch13:rsvd} and reproduce \cref{fig:ch13:rsvd}. Then set $p=0$
+and report how the error at $q=0$ changes.
+\end{exercise}
+
+% checks/ch13_examples.py on Atlas: 187/187 PASS

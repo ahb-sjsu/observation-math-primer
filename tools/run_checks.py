@@ -14,9 +14,12 @@ import sys
 
 helper = sys.argv[1]
 scripts = sorted(glob.glob("checks/ch[0-9][0-9]_examples.py"))
+# Helpers some scripts import (e.g. ch07_extra.py), and the chapter sources that
+# some scripts read to compare pasted figure coordinates against computed ones.
+extras = sorted(set(glob.glob("checks/*.py")) - set(scripts)) + sorted(glob.glob("chapters/ch[0-9][0-9]_*.tex"))
 subprocess.run([sys.executable, helper, "run", "mkdir -p ~/omp-checks"], check=True)
 args = []
-for s in scripts:
+for s in scripts + extras:
     args += [os.path.abspath(s).replace("\\", "/"), "/home/claude/omp-checks/" + os.path.basename(s)]
 subprocess.run([sys.executable, helper, "put"] + args, check=True, stdout=subprocess.DEVNULL)
 cmd = "cd ~/omp-checks && for f in ch[0-9][0-9]_examples.py; do printf '%s ' $f; " \

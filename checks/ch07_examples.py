@@ -183,7 +183,7 @@ Qm = Qm @ np.diag(np.sign(np.diag(Rm)))
 x16 = np.zeros(16); x16[0] = 3.0; x16[5] = 1.0
 y16 = Qm @ x16
 check("d=16 rotation preserves energy 10", close(np.sum(y16 ** 2), 10, 1e-9))
-check("d=16: max coordinate energy drops from 9 to 3.03, mean 10/16 = 0.625", close((y16 ** 2).max(), 3.03, 0.005) and close(np.mean(y16 ** 2), 0.625, 1e-9))
+check("d=16: max coordinate energy drops from 9 to 3.025, mean 10/16 = 0.625", close((y16 ** 2).max(), 3.025, 0.001) and close(np.mean(y16 ** 2), 0.625, 1e-9))
 coords("fig rotation d16 before", [(i + 1, v_ ** 2) for i, v_ in enumerate(x16)], "{:.3f}")
 coords("fig rotation d16 after", [(i + 1, v_ ** 2) for i, v_ in enumerate(y16)], "{:.3f}")
 print("FIGDATA d16 after max energy {:.3f}".format((y16 ** 2).max()))
@@ -288,7 +288,96 @@ r1 = [1, 2, 3, 4, 5]; r2 = [2, 1, 3, 5, 4]
 dd = sum(1 for i in range(5) for j in range(i + 1, 5) if (r1[i] - r1[j]) * (r2[i] - r2[j]) < 0)
 check("ex 7.7: two discordant pairs of 10, tau = 0.6", dd == 2 and close((10 - 2 * dd) / 10, 0.6, 1e-12))
 check("ex 7.8: 2-bit Gaussian Lloyd-Max: alpha = 1 - 0.1175 = 0.8825", close(1 - m2, 0.8825, 1e-4))
-check("ex 7.9: weighted allocation (p*var) = (4*1, 1*4) equal products -> equal bits", True)
+check("ex 7.3: 1/0.678 = 1.47, about 1.5", close(1 / 0.678, 1.475, 1e-3))
+check("ex 7.6: integer split (2,0) gives 9/16 + 1 = 1.5625", close(9 / 16 + 1, 1.5625, 1e-12))
+check("ex 7.8: rescaling factor 1/0.8825 = 1.133", close(1 / (1 - m2), 1.133, 1e-3))
+check("ex 7.9: 1/2 ln(pi e/6) = 0.176 nats = 0.254 bits", close(0.5 * math.log(math.pi * math.e / 6), 0.176, 1e-3) and close(0.5 * math.log(math.pi * math.e / 6) / math.log(2), 0.2546, 1e-4))
+
+# added: overload, consumer allocation, distance bias, certificate
+check("overload probability at +-4 sigma: 2(1-Phi(4)) = 6.3e-5", close(2 * (1 - Phi(4)), 6.3e-5, 1e-6))
+bC = hr_alloc([1.0, 0.25], 4)
+check("consumer allocation: products (1, 0.25), B=4: bits 2.5, 1.5", np.allclose(bC, [2.5, 1.5]))
+dC = 1 * 4 ** -2.5 + 0.25 * 4 ** -1.5
+check("consumer allocation: consumer distortion 0.0625", close(dC, 0.0625, 1e-12))
+dR = 1 * 4 ** (-1 / 3) + 0.25
+check("reconstruction allocation seen by that consumer: 2^(-2/3) + 0.25 = 0.880, 14x", close(dR, 0.880, 1e-3) and close(dR / dC, 14.08, 0.01))
+check("reconstruction allocation spends 7/3 + 4/3 = 11/3 bits on unread coordinates", close(7 / 3 + 4 / 3, 11 / 3, 1e-12))
+# squared-distance bias: E||q-x||^2 = ||q-c||^2 + cell MSE (Monte Carlo, 1-bit Gaussian cell x>0)
+rng = np.random.default_rng(11)
+xs = np.abs(rng.standard_normal(1_000_000))
+cpos = math.sqrt(2 / math.pi)
+qv1 = 0.3
+lhs = np.mean((qv1 - xs) ** 2)
+rhs = (qv1 - cpos) ** 2 + np.mean((xs - cpos) ** 2)
+check("ADC distance bias identity holds (Monte Carlo, half-Gaussian cell)", close(lhs, rhs, 5e-3) and close(np.mean((xs - cpos) ** 2), 1 - 2 / math.pi, 3e-3))
+check("certificate example: 1 - 2*0.06645 = 0.8671 (mu hat 0.0664 displayed rounded)", close(1 - 2 * 0.06645, 0.8671, 1e-4) and close(1 - 2 * 0.0664, 0.8672, 1e-4))
+
+check("Beta marginal: d=3 density flat; E y1^2 = 1/d for d=3 (MC)", True if close(np.mean((lambda Z: (Z / np.linalg.norm(Z, axis=1, keepdims=True))[:, 0] ** 2)(np.random.default_rng(5).standard_normal((400000, 3)))), 1 / 3, 2e-3) else False)
+Z3 = np.random.default_rng(6).standard_normal((400000, 3)); Z3 /= np.linalg.norm(Z3, axis=1, keepdims=True)
+hist, _ = np.histogram(Z3[:, 0], bins=10, range=(-1, 1))
+check("Beta marginal: d=3 coordinate uniform on [-1,1] (histogram within 2%)", np.abs(hist / hist.mean() - 1).max() < 0.02)
+check("ADC cost: exact 128e6 vs table 32768 + 8e6 lookups (16x fewer); storage 512 MB -> 8 MB (64x)",
+      128 * 10 ** 6 == 1.28e8 and 256 * 128 == 32768 and 1.28e8 / 8e6 == 16 and 10 ** 6 * 512 / 1e6 == 512 and 10 ** 6 * 8 / 1e6 == 8)
+
+# ---------------------------------------------------------------------------
+# Added sections: IVF, ADC vs SDC, KV cache, certificate sampling, end-to-end
+# (toys in ch07_extra.py, seeded)
+# ---------------------------------------------------------------------------
+import ch07_extra as ex
+
+Xc, Qc = ex.corpus()
+check("toy corpus: 4000 vectors, 200 queries, d=32", Xc.shape == (4000, 32) and Qc.shape == (200, 32))
+ivf = ex.ivf_curve(Xc, Qc)
+coords("fig IVF (nprobe, scanned fraction, recall@10)", ivf, "{:.3f}")
+want = {1: (0.037, 0.908), 2: (0.067, 0.993), 4: (0.131, 1.0), 8: (0.261, 1.0), 16: (0.506, 1.0), 32: (1.0, 1.0)}
+check("IVF toy: recall@10 0.908, 0.993, 1.0 at nprobe 1, 2, 4 scanning 3.7%, 6.7%, 13.1%",
+      all(close(f, want[n][0], 1e-3) and close(r, want[n][1], 1e-3) for n, f, r in ivf))
+e2e = ex.end_to_end(Xc, Qc)
+coords("fig E2E (kind, bytes, recall, recall rerank5)", [(0 if k_ == "scalar" else 1, b_, r_, rr_) for k_, b_, r_, rr_ in e2e], "{:.4f}")
+want2 = [("scalar", 4, 0.1035, 0.3875), ("scalar", 8, 0.3935, 0.8465), ("scalar", 16, 0.762, 0.998),
+         ("pq", 4, 0.3685, 0.8885), ("pq", 8, 0.5205, 0.9595), ("pq", 16, 0.781, 0.999)]
+check("end-to-end recall@10 (single pass, rerank of 5k) matches the printed table",
+      all(a[0] == b[0] and a[1] == b[1] and close(a[2], b[2], 1e-4) and close(a[3], b[3], 1e-4) for a, b in zip(e2e, want2)))
+check("end-to-end: 32-d float64 vs float32 bytes = 128; 8 B code is 16x smaller", 32 * 4 == 128 and 128 / 8 == 16)
+adc, sdc, s2 = ex.adc_vs_sdc(Xc, Qc, np.random.default_rng(3))
+check("ADC vs SDC: mean squared score error 8.46 vs 15.72, mean squared score 84.4",
+      close(adc, 8.459, 1e-3) and close(sdc, 15.723, 1e-3) and close(s2, 84.43, 1e-2))
+kv = ex.kv_toy()
+check("KV toy: per-token MSE 0.0322 vs per-channel 0.0077 (4.2x)", close(kv["mse_t"], 0.0322, 1e-4) and close(kv["mse_c"], 0.0077, 1e-4) and close(kv["mse_t"] / kv["mse_c"], 4.20, 0.01))
+check("KV toy: on the 15 ordinary channels 0.0343 vs 0.0080", close(kv["mse_t_small"], 0.0343, 1e-4) and close(kv["mse_c_small"], 0.0080, 1e-4))
+check("KV toy: attention KL 0.0430 (per token) vs 0.0057 (per channel), 7.6x",
+      close(kv["kl_t"], 0.0430, 1e-4) and close(kv["kl_c"], 0.0057, 1e-4) and close(kv["kl_t"] / kv["kl_c"], 7.59, 0.01))
+vm, vf, sp2, iso = ex.value_avg_toy()
+check("values: E||sum p e||^2 = sigma^2 d sum p^2 = 0.00648 (MC 0.00649); sum p^2 = 0.0405 vs unaveraged 0.16",
+      close(vf, 0.00648, 1e-5) and close(vm, vf, 1e-4) and close(sp2, 0.0405, 1e-4) and close(iso, 0.16, 1e-12))
+check("values: attention divides the value error by 1/sum p^2 = 24.7", close(1 / sp2, 24.7, 0.05))
+# certificate sampling: Hoeffding margin for m independent comparisons
+m_ = 10 ** 4
+check("Hoeffding margin sqrt(ln(1/0.05)/(2*10^4)) = 0.012 (illustrative m)", close(math.sqrt(math.log(20) / (2 * m_)), 0.0122, 1e-4))
+
+# Hypothesis-discipline additions (scope of the 6 dB rule, Hadamard marginal, Panter-Dite approach)
+check("6 dB rule fails at low rate: Lloyd-Max Gaussian gains 9.30 - 4.40 = 4.90 dB from 1 to 2 bits, not 6.02",
+      close(-db(m2) + db(m1), 4.90, 1e-2) and -db(m2) + db(m1) < 6.0)
+gaps = [db(m) - db(4.0 ** (-bb)) for bb, m in zip(range(1, 5), [m1, m2, m3, m4])]
+check("Lloyd-Max gap to R(D) rises 1.62, 2.74, 3.44, 3.86 dB toward Panter-Dite 4.35",
+      all(close(g, v, 1e-2) for g, v in zip(gaps, [1.62, 2.74, 3.44, 3.86])) and all(np.diff(gaps) > 0) and gaps[-1] < db(pd))
+def _had(n):
+    H = np.array([[1.0]])
+    while H.shape[0] < n:
+        H = np.block([[H, H], [H, -H]])
+    return H
+
+
+_rng = np.random.default_rng(11)
+_d = 16
+_Hn = _had(_d) / math.sqrt(_d)
+_D = np.diag(_rng.choice([-1.0, 1.0], _d))
+_e1 = np.zeros(_d); _e1[0] = 1.0
+_y = _Hn @ _D @ _e1
+check("randomized Hadamard sends e1 to coordinates all equal to +-1/sqrt(d) (two-point law, not Beta)",
+      np.allclose(np.abs(_y), 1 / math.sqrt(_d)))
+_p = np.random.default_rng(12).dirichlet(np.ones(64))
+check("a common value error delta passes through attention unchanged: sum p_s delta = delta", close(_p.sum(), 1.0, 1e-12))
 
 n_ok = sum(results)
 print(f"{n_ok}/{len(results)} PASS")

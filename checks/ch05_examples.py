@@ -363,6 +363,122 @@ lhs6 = np.trace(Yr.T @ Lu @ Yr)
 rhs6 = 0.5 * sum(A6[i, j] * np.sum((Yr[i] - Yr[j]) ** 2) for i in range(6) for j in range(6))
 check("tr(Y^T L Y) = 1/2 sum w_ij ||y_i - y_j||^2", close(lhs6, rhs6, 1e-9))
 
+# ---------------------------------------------------------------- figure data (printed as FIGDATA)
+def fmt(pts):
+    return " ".join(f"({x:.3f},{y:.3f})" for x, y in pts)
+# Fig sphere: rotate about z by -45 deg so p, q are symmetric; view elevation 20 deg
+el = np.radians(70)
+def proj(v):
+    c, s_ = np.cos(-np.pi / 4), np.sin(-np.pi / 4)
+    x, y, z = c * v[0] - s_ * v[1], s_ * v[0] + c * v[1], v[2]
+    return (y, -x * np.sin(el) + z * np.cos(el))
+th0 = np.pi / 3
+pn = np.array([np.sin(th0), 0, np.cos(th0)]); qn = np.array([0, np.sin(th0), np.cos(th0)])
+lat_full = [proj([np.sin(th0) * np.cos(f), np.sin(th0) * np.sin(f), np.cos(th0)]) for f in np.linspace(0, 2 * np.pi, 73)]
+lat_arc = [proj([np.sin(th0) * np.cos(f), np.sin(th0) * np.sin(f), np.cos(th0)]) for f in np.linspace(0, np.pi / 2, 31)]
+om = np.arccos(pn @ qn)
+gc_arc = [proj((np.sin((1 - t_) * om) * pn + np.sin(t_ * om) * qn) / np.sin(om)) for t_ in np.linspace(0, 1, 31)]
+equator = [proj([np.cos(f), np.sin(f), 0]) for f in np.linspace(0, 2 * np.pi, 73)]
+check("fig sphere: slerp points have unit norm", all(close(np.linalg.norm((np.sin((1 - t_) * om) * pn + np.sin(t_ * om) * qn) / np.sin(om)), 1, 1e-12) for t_ in np.linspace(0, 1, 11)))
+check("fig sphere: great-circle arc is above latitude arc (higher z at midpoint)",
+      ((pn + qn) / np.linalg.norm(pn + qn))[2] > np.cos(th0))
+print("FIGDATA sphere_p:", fmt([proj(pn)]), "q:", fmt([proj(qn)]), "north:", fmt([proj([0, 0, 1])]))
+print("FIGDATA sphere_lat_full:", fmt(lat_full))
+print("FIGDATA sphere_lat_arc:", fmt(lat_arc))
+print("FIGDATA sphere_gc_arc:", fmt(gc_arc))
+print("FIGDATA sphere_equator:", fmt(equator))
+# Fig Poincare: geodesic arcs through pairs, and metric unit-ball circles of radius eps (1-r^2)/2
+def geo_arc(pz, qz, n=40):
+    pz, qz = complex(*pz), complex(*qz)
+    # hyperbolic geodesic: map pz to 0 by Mobius, straight line to image of qz, map back
+    m = lambda z, a: (z - a) / (1 - np.conj(a) * z)
+    mi = lambda w, a: (w + a) / (1 + np.conj(a) * w)
+    w = m(qz, pz)
+    pts = [mi(w * t_, pz) for t_ in np.linspace(0, 1, n)]
+    return [(z.real, z.imag) for z in pts]
+pairs = [((0.9, 0), (0, 0.9)), ((-0.6, 0.6), (-0.7, -0.5)), ((0.2, -0.85), (0.8, -0.4)), ((-0.9, 0), (0.9, 0))]
+for k_, (pa, pb) in enumerate(pairs):
+    arc = geo_arc(pa, pb)
+    # length along arc equals d_H
+    L = sum(dpd(arc[i], arc[i + 1]) for i in range(len(arc) - 1))
+    check(f"fig poincare arc {k_}: polyline length matches d_H", close(L, dpd(pa, pb), 2e-2 * dpd(pa, pb)))
+    print(f"FIGDATA poincare_arc{k_}:", fmt(arc))
+arc0 = geo_arc((0.9, 0), (0, 0.9))
+check("fig poincare: Mobius arc agrees with circle centre (k,k) radius R", all(close((x - k) ** 2 + (y - k) ** 2, R2, 1e-6) for x, y in arc0))
+balls = []
+for r_ in (0.0, 0.35, 0.6, 0.8, 0.92):
+    nang = 1 if r_ == 0 else (6 if r_ < 0.5 else 12)
+    for j in range(nang):
+        a_ = 2 * np.pi * j / nang + (0.3 if r_ > 0.7 else 0)
+        balls.append((r_ * np.cos(a_), r_ * np.sin(a_), 0.07 * (1 - r_ ** 2)))
+check("fig poincare: unit-ball radius scales as (1-r^2)", close(balls[0][2] * (1 - 0.8 ** 2), [b for b in balls if close(np.hypot(b[0], b[1]), 0.8, 1e-9)][0][2], 1e-12))
+print("FIGDATA poincare_balls:", " ".join(f"{x:.3f}/{y:.3f}/{rb:.4f}" for x, y, rb in balls))
+# Fig Fisher: exact KL contours for N(mu, sigma) around grid points, eps = 0.03
+def kl_ns(m0, s0, m1, s1):
+    return np.log(s1 / s0) + (s0 ** 2 + (m0 - m1) ** 2) / (2 * s1 ** 2) - 0.5
+def contour(m0, s0, eps=0.03, n=48):
+    out = []
+    for a_ in np.linspace(0, 2 * np.pi, n + 1):
+        lo, hi = 0.0, 0.9 * s0
+        for _ in range(60):
+            mid_ = (lo + hi) / 2
+            if kl_ns(m0, s0, m0 + mid_ * np.cos(a_), s0 + mid_ * np.sin(a_)) < eps:
+                lo = mid_
+            else:
+                hi = mid_
+        out.append((m0 + lo * np.cos(a_), s0 + lo * np.sin(a_)))
+    return out
+for m0 in (-1.0, 0.0, 1.0):
+    for s0 in (0.5, 1.0, 1.6):
+        print(f"FIGDATA fisher_{m0:+.0f}_{s0}:", fmt(contour(m0, s0)))
+# quadratic ellipse at (0,1): 1/2 [dm^2/s^2 + 2 ds^2/s^2] = eps -> semi-axes sqrt(2 eps) s and sqrt(eps) s
+check("fig fisher: Fisher metric of N(mu,sigma) is diag(1/s^2, 2/s^2)",
+      close(kl_ns(0, 1, 1e-3, 1) / (0.5 * 1e-6), 1, 1e-3) and close(kl_ns(0, 1, 0, 1 + 1e-3) / (0.5 * 2e-6), 1, 1e-2))
+check("fig fisher: quadratic semi-axes at (0,1), eps .03: 0.245 (mu), 0.173 (sigma)",
+      close(np.sqrt(2 * 0.03), 0.2449) and close(np.sqrt(0.03), 0.1732))
+cc = contour(0.0, 1.0)
+check("fig fisher: exact contour at (0,1) extends ~0.245 along mu", close(max(x for x, y in cc), 0.245, 0.01))
+check("fig fisher: contour at sigma=1.6 is 1.6x wider in mu than at sigma=1",
+      close(max(x for x, y in contour(0.0, 1.6)) / max(x for x, y in cc), 1.6, 0.02))
+# Fig SPD: covariance ellipse semi-axes along AI and Euclidean paths from I to diag(4,1/4)
+for t_ in (0, 0.25, 0.5, 0.75, 1):
+    ai = (2 ** t_, 2 ** -t_); eu = (np.sqrt(1 + 3 * t_), np.sqrt(1 - 0.75 * t_))
+    print(f"FIGDATA spd t={t_}: AI {ai[0]:.3f} {ai[1]:.3f} det {np.prod(ai)**2:.3f} | EU {eu[0]:.3f} {eu[1]:.3f} det {(np.prod(eu))**2:.3f}")
+check("fig spd: AI path det stays 1", all(close((2 ** t_ * 2 ** -t_) ** 2, 1, 1e-12) for t_ in (0, .25, .5, .75, 1)))
+check("fig spd: Euclidean midpoint det = 2.5*0.625 = 1.5625? no: (1+1.5)(1-0.375)=1.5625",
+      close((1 + 3 * 0.5) * (1 - 0.75 * 0.5), 1.5625, 1e-12))
+check("fig spd: AI path is geodesic (d(I,S(t)) = t d(I,S2))",
+      all(close(d_ai(I2, np.diag([4 ** t_, 4 ** -t_])), t_ * d_ai(I2, S2), 1e-9) for t_ in (0.25, 0.5, 0.75)))
+# Fig ring graph C12: scrambled layout and eigenmap
+n12 = 12
+A12 = np.zeros((n12, n12))
+for i in range(n12):
+    A12[i, (i + 1) % n12] = A12[(i + 1) % n12, i] = 1
+L12 = np.eye(n12) - A12 / 2
+w12, U12 = np.linalg.eigh(L12)
+check("fig ring: smallest nonzero eigenvalue of C12 is 1-cos(30deg) = 0.134, multiplicity 2",
+      close(w12[1], 1 - np.cos(np.pi / 6), 1e-9) and close(w12[2], w12[1], 1e-9) and close(w12[1], 0.134))
+emb = np.stack([np.cos(2 * np.pi * np.arange(n12) / n12), np.sin(2 * np.pi * np.arange(n12) / n12)], 1)
+check("fig ring: cos/sin columns lie in that eigenspace", np.allclose(L12 @ emb, w12[1] * emb))
+rs = np.random.default_rng(7)
+scr = rs.uniform(-1, 1, size=(n12, 2))
+print("FIGDATA ring_scrambled:", fmt(scr))
+print("FIGDATA ring_embed:", fmt(emb))
+
+# hypothesis audit: a zero Jacobian does not make a finite step invisible
+Cq = lambda x: x[0] ** 2
+Jq0 = np.array([2 * 0.0, 0.0])
+check("kernel is first order: C=x1^2 has J=0 at origin, step (0.1,0) changes C by 0.01",
+      np.allclose(Jq0, 0) and close(Cq((0.1, 0.0)) - Cq((0.0, 0.0)), 0.01, 1e-12))
+# hypothesis audit: on C6 the degree formula 1/d_i+1/d_j = 1 for every pair, resistances vary
+A6 = np.zeros((6, 6))
+for i in range(6):
+    A6[i, (i + 1) % 6] = A6[(i + 1) % 6, i] = 1
+L6p = np.linalg.pinv(np.diag(A6.sum(1)) - A6)
+R6 = [L6p[0, 0] + L6p[k, k] - 2 * L6p[0, k] for k in (1, 2, 3)]
+check("C6: degree formula predicts 1, resistances are 5/6, 4/3, 3/2",
+      close(1 / 2 + 1 / 2, 1, 1e-12) and np.allclose(R6, [5 / 6, 4 / 3, 3 / 2], atol=1e-9))
+
 npass = sum(RESULTS)
 print(f"{npass}/{len(RESULTS)} PASS")
 sys.exit(0 if npass == len(RESULTS) else 1)

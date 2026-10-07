@@ -1,10 +1,10 @@
 % Answers to selected exercises, chapter 02.
 
-\paragraph{Exercise 2.1}
+\paragraph{Exercise~\ref{exr:ch02:var}}
 With $u=(1,-1)\T$, $u\T\Sigma u=1+1-2\cdot0.5=1$. With $u=(2,1)\T$,
 $u\T\Sigma u=4+1+2\cdot2\cdot0.5=7$.
 
-\paragraph{Exercise 2.2}
+\paragraph{Exercise~\ref{exr:ch02:notjoint}}
 For any $t$, $\Pr[y\le t]=\tfrac12\Pr[x\le t]+\tfrac12\Pr[-x\le t]=\Pr[x\le t]$,
 because $-x$ has the same distribution as $x$. So $y\sim\Normal(0,1)$. The
 covariance is $\E[xy]=\E[s]\,\E[x^2]=0$. But $\abs{y}=\abs{x}$ always, so
@@ -13,20 +13,20 @@ is positive, and the two are not independent. There is no contradiction,
 because $(x,y)$ is not jointly Gaussian. The combination $x+y$ equals $0$ with
 probability $\tfrac12$, which no normal variable does.
 
-\paragraph{Exercise 2.3}
+\paragraph{Exercise~\ref{exr:ch02:mahal}}
 $r^2=2^2/4+1^2/1=2$, and by \cref{eq:ch02:chi2} the ellipse through the point
 contains probability $1-e^{-1}\approx0.6321$.
 
-\paragraph{Exercise 2.4}
+\paragraph{Exercise~\ref{exr:ch02:orth}}
 Write $e=x-\hat x_{\mathrm L}$ and $\hat x_{\mathrm L}=\mu_x+K(y-\mu_y)$. Then
 $\E[e\,\hat x_{\mathrm L}\T]=\E[e]\mu_x\T+\E[e(y-\mu_y)\T]K\T=0$, since both
 expectations vanish by \cref{eq:ch02:orth}.
 
-\paragraph{Exercise 2.5}
+\paragraph{Exercise~\ref{exr:ch02:cond}}
 $K=1/2$, so $\E[x_1\mid x_2=1]=\tfrac12$ and $\Var(x_1\mid x_2)=3-\tfrac12=\tfrac52$.
 The answer is $\Normal(\tfrac12,\tfrac52)$.
 
-\paragraph{Exercise 2.6}
+\paragraph{Exercise~\ref{exr:ch02:static}}
 Step one has $\Sigma_1^-=1$, $S_1=2$, $K_1=\tfrac12$, $m_1=\tfrac12$ and
 $\Sigma_1=\tfrac12$. Step two has $\Sigma_2^-=\tfrac12$, $S_2=\tfrac32$,
 $K_2=\tfrac13$, $m_2=\tfrac12+\tfrac13(0-\tfrac12)=\tfrac13$ and
@@ -35,14 +35,14 @@ sensor variance, so the prior mean counts as one more reading. The estimate is
 the average of $0$, $1$ and $0$, which is $\tfrac13$, with variance $\tfrac13$
 as for an average of three readings of unit variance.
 
-\paragraph{Exercise 2.7}
+\paragraph{Exercise~\ref{exr:ch02:steady}}
 At steady state $\Sigma^-=\Sigma+q$ and $\Sigma=\Sigma^-r/(\Sigma^-+r)$. Hence
 $(\Sigma^--q)(\Sigma^-+r)=\Sigma^-r$, which simplifies to
 $(\Sigma^-)^2-q\Sigma^--qr=0$. For $q=2$, $r=1$ the positive root is
 $\Sigma^-=1+\sqrt3\approx2.732$, and $\Sigma=\Sigma^--q=\sqrt3-1\approx0.732$.
-With $q=1$, $r=2$ the same equation gives $\Sigma^-=2$, as in \cref{ex:ch02:kalman}.
+With $q=1$, $r=2$ the same equation gives $\Sigma^-=2$, as in Example~\ref{ex:ch02:kalman}.
 
-\paragraph{Exercise 2.8}
+\paragraph{Exercise~\ref{exr:ch02:crb}}
 For $\theta$, the information is $n/\sigma^2=2$ and the bound is $\tfrac12$.
 For $v=\sigma^2$ with $\theta$ known, one reading has log-likelihood
 $-\tfrac12\log v-(y-\theta)^2/(2v)$ plus a constant, whose second derivative has
@@ -50,6 +50,6 @@ expectation $-1/(2v^2)$. So $\mathcal I_n=n/(2v^2)=4/8=\tfrac12$ and the bound
 is $2$. The estimator $\tfrac1n\sum_i(y_i-\theta)^2$ is unbiased with variance
 $2v^2/n=2$, so it attains the bound.
 
-\paragraph{Exercise 2.9}
+\paragraph{Exercise~\ref{exr:ch02:mi}}
 From covariances, $\tfrac12\log(\Sigma_1^-/\Sigma_1)=\tfrac12\log\big(5\big/\tfrac{10}7\big)=\tfrac12\log3.5\approx0.6264$
 nats. From the innovation, $\tfrac12\log(S_1/R)=\tfrac12\log(7/2)$, the same.

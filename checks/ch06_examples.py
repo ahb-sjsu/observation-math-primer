@@ -287,13 +287,18 @@ Sc = capped_wf([1.0, 1.0], [1.0, 1.0], 2.5)
 check("two obs: Sigma_circ = diag(1,1) (trace constraint slack)", np.allclose(Sc, [1, 1]))
 Lb = 0.5 * np.log(np.linalg.det(S2b) / np.prod(Sc))
 check("two obs: L = 1/2 ln 1.5 = 0.203 nats; total = R1 = 0.490 + 0.203", close(Lb, 0.203, 1e-3) and close(R2b + Lb, R1, 1e-9))
-# orthogonal observers: L = R1(D1)
+# orthogonal observers inside the example, Sigma_x = diag(4,1): L = 1/2 ln(4/D1) = R1(D1)
 D1, D2 = 0.25, 0.5
-S1o = sigma_star(I2, np.diag([1.0, 0.0]), D1)
-S2o = sigma_star(I2, np.diag([0.0, 1.0]), D2)
+Sx41 = np.diag([4.0, 1.0])
+S1o = sigma_star(Sx41, np.diag([1.0, 0.0]), D1)
+S2o = sigma_star(Sx41, np.diag([0.0, 1.0]), D2)
+check("two obs orthogonal: Sigma1* = diag(D1,1), Sigma2* = diag(4,D2)",
+      np.allclose(S1o, np.diag([D1, 1.0]), atol=1e-9) and np.allclose(S2o, np.diag([4.0, D2]), atol=1e-9))
+check("two obs orthogonal: optima do not nest", np.linalg.eigvalsh(S1o - S2o).min() < -1e-9)
 Scirc = np.diag([D1, D2])
 Lo = 0.5 * np.log(np.linalg.det(S2o) / np.linalg.det(Scirc))
-check("two obs orthogonal: L = 1/2 ln(1/D1) = R1(D1)", close(Lo, 0.5 * np.log(1 / D1), 1e-6))
+R1o = 0.5 * np.log(np.linalg.det(Sx41) / np.linalg.det(S1o))
+check("two obs orthogonal: L = 1/2 ln(4/D1) = R1(D1)", close(Lo, 0.5 * np.log(4 / D1), 1e-6) and close(Lo, R1o, 1e-6))
 
 # ---------------------------------------------------------------------------
 # Section 8: coupling (Paper IV counterexample)
@@ -378,6 +383,116 @@ R_I = lambda D: rate_nats([1, 1], D)[0]
 check("exercise 6.6: with P = I the excess R_I(D/3) - R_I(D) = ln 3 at D = 1 (both modes active for D < 2)",
       close(R_I(1 / 3) - R_I(1.0), np.log(3), 1e-6) and close(R_I(1.9 / 3) - R_I(1.9), np.log(3), 1e-6))
 check("exercise 6.9: O spends nothing on e2 below 1/2 log2(9/4) = 0.585 bits", close(0.5 * np.log2(9 / 4), 0.585, 1e-3))
+
+# ---------------------------------------------------------------------------
+# Figure data (printed as FIGDATA lines and checked)
+# ---------------------------------------------------------------------------
+def coords(name, pts, fmt="{:.4g}"):
+    print("FIGDATA " + name + ": " + " ".join("(" + ",".join(fmt.format(v) for v in p) + ")" for p in pts))
+
+
+# read operator vs signal ellipse: std of x along u = sqrt(2.5)
+check("fig read-vs-signal: std along u = sqrt(2.5) = 1.581", close(np.sqrt(u @ Sx @ u), 1.581, 1e-3))
+# flip bars
+coords("fig flip bars recon (O,R)", [(1, 2.0), (2, 4.25)])
+coords("fig flip bars consumer (O,R)", [(1, 1.0), (2, 0.25)])
+
+
+# rate needed to reach consumer distortion D (Sigma = diag(4,1), consumer reads e2)
+def rate_O_bits(Dc):
+    # reconstruction-optimal water level theta; consumer distortion min(1, theta)
+    th = Dc
+    return 0.5 * np.log2(4 / th) + 0.5 * np.log2(1 / th)
+
+
+Ds = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+rc = [(D_, 0.5 * np.log2(1 / D_)) for D_ in Ds]
+ro = [(D_, rate_O_bits(D_)) for D_ in Ds]
+coords("fig RC consumer-aware (D, bits)", rc, "{:.3f}")
+coords("fig RC reconstruction-optimal (D, bits)", ro, "{:.3f}")
+check("fig RC: O needs log2(2/D) bits, e.g. 1 bit at D=1 and 2 bits at D=0.5", close(rate_O_bits(1.0), 1.0, 1e-12) and close(rate_O_bits(0.5), 2.0, 1e-12))
+check("fig RC: consumer-aware needs 0 bits at D=1 and 0.5 bits at D=0.5", close(0.5 * np.log2(1 / 1.0), 0, 1e-12) and close(0.5 * np.log2(1 / 0.5), 0.5, 1e-12))
+
+
+# distortion-rate curves for mismatch figure (rates in nats)
+def dist_at_rate(gammas, R):
+    g = np.array(gammas, float)
+    lo, hi = 1e-12, g.max()
+    for _ in range(200):
+        th = np.sqrt(lo * hi)
+        r = 0.5 * np.sum(np.log(np.maximum(g / th, 1.0)))
+        if r > R:
+            lo = th
+        else:
+            hi = th
+    th = np.sqrt(lo * hi)
+    return np.minimum(g, th)
+
+
+Rs = [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+com, ora, omi = [], [], []
+for R_ in Rs:
+    e = dist_at_rate([1, 1], R_)          # coder water-fills Phat = I
+    com.append((R_, 1 * e[0] + 2 * e[1]))  # true P = diag(1,2)
+    eo = dist_at_rate([1, 2], R_)         # oracle for P = diag(1,2) (gamma = p_k since Sigma = I)
+    ora.append((R_, eo.sum()))
+    omi.append((R_, 1 + np.exp(-2 * R_)))  # Phat = diag(1,0), P = I
+coords("fig mismatch commission true distortion", com, "{:.3f}")
+coords("fig mismatch oracle P=diag(1,2)", ora, "{:.3f}")
+coords("fig mismatch omission true distortion", omi, "{:.3f}")
+check("fig mismatch: commission curve is 3 e^{-R} for R > 0", all(close(d_, 3 * np.exp(-r_), 1e-6) for r_, d_ in com))
+check("fig mismatch: commission curve stays within factor 2 of the oracle and both go to 0", all(o_ <= c_ + 1e-9 for (_, o_), (_, c_) in zip(ora, com)) and com[-1][1] < 0.06)
+check("fig mismatch: omission curve tends to the floor 1", close(omi[-1][1], 1.0, 1e-3) and all(d_ >= 1 for _, d_ in omi))
+# two-observer ellipses: radii
+check("fig two obs: sqrt(0.75) = 0.866, sqrt(1.5) = 1.225", close(np.sqrt(0.75), 0.866, 1e-3) and close(np.sqrt(1.5), 1.225, 1e-3))
+
+# omission floor, disjoint case (ex:ch06:disjoint): the consumer reads nothing coded
+Phat_d = np.diag([1.0, 0.0])
+P_d = np.diag([0.0, 1.0])
+Pi_d = np.diag([0.0, 1.0])  # whitened kernel of Phat with Sigma = I
+check("disjoint: floor tr(P Pi) = 1", close(np.trace(P_d @ Pi_d), 1.0, 1e-12))
+check("disjoint: tr(P (I - Pi)) = 0, so the divergence condition fails",
+      close(np.trace(P_d @ (np.eye(2) - Pi_d)), 0.0, 1e-12))
+check("disjoint: true distortion is exactly 1 at every rate, including R = 0",
+      all(close(np.trace(P_d @ np.diag([np.exp(-2 * R), 1.0])), 1.0, 1e-12)
+          for R in (0.0, 0.5, 2.0, 10.0)))
+
+# hypothesis audit: an unread direction correlated with a read one loses error variance (ex tilt, D=0.625)
+Sxt = np.diag([4.0, 1.0])
+ut = np.array([1.0, 1.0]) / np.sqrt(2)
+Pt_ = np.outer(ut, ut)
+St = sigma_star(Sxt, Pt_, 0.625)
+kt = np.array([1.0, -1.0]) / np.sqrt(2)
+at = np.array([0.25, -1.0])
+check("tilt: Sigma* = [[1.6,-0.6],[-0.6,0.85]] with tr(P Sigma*) = 0.625",
+      np.allclose(St, [[1.6, -0.6], [-0.6, 0.85]], atol=1e-9) and close(np.trace(Pt_ @ St), 0.625, 1e-9))
+check("tilt: unread (1,-1)/sqrt2 has source variance 2.5, error variance 1.825",
+      close(kt @ Sxt @ kt, 2.5, 1e-12) and close(kt @ St @ kt, 1.825, 1e-9) and close(ut @ kt, 0, 1e-12))
+check("tilt: uncorrelated component x1/4 - x2 (P Sx a = 0) keeps variance 1.25",
+      np.allclose(Pt_ @ Sxt @ at, 0, atol=1e-12) and close(at @ Sxt @ at, 1.25, 1e-12) and close(at @ St @ at, 1.25, 1e-9))
+# hypothesis audit: unequal read weights give a strict flip below R* (coupling criterion needs equal weights)
+lam = np.array([4.0, 2.0, 1.0])
+Pw = np.array([1.0, 10.0, 0.0])
+Rstar = 0.5 * (np.log2(4 / 1) + np.log2(2 / 1))
+check("unequal weights: R* = 1.5 bits", close(Rstar, 1.5, 1e-12))
+Rb = 0.5  # bits
+# O: reverse water-filling on lam at 0.5 bit
+thO = 4 * 2 ** (-2 * Rb)
+errO = np.minimum(lam, thO)
+check("unequal weights: O at 0.5 bit has theta=2 and error diag(2,2,1)",
+      close(thO, 2.0, 1e-12) and np.allclose(errO, [2, 2, 1]))
+# R: water-fill weighted variances (4,20) at 0.5 bit
+gw = Pw[:2] * lam[:2]
+thR = 20 * 2 ** (-2 * Rb)
+check("unequal weights: R water level 10 >= 4, so only e2 is described", close(thR, 10.0, 1e-12) and gw[0] <= thR < gw[1])
+errR = np.array([4.0, thR / Pw[1], 1.0])
+check("unequal weights: R error diag(4,1,1)", np.allclose(errR, [4, 1, 1]))
+check("unequal weights: consumer 22 vs 14, reconstruction 5 vs 6 (strict flip below R*)",
+      close(Pw @ errO, 22, 1e-12) and close(Pw @ errR, 14, 1e-12) and close(errO.sum(), 5, 1e-12) and close(errR.sum(), 6, 1e-12)
+      and Rb < Rstar)
+# hypothesis audit: consumer reading e1 alone on diag(4,1): no flip at 1 bit, flip at 2 bits (consumer 0.25 vs 0.5)
+check("e1 reader: identical at 1 bit, flip at 2 bits with consumer distortions 0.25 vs 0.5",
+      close(min(4, 4 * 2 ** -2), 1.0, 1e-12) and close(4 * 2 ** -4, 0.25, 1e-12) and close(4 * 2 ** -4 + 1, 1.25, 1e-12))
 
 n_ok = sum(results)
 print(f"{n_ok}/{len(results)} PASS")

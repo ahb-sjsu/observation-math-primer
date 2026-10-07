@@ -228,6 +228,30 @@ check("symmetric closure: premise 2 fails at world 0 (G at 1 but not box G at 1)
       not prem2(R5, [0, 1], Gm, 0))
 
 # ---------------------------------------------------------------------------
+# Example 10.10: counts read from counter-apologetics/formal/axioms.log (copied verbatim, 2026-10-07)
+AXLOG = """'CounterApologetics.Modal.ontological_valid_B' does not depend on any axioms
+'CounterApologetics.Modal.ontological_S5_necessary' does not depend on any axioms
+'CounterApologetics.Modal.reverse_ontological' does not depend on any axioms
+'CounterApologetics.Modal.reverse_ontological_S5' does not depend on any axioms
+'CounterApologetics.Modal.rivals_incompatible' does not depend on any axioms
+'CounterApologetics.Modal.S4_countermodel' depends on axioms: [propext]
+'CounterApologetics.Modal.vanInwagen_collapse' does not depend on any axioms
+'CounterApologetics.Modal.vanInwagen_needs_entailment' does not depend on any axioms
+'CounterApologetics.Prob.conj_le_left' depends on axioms: [propext, Classical.choice, Quot.sound]
+'CounterApologetics.Prob.conclusion_ge_conj' depends on axioms: [propext, Classical.choice, Quot.sound]
+'CounterApologetics.Prob.conj_not_majority' depends on axioms: [propext, Classical.choice, Quot.sound]
+'CounterApologetics.Prob.old_criterion_inadequate' depends on axioms: [propext, Classical.choice, Quot.sound]
+'CounterApologetics.Prob.frechet' depends on axioms: [propext, Classical.choice, Quot.sound]"""
+axl = AXLOG.splitlines()
+check("axioms.log: 13 theorems", len(axl) == 13)
+check("axioms.log: 7 modal theorems with no axioms",
+      sum(".Modal." in l and "does not depend" in l for l in axl) == 7)
+check("axioms.log: S4_countermodel uses propext only", any("S4_countermodel' depends on axioms: [propext]" in l for l in axl))
+check("axioms.log: 5 probability theorems use the three standard axioms",
+      sum(".Prob." in l and "[propext, Classical.choice, Quot.sound]" in l for l in axl) == 5)
+check("axioms.log: no sorryAx", not any("sorryAx" in l for l in axl))
+
+# ---------------------------------------------------------------------------
 # Exercise answers
 check("Ex 10.1: (p->q) and (q->p) true on 2 of 4 rows (p<->q)",
       sum(imp(p, q) and imp(q, p) for p, q in rows) == 2)
@@ -248,6 +272,21 @@ check("Ex 10.6: frame not transitive", not props({(a - 1, b - 1) for a, b in Rc}
 refl3 = sum(1 for Rf in frames(3) if props(Rf, 3)[0])
 check("Ex 10.9: 64 reflexive relations on 3 worlds", refl3 == 64)
 check("Ex 10.9: 2^9 = 512 relations, 2^6 symmetric", 2 ** 9 == 512 and 2 ** 6 == 64)
+
+# Hypothesis-discipline additions (2026-10-07)
+# A model can make T true everywhere on an irreflexive frame (p true everywhere).
+Wi = [1, 2]
+Ri = {(1, 2), (2, 1)}
+Pi = {1: True, 2: True}
+check("irreflexive frame, p true everywhere: box p -> p true at every world",
+      all((not box(Ri, Wi, Pi, w)) or Pi[w] for w in Wi) and not any((w, w) in Ri for w in Wi))
+# One-world reflexive frame with G true satisfies the hypotheses of ontological_valid_B.
+W1 = [0]
+R1 = {(0, 0)}
+G1 = {0: True}
+prem2_one = all((not G1[v]) or box(R1, W1, G1, v) for v in W1 if (0, v) in R1)
+check("one-world reflexive frame, G true: symmetric, dia G and premise 2 hold (hypotheses satisfiable)",
+      all((b, a) in R1 for (a, b) in R1) and dia(R1, W1, G1, 0) and prem2_one)
 
 print(f"\n{sum(results)}/{len(results)} PASS")
 sys.exit(0 if all(results) else 1)

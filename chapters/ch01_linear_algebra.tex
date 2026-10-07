@@ -89,7 +89,8 @@ equations $A\T G(x-Ac)=0$, and so the \emph{$G$-orthogonal projector}
 \end{equation}
 It is idempotent but in general not symmetric. It is orthogonal in the
 $G$-inner product, which is what the identity $G\Pi_G=\Pi_G\T G$ says. Read
-in the ordinary dot product, it is oblique. Because the residual is
+in the ordinary dot product, it is oblique unless it happens to be symmetric,
+as it is when $G=cI$ or when $\mathcal S$ is spanned by eigenvectors of $G$. Because the residual is
 $G$-orthogonal to the subspace, Pythagoras holds in the $G$-norm,
 \begin{equation}\label{eq:ch01:gpyth}
 \norm{x}_G^2=\norm{\Pi_Gx}_G^2+\norm{x-\Pi_Gx}_G^2 .
@@ -125,27 +126,49 @@ $q_2=(0,0,1)\T$. Then
 \qquad \Pi\,(3,1,2)\T=(2,2,2)\T .
 \]
 The residual $(1,-1,0)\T$ spans $\ker\Pi$, and $\tr\Pi=2=\rank\Pi$.
+\Cref{fig:ch01:plane} draws the split.
 \end{example}
 
-\begin{figure}[t]
+\begin{figure}[tbp]
 \centering
 \begin{tikzpicture}[scale=1.35]
-\draw[->,gray] (-1.3,0)--(2.6,0) node[right] {$x_1$};
-\draw[->,gray] (0,-2.9)--(0,1.4) node[above] {$x_2$};
-\draw[thick] (-1.2,-1.2)--(1.3,1.3) node[above right] {$\operatorname{span}(u)$};
-\draw[dashed,blue!60!black] (1,-1) circle ({sqrt(2)});
-\draw[dashed,red!70!black] (1,-1) ellipse ({sqrt(4/3)} and {sqrt(8/3)});
-\fill (1,-1) circle (1.2pt) node[below right] {$x$};
-\fill[blue!60!black] (0,0) circle (1.4pt);
-\node[blue!60!black,left] at (-0.05,0.12) {$\Pi x$};
-\fill[red!70!black] (1/3,1/3) circle (1.4pt);
-\node[red!70!black,above left] at (1/3,1/3) {$\Pi_G x$};
+\draw[guide,->] (-1.3,0)--(2.6,0) node[lbl,right] {$x_1$};
+\draw[guide,->] (0,-2.9)--(0,1.4) node[lbl,above] {$x_2$};
+\draw[thick] (-1.2,-1.2)--(1.3,1.3) node[lbl,above right] {$\operatorname{span}(u)$};
+\draw[thick,pblue] (1,-1) circle ({sqrt(2)});
+\draw[thick,porange] (1,-1) ellipse ({sqrt(4/3)} and {sqrt(8/3)});
+\fill (1,-1) circle (1.4pt) node[lbl,below right] {$x$};
+\fill[pblue] (0,0) circle (1.8pt);
+\node[lbl,pblue,left] at (-0.05,0.14) {$\Pi x$};
+\fill[porange] (1/3,1/3) circle (1.8pt);
+\node[lbl,porange,above left] at (1/3,1/3) {$\Pi_G x$};
 \end{tikzpicture}
 \caption{The Euclidean and the $G$-orthogonal projection of $x=(1,-1)\T$ onto the
 line spanned by $(1,1)\T$, with $G=\diag(2,1)$. The circle is the smallest
 Euclidean ball around $x$ that touches the line, and it touches at the origin.
 The ellipse is the smallest $G$-ball, and it touches at $(\tfrac13,\tfrac13)$.}
 \label{fig:ch01:gproj}
+\end{figure}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[x={(-0.55cm,-0.42cm)},y={(1.1cm,0cm)},z={(0cm,1.1cm)},scale=1.1]
+\fill[plight] (0,0,0)--(3.2,3.2,0)--(3.2,3.2,3)--(0,0,3)--cycle;
+\draw[pgray] (0,0,0)--(3.2,3.2,0)--(3.2,3.2,3)--(0,0,3)--cycle;
+\draw[guide,->] (0,0,0)--(3.8,0,0) node[lbl,below left] {$x_1$};
+\draw[guide,->] (0,0,0)--(0,3.8,0) node[lbl,right] {$x_2$};
+\draw[guide,->] (0,0,0)--(0,0,3.5) node[lbl,above] {$x_3$};
+\draw[vec,pblue] (0,0,0)--(3,1,2) node[lbl,left] {$x=(3,1,2)$};
+\draw[vec,pgreen] (0,0,0)--(2,2,2) node[lbl,above right] {$\Pi x=(2,2,2)$};
+\draw[vec,pred] (2,2,2)--(3,1,2);
+\node[lbl,pred] at (2.5,1.5,2.75) {$x-\Pi x$};
+\node[lbl,pgray,right] at (0,0,3.15) {$\operatorname{span}(q_1,q_2)$};
+\end{tikzpicture}
+\caption{The orthogonal projector onto the plane spanned by $q_1$ and $q_2$ keeps
+$(2,2,2)\T$, which lies in the plane, and discards $(1,-1,0)\T$, which is
+perpendicular to it. The three vectors form a right triangle, so the squared
+lengths add, $14=12+2$.}
+\label{fig:ch01:plane}
 \end{figure}
 
 \inproject{The read operator is a weighted sum of projectors onto the directions a
@@ -157,9 +180,9 @@ measure how well a probe recovered a read subspace.}
 
 \buildson{Primer~L, sections~L.4 and L.5 (kernel, rank, the projection $uu\T$).
 Chapter~0 of \emph{Data Mining as Observation}, section~0.2.}
-\usedin{\Cref{sec:ch01:whiten,sec:ch01:pencil}. Chapter~5, where a
+\usedin{\Cref{sec:ch01:whiten,sec:ch01:pencil}. \Cref{ch05}, where a
 positive definite $G$ that varies from point to point is a Riemannian metric.
-Chapter~6, read subspaces and their overlaps.}
+\Cref{ch06}, read subspaces and their overlaps.}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{Spectral theorem and Loewner order}
@@ -183,13 +206,38 @@ numbers. For a function $f$ defined on the eigenvalues,
 \begin{equation}\label{eq:ch01:funcalc}
 f(A)=\sum_{j=1}^m f(\lambda_j)\,\Pi_j .
 \end{equation}
-With $f(t)=t^{-1}$ this is the inverse, with $f(t)=\log t$ the matrix
-logarithm of \cref{sec:ch01:logdet}, and with $f(t)=\sqrt t$ the square root.
+With $f(t)=t^{-1}$ this is the inverse, which needs every $\lambda_j\neq0$.
+With $f(t)=\log t$ it is the matrix logarithm of \cref{sec:ch01:logdet}, which
+needs every $\lambda_j>0$. With $f(t)=\sqrt t$ it is the square root, which
+needs every $\lambda_j\ge0$.
 Among positive semidefinite matrices the square root is unique. Only one PSD
 matrix $B$ has $B^2=A$, and it is the one \cref{eq:ch01:funcalc} gives
 \cite{hornjohnson2012}. Other square roots exist if PSD is not required, for
 example $-A^{1/2}$, and non-symmetric factors such as the Cholesky factor $L$
 with $LL\T=A$ are also used. They are not ``the'' square root.
+
+Geometrically, a symmetric matrix stretches space along its eigenvectors by
+its eigenvalues. \Cref{fig:ch01:circle} shows the matrix of
+Example~\ref{ex:ch01:spectral} sending the unit circle to an ellipse whose axes are
+the eigenvectors, with half-lengths equal to the eigenvalues.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=0.5]
+\draw[guide,->] (-6,0)--(6.4,0) node[lbl,right] {$x_1$};
+\draw[guide,->] (0,-3.2)--(0,3.6) node[lbl,above] {$x_2$};
+\draw[thick,pgray] (0,0) circle (1);
+\draw[thick,pblue,rotate=26.565] (0,0) ellipse (6.000 and 1.000);
+\draw[vec,porange,rotate=26.565] (0,0)--(6,0) node[lbl,above left] {$Av_1=6v_1$};
+\draw[vec,porange,rotate=26.565] (0,0)--(0,1);
+\node[lbl,porange] at (-1.05,1.35) {$Av_2=v_2$};
+\node[lbl,pgray] at (0.9,-1.2) {unit circle};
+\end{tikzpicture}
+\caption{The matrix with rows $(5,2)$ and $(2,2)$ maps the unit circle to the
+blue ellipse. The eigenvector directions are the only ones that are stretched
+without turning, by $6$ along $(2,1)\T$ and by $1$ along $(1,-2)\T$.}
+\label{fig:ch01:circle}
+\end{figure}
 
 Positive semidefiniteness, written $A\psd 0$, means $x\T Ax\ge 0$ for all $x$
 (Primer~L, section~L.6). By \cref{eq:ch01:spectral} that holds exactly when
@@ -197,6 +245,39 @@ every eigenvalue is nonnegative, and the eigenvalues bound the form,
 \begin{equation}\label{eq:ch01:rayleighbounds}
 \lambda_{\min}(A)\,\norm{x}^2\ \le\ x\T Ax\ \le\ \lambda_{\max}(A)\,\norm{x}^2 .
 \end{equation}
+The level set $x\T Ax=1$ shows the difference between definite and
+semidefinite at a glance (\cref{fig:ch01:levels}). For $A\pd0$ it is an ellipse
+with half-axes $1/\sqrt{\lambda_i}$. When an eigenvalue is zero, the form does
+not grow along that eigenvector at all. In the plane, with the other eigenvalue
+positive, the ellipse opens into a pair of parallel lines, and in higher
+dimension it opens into a cylinder. A read operator with a kernel has level sets of this second
+kind. Moving along the kernel never changes what the consumer sees.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=1.1]
+\begin{scope}
+\clip (-2,-2) rectangle (2,2);
+\draw[guide,->] (-2,0)--(2,0);
+\draw[guide,->] (0,-2)--(0,2);
+\draw[thick,porange,rotate=26.565] (0,0) ellipse (0.408 and 1);
+\end{scope}
+\node[lbl] at (0,-2.35) {$A\pd0$, rows $(5,2)$, $(2,2)$};
+\begin{scope}[xshift=5cm]
+\clip (-2,-2) rectangle (2,2);
+\draw[guide,->] (-2,0)--(2,0);
+\draw[guide,->] (0,-2)--(0,2);
+\draw[thick,porange] (-1,2)--(3,-2);
+\draw[thick,porange] (-3,2)--(1,-2);
+\draw[vec,pred] (0,0)--(1.2,-1.2) node[lbl,right] {$\ker A$};
+\end{scope}
+\node[lbl] at (5,-2.35) {$A=gg\T\psd0$, $g=(1,1)\T$};
+\end{tikzpicture}
+\caption{The level set $x\T Ax=1$ is an ellipse when $A$ is positive definite
+and a pair of parallel lines $x_1+x_2=\pm1$ when $A$ is semidefinite with a
+kernel. Along the kernel direction the form stays constant forever.}
+\label{fig:ch01:levels}
+\end{figure}
 
 The ratio of the two bounds in \cref{eq:ch01:rayleighbounds} is the
 \emph{condition number} $\kappa(A)=\lambda_{\max}/\lambda_{\min}$ of a positive
@@ -207,7 +288,8 @@ direction by a factor of ten relative to the thick one. Any error made before
 whitening, for example by estimating $\Sigma$ from too few samples, is
 amplified along that thin direction. A large condition number is a warning
 that a whitened quantity rests on the smallest eigenvalues, which are the
-least reliably estimated.
+least reliably estimated. How far eigenvalues and eigenvectors move when a
+matrix is perturbed is the subject of \cref{ch13}.
 
 Comparing two symmetric matrices uses the same test on their difference.
 
@@ -227,6 +309,39 @@ through a scalar such as $\tr(\PC\Sd)$, and why a statement of the form
 $\Sigma_1\psd\Sigma_2$ is a much stronger claim, a win for every consumer at
 once.
 
+For covariances there is a picture. Draw each $\Sigma$ as its ellipse
+$\{\Sigma^{1/2}u:\norm{u}\le1\}$, whose half-axes are $\sqrt{\lambda_i}$ along the
+eigenvectors. Then $\Sigma_1\psd\Sigma_2$ exactly when the ellipse of
+$\Sigma_2$ fits inside the ellipse of $\Sigma_1$. Two ellipses that cross
+belong to incomparable matrices (\cref{fig:ch01:loewner}).
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=1.15]
+\draw[guide] (-2.1,0)--(2.1,0); \draw[guide] (0,-2.1)--(0,2.1);
+\draw[thick,pblue] (0,0) circle (1);
+\draw[thick,porange,rotate=31.717] (0,0) ellipse (1.902 and 1.176);
+\node[lbl,pblue] at (0.35,-0.7) {$I$};
+\node[lbl,porange] at (1.55,1.55) {$A$};
+\node[lbl] at (0,-2.45) {$A\psd I$, nested};
+\begin{scope}[xshift=5cm]
+\draw[guide] (-2.1,0)--(2.1,0); \draw[guide] (0,-2.1)--(0,2.1);
+\draw[thick,pblue] (0,0) ellipse (1.732 and 1.000);
+\draw[thick,porange,rotate=45] (0,0) ellipse (1.732 and 1.000);
+\fill[pred] (1.732,0) circle (1.6pt);
+\fill[pred] (1.225,1.225) circle (1.6pt);
+\node[lbl,pblue] at (1.85,-0.65) {$\diag(3,1)$};
+\node[lbl,porange] at (-1.75,1.45) {$\begin{pmatrix}2&1\\1&2\end{pmatrix}$};
+\node[lbl] at (0,-2.45) {incomparable, crossing};
+\end{scope}
+\end{tikzpicture}
+\caption{Covariance ellipses make the Loewner order visible. On the left the
+ellipse of $A$, with rows $(3,1)$ and $(1,2)$, contains the unit circle, so
+$A\psd I$. On the right each ellipse pokes out of the other, so neither matrix
+dominates. The red points mark where each reaches farther than the other.}
+\label{fig:ch01:loewner}
+\end{figure}
+
 Three facts carry most of the weight in later chapters.
 \begin{align}
 A\psd B &\implies C\T AC\psd C\T BC\ \text{for any } C, \label{eq:ch01:congruence}\\
@@ -243,7 +358,11 @@ A\psd B\iff \tr(PA)\ge\tr(PB)\ \text{for every } P\psd0 .
 \end{equation}
 In the language of the programme, one error covariance is below another in
 the Loewner order exactly when every consumer, whatever its read operator,
-finds it no worse.
+finds it no worse. The ``if'' direction needs every rank-one reader $xx\T$.
+Agreement among a few given consumers does not give the Loewner order. The
+identity and the matrix with rows $(1,0.9)$ and $(0.9,1)$ tie for both
+coordinate readers $e_1e_1\T$ and $e_2e_2\T$, yet their difference has
+eigenvalues $\pm0.9$, so they are incomparable.
 The proof of the inverse rule goes through whitening. By \cref{eq:ch01:congruence} with
 $C=B^{-1/2}$, the hypothesis gives $B^{-1/2}AB^{-1/2}\psd I$, so every
 eigenvalue of $B^{-1/2}AB^{-1/2}$ is at least $1$. Its inverse
@@ -295,9 +414,9 @@ section ``Convex Structure'', the step $\Sigma\preceq\Sigma_T$ if and only if
 $\Sigma^{-1}\succeq\Sigma_T^{-1}$ is \cref{eq:ch01:inversemono}.}
 
 \buildson{Primer~L, sections~L.6 and L.7.}
-\usedin{Every later section of this chapter. Chapter~2, where the
-Cram\'er--Rao bound is a Loewner inequality. Chapter~4, semidefinite
-constraints. Chapter~6, the commission and omission theorems.}
+\usedin{Every later section of this chapter. \Cref{ch02}, where the
+Cram\'er--Rao bound is a Loewner inequality. \Cref{ch04}, semidefinite
+constraints. \Cref{ch06}, the commission and omission theorems.}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{Trace as weighted variance}
@@ -326,7 +445,7 @@ Linearity of trace and expectation gives, for a fixed matrix $P$,
 \begin{equation}\label{eq:ch01:expqf}
 \E\big[\delta\T P\delta\big]=\tr\big(P\,M_\delta\big)=\tr\big(P\,\Sd\big)+\mu\T P\mu .
 \end{equation}
-This is chapter~0's identity, equation~0.10, with the mean term written out.
+This is equation~0.10 of \emph{Data Mining as Observation}, with the mean term written out.
 A biased error pays $\mu\T P\mu$ on top of its covariance term.
 
 \begin{definition}[Observer distortion]\label{def:ch01:dO}
@@ -338,8 +457,8 @@ For a read operator $\PC\psd 0$ and a centred error with covariance $\Sd$,
 
 The definition is a weighted mean squared error. Weighting squared error by a
 PSD matrix is standard in estimation and in rate--distortion theory. The
-programme takes the weight from the consumer's Jacobian, as chapter~0 does, and
-chapter~6 gives the history of both the weighted error and that choice of
+programme takes the weight from the consumer's Jacobian, as that book does, and
+\cref{ch06} gives the history of both the weighted error and that choice of
 weight. The trace has a reading that explains the name.
 Write $\PC=\sum_i p_i v_iv_i\T$ by the spectral theorem. Then
 \begin{equation}\label{eq:ch01:weightedvar}
@@ -383,13 +502,13 @@ $\mu\T\PC\mu=2$, to $10$.
 on distortion (label \texttt{sec:distortion}), compares codes at matched
 reconstruction error and reports that $\tr(\PC\Sd)$ tracks which code the
 consumer prefers while reconstruction error does not, with the claim status
-\texttt{[demonstrated]}. \Cref{ex:ch01:trace} is the two-dimensional version of
+\texttt{[demonstrated]}. Example~\ref{ex:ch01:trace} is the two-dimensional version of
 that dissociation.}
 
 \buildson{Chapter~0 of \emph{Data Mining as Observation}, sections~0.3 and 0.5,
 equations~0.3, 0.4 and 0.10. Primer~S, section~S.2 (linearity of expectation).}
-\usedin{Chapter~2, where $\tr(\PC\Sigma)$ is evaluated on Kalman covariances.
-Chapter~3, consumer-relative rate--distortion. Chapter~6 throughout. Chapter~7,
+\usedin{\Cref{ch02}, where $\tr(\PC\Sigma)$ is evaluated on Kalman covariances.
+\Cref{ch03}, consumer-relative rate--distortion. \Cref{ch06} throughout. \Cref{ch07},
 where a quantizer's error covariance is scored by $\dO$.}
 
 % ---------------------------------------------------------------------------
@@ -432,7 +551,7 @@ coordinates. A consumer with read operator $P$ in source coordinates sees
 \end{equation}
 The matrix $\tilde P$ is the \emph{whitened operator}. Its eigenvalues weigh
 how much a consumer cares about each direction against how much variance the
-source has there, and they are what reverse water-filling in chapter~3 acts on.
+source has there, and they are what reverse water-filling in \cref{ch03} acts on.
 Three facts make it easy to use,
 \begin{equation}\label{eq:ch01:whitenfacts}
 \tr(P\Sigma_x)=\tr\tilde P,\qquad
@@ -466,6 +585,33 @@ coordinates the consumer's top direction leans toward the first coordinate,
 because that is where the source has more variance to spoil.
 \end{example}
 
+\Cref{fig:ch01:whiten} shows whitening on a sample. Sixty draws from
+$\Normal(0,\Sigma)$, with $\Sigma$ the matrix of Example~\ref{ex:ch01:spectral}, form
+a tilted cloud. Multiplying each point by $\Sigma^{-1/2}$ turns the cloud
+round, and the covariance ellipse becomes the unit circle.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.47\linewidth, height=0.42\linewidth, axis equal image,
+  xmin=-5.5, xmax=5.5, ymin=-4.2, ymax=4.2, title={\small before, $x$}]
+\addplot[only marks, mark=*, mark size=1.1pt, pblue] coordinates {(2.93,-2.11) (0.57,-0.49) (-1.10,-0.54) (-4.50,-1.47) (0.06,3.78) (0.28,-0.32) (-0.99,-1.02) (-2.51,-1.12) (0.90,-0.03) (1.95,0.30) (0.95,2.01) (0.88,-0.34) (-0.08,0.59) (4.02,0.77) (0.06,1.15) (-2.08,-0.89) (2.24,1.26) (0.59,0.92) (-5.52,-0.32) (-3.04,-2.71) (1.00,1.06) (-1.58,-1.65) (0.03,-0.05) (3.47,1.78) (1.06,1.55) (-0.98,-1.31) (1.60,1.09) (-0.92,-1.13) (-0.95,-3.08) (1.78,1.03) (-3.50,-0.87) (-1.64,0.42) (-4.92,-2.36) (2.20,1.90) (-4.95,-1.89) (0.36,-0.60) (2.74,-0.61) (0.16,-1.15) (3.02,0.79) (-1.80,-2.43) (4.07,1.95) (2.29,1.90) (0.38,-0.62) (-2.19,-1.50) (2.11,-1.09) (-1.47,-0.76) (0.82,0.87) (-3.70,-2.96) (0.69,1.56) (1.76,0.72) (-0.51,0.19) (-0.05,0.91) (-1.64,-0.29) (0.08,0.64) (1.96,3.42) (4.10,2.80) (-4.60,-1.62) (-1.01,0.33) (-4.24,0.19) (1.55,-1.06)};
+\addplot[thick,porange,domain=0:360,samples=91] ({2.449*cos(x)*cos(26.565)-sin(x)*sin(26.565)},{2.449*cos(x)*sin(26.565)+sin(x)*cos(26.565)});
+\end{axis}
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.47\linewidth, height=0.42\linewidth, axis equal image,
+  xmin=-5.5, xmax=5.5, ymin=-4.2, ymax=4.2, title={\small after, $\Sigma^{-1/2}x$}]
+\addplot[only marks, mark=*, mark size=1.1pt, pgreen] coordinates {(2.04,-2.56) (0.42,-0.57) (-0.45,-0.22) (-2.02,-0.23) (-0.87,3.32) (0.23,-0.35) (-0.28,-0.67) (-1.06,-0.39) (0.48,-0.24) (0.96,-0.20) (0.02,1.55) (0.55,-0.51) (-0.18,0.54) (1.94,-0.27) (-0.24,1.00) (-0.89,-0.29) (0.88,0.58) (0.09,0.67) (-2.83,1.02) (-0.96,-1.67) (0.28,0.70) (-0.44,-1.08) (0.03,-0.05) (1.41,0.75) (0.19,1.11) (-0.21,-0.93) (0.58,0.58) (-0.21,-0.78) (0.23,-2.49) (0.69,0.49) (-1.64,0.06) (-0.96,0.76) (-2.03,-0.91) (0.71,1.16) (-2.16,-0.50) (0.33,-0.61) (1.59,-1.19) (0.35,-1.05) (1.41,-0.02) (-0.37,-1.72) (1.68,0.75) (0.75,1.14) (0.35,-0.64) (-0.80,-0.80) (1.37,-1.46) (-0.60,-0.32) (0.22,0.58) (-1.25,-1.73) (-0.00,1.21) (0.76,0.22) (-0.32,0.29) (-0.24,0.82) (-0.79,0.13) (-0.11,0.54) (0.22,2.55) (1.50,1.50) (-2.04,-0.34) (-0.61,0.53) (-2.28,1.17) (1.07,-1.30)};
+\addplot[thick,porange,domain=0:360,samples=91] ({cos(x)},{sin(x)});
+\end{axis}
+\end{tikzpicture}
+\caption{Whitening turns a correlated cloud into a round one. The orange curve is
+the covariance ellipse, half-axes $\sqrt6$ and $1$ before and the unit circle
+after. Distances in the right panel are Mahalanobis distances in the left.}
+\label{fig:ch01:whiten}
+\end{figure}
+
 \inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex} defines
 $\tilde P:=\Sigma_x^{1/2}P\Sigma_x^{1/2}$ as ``the whitened operator'' in appendix
 ``The price of a misidentified observer''. The theorem ``Omission floor'' projects
@@ -477,8 +623,8 @@ $\PC^{1/2}\Sigma_x\PC^{1/2}$, which has the same spectrum.}
 
 \buildson{Primer~L, sections~L.7 and L.8. Chapter~0 of \emph{Data Mining as
 Observation}, equation~0.6.}
-\usedin{Chapter~2 (whitening a Gaussian), chapter~3 (reverse water-filling on
-the eigenvalues of $\tilde P$), chapter~6 (omission floor).}
+\usedin{\Cref{ch02} (whitening a Gaussian), \cref{ch03} (reverse water-filling on
+the eigenvalues of $\tilde P$), \cref{ch06} (omission floor).}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{Pencils and Rayleigh quotients}
@@ -488,7 +634,9 @@ Many questions in the programme ask for the direction that does best on one
 quadratic form relative to another. Which one-dimensional description of a
 source buys the most reduction in a consumer's error per unit of leaked
 information? Which direction carries the most consumer-weighted variance per
-unit of source variance? The answer is always a generalized eigenvector.
+unit of source variance? When the form in the denominator is positive
+definite, the answer is a generalized eigenvector. When it is only
+semidefinite, the ratio can be unbounded along its kernel.
 
 \begin{definition}[Matrix pencil and generalized eigenproblem]\label{def:ch01:pencil}
 For symmetric $A$ and symmetric $B\pd 0$, the \emph{pencil} $(A,B)$ has
@@ -506,11 +654,14 @@ Collecting them in a matrix $V$ diagonalizes both forms at once,
 V\T BV=I,\qquad V\T AV=\diag(\mu_1,\dots,\mu_d).
 \end{equation}
 This is simultaneous diagonalization. In the coordinates $c=V^{-1}x$ both forms
-are sums of squares, $x\T Bx=\sum_ic_i^2$ and $x\T Ax=\sum_i\mu_ic_i^2$. It needs
-one of the two matrices to be positive definite. Two PSD matrices $A$ and $B$
-with $A+B\pd0$ can still be diagonalized together, by applying
-\cref{eq:ch01:simdiag} to the pencil $(A,A+B)$. Then $V\T(A+B)V=I$ and
-$V\T AV$ is diagonal, so $V\T BV=I-V\T AV$ is diagonal too.
+are sums of squares, $x\T Bx=\sum_ic_i^2$ and $x\T Ax=\sum_i\mu_ic_i^2$. This
+construction needs $B\pd0$. That is sufficient, not necessary. Two PSD
+matrices $A$ and $B$ with $A+B\pd0$ can still be diagonalized together, by
+applying \cref{eq:ch01:simdiag} to the pencil $(A,A+B)$. Then $V\T(A+B)V=I$
+and $V\T AV$ is diagonal, so $V\T BV=I-V\T AV$ is diagonal too. Without any
+definiteness it can fail. For $A=\diag(1,-1)$ and $B$ with rows $(0,1)$ and
+$(1,0)$, $\det(A-\mu B)=-1-\mu^2$ has no real root, so no real congruence
+diagonalizes both.
 
 The ratio of the two forms is the \emph{Rayleigh quotient} of the pencil,
 \begin{equation}\label{eq:ch01:rayleigh}
@@ -565,13 +716,36 @@ $V\T AV=\diag(3,1)$. The check on the first entry is $A(2,1)\T=(6,12)\T$,
 then $(2,1)(6,12)\T/8=24/8=3$. At $x=e_1$ the Rayleigh quotient is
 $2/1=2$, between $1$ and $3$. The ordinary eigenvalues of $A$ are
 $5\pm\sqrt{13}$, about $8.606$ and $1.394$, which shows that the pencil, and not
-$A$ alone, answers the relative question.
+$A$ alone, answers the relative question. \Cref{fig:ch01:rayleigh} traces the
+Rayleigh quotient around the half circle of directions.
 
 For Ky Fan, let $A=\begin{pmatrix}3&1&0\\1&3&0\\0&0&1\end{pmatrix}$, with
 eigenvalues $4$, $2$ and $1$. The best two-dimensional trace is $4+2=6$. The
 subspace spanned by $e_1,e_2$ is the top eigenspace and gives
 $\tr(U\T AU)=3+3=6$. The subspace spanned by $e_1,e_3$ gives $3+1=4$.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=180, ymin=0.6, ymax=3.4,
+  xtick={0,45,90,135,180}, xlabel={\small direction angle of $x$ (degrees)},
+  ylabel={\small $\rho(x)$}]
+\addplot[thick,pblue] coordinates {(0,2.0000) (5,2.3396) (10,2.6273) (15,2.8327) (20,2.9516) (25,2.9976) (30,2.9897) (35,2.9459) (40,2.8795) (45,2.8000) (50,2.7135) (55,2.6238) (60,2.5329) (65,2.4423) (70,2.3523) (75,2.2632) (80,2.1750) (85,2.0873) (90,2.0000) (95,1.9127) (100,1.8250) (105,1.7368) (110,1.6477) (115,1.5577) (120,1.4671) (125,1.3762) (130,1.2865) (135,1.2000) (140,1.1205) (145,1.0541) (150,1.0103) (155,1.0024) (160,1.0484) (165,1.1673) (170,1.3727) (175,1.6604) (180,2.0000)};
+\addplot[guide] coordinates {(0,3) (180,3)};
+\addplot[guide] coordinates {(0,1) (180,1)};
+\addplot[only marks, mark=*, mark size=2pt, pgreen] coordinates {(26.565,3) (153.435,1)};
+\node[lbl,pgreen,above right] at (axis cs:26.565,3) {$v_1\propto(2,1)$, $\mu_1=3$};
+\node[lbl,pgreen,above left] at (axis cs:153.435,1) {$v_2\propto(2,-1)$, $\mu_2=1$};
+\node[lbl,pblue,below right] at (axis cs:0,2) {$e_1$, $\rho=2$};
+\end{axis}
+\end{tikzpicture}
+\caption{The Rayleigh quotient of the pencil with $A$ rows $(2,2)$, $(2,8)$ and
+$B=\diag(1,4)$, over all directions in the plane. It peaks at the generalized
+eigenvalue $3$ and bottoms out at $1$, and the two extreme directions are
+$26.6^\circ$ and $153.4^\circ$, which are not at right angles.}
+\label{fig:ch01:rayleigh}
+\end{figure}
 
 \inproject{In \nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex},
 section ``The One-Dimensional Case'', the theorem labelled \texttt{thm:onedim}
@@ -586,8 +760,8 @@ that $\Sigma_x,P_1,P_2$ are simultaneously diagonalizable.}
 
 \buildson{\Cref{sec:ch01:spectral,sec:ch01:whiten}. Primer~L, section~L.7,
 the PCA paragraph.}
-\usedin{Chapter~3, where water-filling acts on simultaneously diagonal forms.
-Chapter~4, Lagrange multipliers for the Rayleigh quotient. Chapter~6, the pencil
+\usedin{\Cref{ch03}, where water-filling acts on simultaneously diagonal forms.
+\Cref{ch04}, Lagrange multipliers for the Rayleigh quotient. \Cref{ch06}, the pencil
 characterization of leakage.}
 
 
@@ -596,7 +770,7 @@ characterization of leakage.}
 \section{The Schur complement is what remains of a block after the other block is eliminated}\label{sec:ch01:schur}
 
 Gaussian elimination on a matrix split into blocks produces one matrix again
-and again. It is the conditional covariance of chapter~2, the error covariance
+and again. It is the conditional covariance of \cref{ch02}, the error covariance
 of a Kalman update and the certificate in a semidefinite constraint.
 
 \begin{definition}[Schur complement]\label{def:ch01:schur}
@@ -620,8 +794,9 @@ one and are easy to invert. Three consequences follow at once,
 \det M=\det A\cdot\det S, \label{eq:ch01:schurdet}\\
 M^{-1}=\begin{pmatrix}A^{-1}+A^{-1}BS^{-1}B\T A^{-1}&-A^{-1}BS^{-1}\\-S^{-1}B\T A^{-1}&S^{-1}\end{pmatrix}, \label{eq:ch01:schurinv}
 \end{gather}
-and the positive definiteness test below. The lower-right block of $M^{-1}$ is
-$S^{-1}$. That fact is the bridge to chapter~2, where the inverse covariance
+and the positive definiteness test below. The inverse formula needs $S$ to be
+invertible as well. The lower-right block of $M^{-1}$ is then
+$S^{-1}$. That fact is the bridge to \cref{ch02}, where the inverse covariance
 holds the conditional precisions.
 
 \begin{theorem}[Schur complement test]\label{thm:ch01:schurpsd}
@@ -641,11 +816,11 @@ directions. And $\diag(A,S)$ is PSD (PD) exactly when $S$ is, given $A\pd0$.
 Eliminating in the other order, with $D$ invertible, gives the other Schur
 complement $A-BD^{-1}B\T$. Equating the upper-left blocks of the two expressions
 for $M^{-1}$ gives the matrix inversion lemma, often called the Woodbury
-identity,
+identity. It holds when $A$, $D$ and both Schur complements are invertible,
 \begin{equation}\label{eq:ch01:woodbury}
 (A-BD^{-1}B\T)^{-1}=A^{-1}+A^{-1}B\big(D-B\T A^{-1}B\big)^{-1}B\T A^{-1}.
 \end{equation}
-Chapter~2 uses it to pass between the covariance and the information forms of
+\Cref{ch02} uses it to pass between the covariance and the information forms of
 the Kalman update.
 
 \begin{example}[A three-by-three matrix split one and two]\label{ex:ch01:schur}
@@ -665,6 +840,28 @@ bottom-right entry of $M$ from $3$ to $\tfrac12$ changes $S$ to
 $\diag(1,-\tfrac12)$, and the test says that $M$ is then not PSD.
 \end{example}
 
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[node distance=2.2cm]
+\node[block] (M) {$M=\begin{pmatrix}A&B\\B\T&D\end{pmatrix}$};
+\node[block, right=2.6cm of M] (Dg) {$\begin{pmatrix}A&0\\0&S\end{pmatrix}$};
+\draw[flow] (M) -- node[lbl,above] {eliminate} node[lbl,below] {$L^{-1}(\cdot)L^{-\top}$} (Dg);
+\node[block, fill=white, below=1.0cm of Dg, text width=5.2cm, align=left] (out)
+  {$S=D-B\T A^{-1}B$\\[2pt]
+   $\det M=\det A\cdot\det S$\\[2pt]
+   $M\psd0\iff S\psd0$ \ (given $A\pd0$)\\[2pt]
+   lower-right block of $M^{-1}$ is $S^{-1}$};
+\draw[flow,pgreen] (Dg) -- (out);
+\node[lbl,pgray,below=1.0cm of M, text width=4.2cm, align=center] (g)
+  {in \cref{ch02}, $S$ is the covariance of the second block given the first};
+\draw[flow,pgray] (out.west) -- (g.east);
+\end{tikzpicture}
+\caption{Block elimination turns $M$ into a block-diagonal matrix by a congruence
+with unit-triangular factors. Everything about $M$ that the chapter needs can
+then be read from $A$ and the Schur complement $S$.}
+\label{fig:ch01:schur}
+\end{figure}
+
 \inproject{\nolinkurl{geometric-observation/paper/tit-rate-leakage/tit-rate-leakage.tex},
 section ``Convex Structure'', turns a nonlinear matrix constraint into the linear
 matrix inequality labelled \texttt{eq:lmi} ``by the Schur complement criterion''
@@ -674,7 +871,7 @@ other order'', which is \cref{eq:ch01:schurdet}.}
 
 \buildson{Primer~L, section~L.3 (determinants and inverses). \Cref{sec:ch01:spectral},
 congruence.}
-\usedin{Chapter~2, Gaussian conditioning and the Kalman update. Chapter~4,
+\usedin{\Cref{ch02}, Gaussian conditioning and the Kalman update. \Cref{ch04},
 semidefinite programs and the max-det problem.}
 
 % ---------------------------------------------------------------------------
@@ -724,8 +921,10 @@ multiples of $I$. Its trace is $\norm{x}^2$, so
 \begin{equation}\label{eq:ch01:spread}
 \E\big[(Qx)(Qx)\T\big]=\frac{\norm{x}^2}{d}\,I .
 \end{equation}
-Every coordinate of the rotated vector has second moment $\norm{x}^2/d$, however
-the energy of $x$ was spread before. A scalar quantizer designed for that
+Averaged over the draw of $Q$, every coordinate of the rotated vector has
+second moment $\norm{x}^2/d$, however the energy of $x$ was spread before. For
+a single draw of $Q$ the squared coordinates scatter around this value, in the
+way described next. A scalar quantizer designed for that
 spread then fits every coordinate.
 
 More is true for a unit vector $x$. The rotated vector $Qx$ is uniformly
@@ -734,8 +933,9 @@ coordinates is close in distribution to $\Normal(0,1/d)$. That is why
 turboquant-pro scales a single Lloyd--Max codebook for the standard normal by
 $1/\sqrt d$ and uses it on every coordinate, with the vector's norm stored
 separately. The rotation does not reduce any error by itself. It reshapes the
-input so that one fixed scalar codebook suits all coordinates, and so that no
-coordinate carries an outlier the codebook was not designed for. The price is
+input so that one fixed scalar codebook suits all coordinates, and so that,
+with high probability over the rotation, no coordinate carries an outlier the
+codebook was not designed for. The price is
 that coordinates of $Qx$ are no longer the original features, so a consumer
 that reads a few original features now depends on all rotated coordinates at
 once.
@@ -755,7 +955,10 @@ has second moment $\norm{x}^2/d$ over the random signs, the diagonal of
 are needed. Without them, vectors aligned with a row of $H_d$ are concentrated
 onto a single coordinate instead of being spread. Randomized Hadamard
 preprocessing of this kind is the basis of the fast Johnson--Lindenstrauss
-transform \cite{ailonchazelle2009}.
+transform \cite{ailonchazelle2009}. Why a random rotation preserves distances
+between many points at once, and how sharply the rotated coordinates
+concentrate, is the subject of \cref{ch11}, which states the
+Johnson--Lindenstrauss lemma.
 
 \begin{example}[Spreading with a randomized Hadamard matrix]\label{ex:ch01:hadamard}
 For $d=4$ Sylvester's construction gives rows $(1,1,1,1)$, $(1,-1,1,-1)$,
@@ -772,24 +975,64 @@ $Rx=(\tfrac12,\tfrac12,-\tfrac12,\tfrac12)\T$, spread evenly again.
 A random sign flip followed by a permutation is also orthogonal, but it maps
 $e_1$ to $\pm e_j$ for some $j$. It moves energy between coordinates without
 spreading it.
+
+In dimension $8$, \cref{fig:ch01:hadamard} applies a randomized Hadamard
+matrix, with signs drawn by the check script, to the spiky vector
+$x=(2,0.4,0,\dots,0)\T$. The largest coordinate falls from $2$ to
+$2.4/\sqrt8\approx0.849$ and every coordinate becomes $(2\pm0.4)/\sqrt8$ in
+magnitude, while the length is unchanged.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.47\linewidth, height=0.36\linewidth, ybar, bar width=6pt,
+  ymin=-1.1, ymax=2.2, xtick={1,...,8}, title={\small before, $x$}]
+\addplot[fill=pblue, draw=pblue] coordinates {(1,2.000) (2,0.400) (3,0.000) (4,0.000) (5,0.000) (6,0.000) (7,0.000) (8,0.000)};
+\end{axis}
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.47\linewidth, height=0.36\linewidth, ybar, bar width=6pt,
+  ymin=-1.1, ymax=2.2, xtick={1,...,8}, title={\small after, $Rx$}]
+\addplot[fill=pgreen, draw=pgreen] coordinates {(1,0.849) (2,0.566) (3,0.849) (4,0.566) (5,0.849) (6,0.566) (7,0.849) (8,0.566)};
+\end{axis}
+\end{tikzpicture}
+\caption{A randomized Hadamard rotation spreads a spiky vector over all eight
+coordinates. The length is the same in both panels, and the largest magnitude
+drops from $2$ to $0.849$, so one scalar codebook fits every coordinate.}
+\label{fig:ch01:hadamard}
+\end{figure}
 
 \inproject{\nolinkurl{turboquant-pro/turboquant_pro/core.py} implements the TurboQuant
 algorithm of Zandieh et al.\ \cite{zandieh2025}, which rotates and then applies a
-scalar quantizer to each coordinate. For \texttt{head\_dim} up to $4096$ it
-builds the rotation as \texttt{np.linalg.qr} of a Gaussian matrix, with no sign
-correction, and above $4096$ it uses a random sign flip followed by a
-permutation. \nolinkurl{turboquant-pro/turboquant_pro/pgvector.py} adds an opt-in
-\texttt{rotation="hadamard"} family, $R=(1/\sqrt d)H\,\diag(\text{sign})$ applied
-by a fast Walsh--Hadamard transform, and refuses a dimension that is not a power
-of two. A comment there calls the QR rotation Haar-random. Mezzadri's
-correction \cref{eq:ch01:haar} is what makes that exact. The project files do
-not state whether the missing sign correction changes any measured result. A
-rotation preserves Euclidean error, which is not the acceptance criterion for a
-quantizer. Chapter~7 explains why acceptance uses rank fidelity instead.}
+scalar quantizer to each coordinate. The description here is of the code after
+the fix recorded in \nolinkurl{turboquant-pro/CHANGELOG.md} on 2026-10-07. For
+\texttt{head\_dim} up to $4096$ the rotation is \texttt{np.linalg.qr} of a
+Gaussian matrix with no sign correction, so it is not exactly Haar distributed.
+The changelog reports the same relative squared error with and without
+Mezzadri's correction \cref{eq:ch01:haar}, $0.0444$ against $0.0453\pm0.0034$
+over $20$ seeds at $d=128$, and the code comments now say so. Above $4096$ the
+class \texttt{\_TwoWindowHadamard} applies a randomized Hadamard rotation of
+any dimension. With $m=2^{\lfloor\log_2d\rfloor}$ it applies random signs, a
+random permutation and the scaled Hadamard matrix to the first $m$
+coordinates, then fresh random signs, a permutation and the Hadamard matrix
+to the last $m$. Because $m>d/2$ when $d$ is not a power of two, the two
+windows cover every coordinate, and when $d$ is a power of two only the first
+window is used. Before the fix this branch was the sign flip plus permutation
+of \cref{ex:ch01:hadamard}, which spreads no energy. On inputs with $8$ outlier
+channels at $d=8192$ and $3$ bits the changelog reports relative squared error
+$0.89$ for that path against $0.054$ for a spreading rotation. Gaussian inputs
+did not show the difference, because they are already spread.
+\nolinkurl{turboquant-pro/turboquant_pro/pgvector.py} keeps the old sign flip
+plus permutation for \texttt{rotation="qr"} above $4096$ dimensions so that
+stored records still decode, logs a warning, and recommends its opt-in
+\texttt{rotation="hadamard"}, $R=(1/\sqrt d)H\,\diag(\text{sign})$ applied by a
+fast Walsh--Hadamard transform for a power-of-two dimension. A rotation
+preserves Euclidean error, which is not the acceptance criterion for a
+quantizer. \Cref{ch07} explains why acceptance uses rank fidelity instead.}
 
 \buildson{Primer~L, section~L.5. \Cref{sec:ch01:trace}.}
-\usedin{Chapter~7, random rotation and scalar quantization in turboquant-pro.}
+\usedin{\Cref{ch07}, random rotation and scalar quantization in turboquant-pro.}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{The log-determinant}
@@ -800,9 +1043,9 @@ up to a constant. Its logarithm turns products of eigenvalues into sums,
 \begin{equation}\label{eq:ch01:logdet}
 \log\det X=\sum_{i=1}^d\log\lambda_i(X)=\tr\log X,\qquad X\pd 0,
 \end{equation}
-where $\log X$ is defined by \cref{eq:ch01:funcalc}. Chapter~2 shows that the
+where $\log X$ is defined by \cref{eq:ch01:funcalc}. \Cref{ch02} shows that the
 mutual information between jointly Gaussian vectors is a difference of two
-log-determinants, and chapters~3 and~4 meet a Gaussian rate--distortion problem
+log-determinants, and \cref{ch03,ch04} meet a Gaussian rate--distortion problem
 that maximizes one. Two calculus facts are needed for those chapters.
 
 \begin{proposition}[Derivatives of $\log\det$ and of the inverse]\label{prop:ch01:logdetgrad}
@@ -830,8 +1073,14 @@ symmetric, so $\log\det$ is concave on the positive definite matrices,
 \end{equation}
 It is also monotone. If $X\psd Y\pd0$, then $Y^{-1/2}XY^{-1/2}\psd I$, every
 eigenvalue of it is at least $1$, and so $\log\det X\ge\log\det Y$. Concavity
-is what makes a max-det problem have a unique maximizer, and monotonicity is
-what makes ``smaller covariance in the Loewner order'' mean ``less volume''.
+alone does not give a unique maximizer, since a function that is constant on a
+segment is concave. Strict concavity does, and $\log\det$ is strictly concave
+because $\tr(E^2)>0$ for every symmetric $E\neq0$. So a max-det problem over a
+convex feasible set has at most one maximizer, and exactly one when a
+maximizer exists. Monotonicity is what makes ``smaller covariance in the
+Loewner order'' mean ``no more volume''. The converse fails. $\diag(1,1)$ has
+the smaller determinant of the pair $\diag(1,1)$ and $\diag(4,\tfrac12)$, yet
+the two are incomparable.
 
 \begin{example}[First and second order, and a midpoint]\label{ex:ch01:logdet}
 Let $X=\begin{pmatrix}2&1\\1&1\end{pmatrix}$, with $\det X=1$ and
@@ -858,8 +1107,8 @@ $\tr(P\Sigma)\le D$. Its uniqueness argument is the strict concavity in
 
 \buildson{Primer~L, section~L.7 (determinant as product of eigenvalues) and
 section~L.9 (gradients). \Cref{sec:ch01:spectral}.}
-\usedin{Chapter~2, Gaussian mutual information. Chapter~3, Gaussian
-rate--distortion. Chapter~4, the max-det program and its KKT conditions.}
+\usedin{\Cref{ch02}, Gaussian mutual information. \Cref{ch03}, Gaussian
+rate--distortion. \Cref{ch04}, the max-det program and its KKT conditions.}
 
 % ---------------------------------------------------------------------------
 % ---------------------------------------------------------------------------
@@ -888,8 +1137,8 @@ D_{\mathrm{floor}}=\tr\big(\tilde P\,\Pi\big),\qquad \tilde P=\Sigma_x^{1/2}P\,\
 By \cref{eq:ch01:tracepos} the floor is positive exactly when $\tilde P\Pi\neq0$,
 that is, when the true consumer reads some whitened direction the coder left
 out. The whitening matters. Using the projector onto $\ker\hat P$ in source
-coordinates ignores that coding the read directions also pins down whatever
-is correlated with them.
+coordinates ignores that coding the read directions also reduces the error in
+whatever is correlated with them.
 
 \begin{example}[An omitted direction that is partly recovered]\label{ex:ch01:floor}
 Let $\Sigma_x=\begin{pmatrix}2&1\\1&1\end{pmatrix}$. The coder believes the
@@ -903,8 +1152,10 @@ D_{\mathrm{floor}}=\tr\tilde P-\frac{s_1\T\tilde Ps_1}{2}
 =e_2\T\Sigma_xe_2-\frac{(e_1\T\Sigma_xe_2)^2}{2}=1-\tfrac12=\tfrac12 .
 \]
 This is the Schur complement $\Sigma_{22}-\Sigma_{21}\Sigma_{11}^{-1}\Sigma_{12}$
-of \cref{eq:ch01:schur}, which chapter~2 identifies as the variance of $x_2$
-left after $x_1$ is known exactly. Coding $x_1$ perfectly has removed half of
+of \cref{eq:ch01:schur}. For a Gaussian source \cref{ch02} identifies it as the
+variance of $x_2$ left after $x_1$ is known exactly. For any other source it is
+the error variance of the best \emph{linear} predictor of $x_2$ from $x_1$, and
+a nonlinear decoder can do better. Coding $x_1$ perfectly has removed half of
 the variance of $x_2$. The naive projector onto $\ker\hat P=\operatorname{span}(e_2)$,
 applied to $\tilde P$, gives $\big((\Sigma_x^{1/2})_{22}\big)^2$. For a
 $2\times2$ positive definite matrix the square root is
@@ -919,11 +1170,14 @@ $D_{\mathrm{floor}}:=\tr(\tilde P\Pi)$ with $\Pi$ projecting onto the whitened
 kernel, proves that every allocation in the $\hat P$-water-filling family has
 true distortion at least $D_{\mathrm{floor}}$, and remarks that ``the naive
 $\ker\hat P$ overstates the floor when $\Sigma_x\ne I$''.
-\Cref{ex:ch01:floor} is a two-dimensional instance of that remark.}
+Example~\ref{ex:ch01:floor} is a two-dimensional instance of that remark. The
+overstatement is not automatic. With $\Sigma_x=\diag(2,1)$ and $\hat P=e_1e_1\T$
+the whitened kernel $\Sigma_x^{-1/2}\operatorname{span}(e_2)$ is
+$\operatorname{span}(e_2)$ itself, so the naive projector gives the floor exactly.}
 
 \buildson{\Cref{sec:ch01:proj,sec:ch01:trace,sec:ch01:whiten,sec:ch01:schur}.}
-\usedin{Chapter~2, where the same Schur complement is a conditional variance.
-Chapter~6, the commission tax and the omission floor.}
+\usedin{\Cref{ch02}, where the same Schur complement is a conditional variance.
+\Cref{ch06}, the commission tax and the omission floor.}
 
 \let\sectionmark\ompSavedSectionmark
 \section*{Exercises}
@@ -932,7 +1186,7 @@ Chapter~6, the commission tax and the omission floor.}
 
 \begin{exercise}\label{exr:ch01:rank}
 Show that the trace of an orthogonal projector equals its rank. Check it on the
-projector of \cref{ex:ch01:gproj} in $\R^3$.
+projector of Example~\ref{ex:ch01:gproj} in $\R^3$.
 \end{exercise}
 
 \begin{exercise}\label{exr:ch01:oblique}
@@ -969,9 +1223,13 @@ from \cref{eq:ch01:schurdet}.
 \end{exercise}
 
 \begin{exercise}\label{exr:ch01:signperm}
-Show that a sign flip followed by a permutation maps every coordinate vector to a
-signed coordinate vector, and that $\tfrac1{\sqrt d}H_dD_s$ maps every coordinate
-vector to a vector whose coordinates all have magnitude $1/\sqrt d$.
+Before its 2026-10-07 fix, turboquant-pro rotated vectors of more than $4096$
+dimensions by a sign flip followed by a permutation. Show that such a map sends
+every coordinate vector to a signed coordinate vector, and that
+$\tfrac1{\sqrt d}H_dD_s$ sends every coordinate vector to a vector whose
+coordinates all have magnitude $1/\sqrt d$. Then show that the two Hadamard
+windows $[0,m)$ and $[d-m,d)$ of the current rotation, with
+$m=2^{\lfloor\log_2d\rfloor}$, together cover every coordinate.
 \end{exercise}
 
 \begin{exercise}\label{exr:ch01:logdet}
@@ -984,7 +1242,7 @@ terms of \cref{eq:ch01:logdetexp}.
 
 \begin{exercise}\label{exr:ch01:mc}
 Draw $10^5$ errors $\delta=\mu+\Sigma^{1/2}z$ with $z\sim\Normal(0,I)$, using
-$\Sigma=\Sigma_a$, $\mu=(1,0)\T$ and $P=\PC$ from \cref{ex:ch01:trace}. Compare the
+$\Sigma=\Sigma_a$, $\mu=(1,0)\T$ and $P=\PC$ from Example~\ref{ex:ch01:trace}. Compare the
 sample mean of $\delta\T P\delta$ with $\tr(P\Sigma)+\mu\T P\mu=10$.
 \end{exercise}
 
@@ -1002,4 +1260,4 @@ $10^4$ random $U$ with orthonormal columns and confirm that none exceeds
 $\lambda_1+\lambda_2$, which the top two eigenvectors attain.
 \end{exercise}
 
-% checks/ch01_examples.py on Atlas: CHECKRESULT
+% checks/ch01_examples.py on Atlas: 179/179 PASS

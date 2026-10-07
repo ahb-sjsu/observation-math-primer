@@ -1,1 +1,28 @@
-% Answers to selected exercises, chapter 08.
+% Answers to selected exercises, chapter 08. Every number is checked in checks/ch08_examples.py.
+
+\paragraph{Exercise~\ref{exr:ch08:counting}}
+The counting utility is $u=(5,4,4,4,1)$ for $(p,q,r,s,t)$. The function $u^3=(125,64,64,64,1)$ represents the same order and is not affine in $u$.
+
+\paragraph{Exercise~\ref{exr:ch08:paretoset}}
+$(3,3)$ is dominated by $(2,3)$, and $(2,4)$ is dominated by $(2,3)$. The Pareto set is $\{(1,5),(2,3),(4,1)\}$.
+
+\paragraph{Exercise~\ref{exr:ch08:luce}}
+$p(b\mid\{b,c\})=2/3$ and $p(b\mid\{a,b,c\})=2/6=1/3$, so the share fell, as regularity requires. The ratio $p(b)/p(c)$ is $2$ in both menus.
+
+\paragraph{Exercise~\ref{exr:ch08:pennies}}
+At every pure profile one player loses and switches, so no pure profile is an equilibrium. If the column player mixes $(\tfrac12,\tfrac12)$ the row player's two strategies both pay $0$, and symmetrically, so $(\tfrac12,\tfrac12)$ for both is the mixed equilibrium.
+
+\paragraph{Exercise~\ref{exr:ch08:hull}}
+If $(1,0)$ were strictly worst, its cost would exceed the costs of both neighbours, but $(1,0)$ is the midpoint and $c$ is convex, so $c(1,0)\le\tfrac12c(0,0)+\tfrac12c(2,0)\le\max$. On the line $c$ is $g(s-s_0)^2+h$ with $g\ge0$. The representable orders are the single-peaked ones, namely those with the middle option not strictly last, together with total indifference ($g=0$).
+
+\paragraph{Exercise~\ref{exr:ch08:reversal}}
+$d_1(a)=1$ and $d_1(b)=0.5$, so $b$ is preferred under rank cap $1$. $d_2(a)=1$ and $d_2(b)=\sqrt{0.25+2.25}=1.581$, so $a$ is preferred under rank cap $2$. The reversal persists.
+
+\paragraph{Exercise~\ref{exr:ch08:fixed}}
+With $\Pi=I$ the costs are $4$, $1$ and $9$. Then $p(a\mid\{a,b\})=e^{-4}/(e^{-4}+e^{-1})=0.0474$ and $p(a\mid\{a,b,c\})=e^{-4}/(e^{-4}+e^{-1}+e^{-9})$, which is also $0.0474$ to four places and slightly smaller. Regularity holds, as it must for a Luce rule.
+
+\paragraph{Exercise~\ref{exr:ch08:sym}}
+The best responses are $a_1=\tfrac12a_2+1$ and $a_2=\tfrac12a_1+1$, so $a_1=a_2=2$. Substituting one response into the other shows that each round, in which the players update in turn, multiplies the distance from $(2,2)$ by $\tfrac14$, so the iteration converges from any start.
+
+\paragraph{Exercise~\ref{exr:ch08:code-decoy}}
+The leading direction of $M(\{a,b,c\})=\diag(4,1+s^2)$ is $e_1$ while $1+s^2<4$ and $e_2$ once $1+s^2>4$, so the jump is at $s=\sqrt3=1.732$. Below it, $a$ costs $4$ while $b$ and $c$ cost $0$, so $p(a)=e^{-4}/(e^{-4}+2)=0.0091$. At $s=1.8$, $p(a)=1/(1+e^{-1}+e^{-3.24})=0.7107$.

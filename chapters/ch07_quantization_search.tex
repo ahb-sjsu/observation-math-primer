@@ -1,2 +1,546 @@
-% Chapter 07 stub, replaced by the drafting agent.
-\chapter{TODO}\label{ch07}
+\chapter{A quantizer is judged by what its consumer reads, not by how well it reconstructs}\label{ch07}\chaptermark{Quantization and vector search}
+
+A quantizer replaces a real number, or a vector of them, with one of finitely many values so that it can be stored in a fixed number of bits. Every embedding index and every compressed key--value cache in the programme's software rests on one. This chapter builds the theory of quantizers from the uniform rounding rule up to the product quantizers used in vector search, and then asks how a compressed index should be accepted.
+
+The theory has two halves. The first is classical and is surveyed in Gray and Neuhoff's review \cite{grayneuhoff1998}. It covers the error of a uniform quantizer, the optimality conditions of Lloyd and Max \cite{lloyd1982,max1960}, the price of a fixed-length code, the allocation of bits across coordinates and vector quantization. The second half is about search. Random rotations make one scalar quantizer fit every coordinate \cite{zandieh2025turboquant}. Product quantization scores a query against compressed vectors by table lookup \cite{jegou2011pq}, and an inverted file or a graph limits how many vectors are scored at all. Quantized inner products are biased unless the estimator is built to be unbiased. The key--value cache of a language model is a second consumer of the same quantizers, and it reads keys and values differently. The chapter ends with the rule that turboquant-pro states as its one rule, that reconstruction cosine is never an acceptance metric, and with a worked budget that goes from bits per vector to recall at $10$.
+
+\emph{Data Mining as Observation}, Chapter~0, section 0.7 gave the first-course rule that each extra bit quarters the squared error, and Chapter~11 of that book introduced recall at $k$, rank certificates and the keys incident. This chapter derives the rule, says when it fails, and connects the search material to the read operator of \cref{ch06}.
+
+\section{A uniform quantizer's error is nearly a uniform variable one step wide}\label{sec:ch07:uniform}
+
+A uniform quantizer with step $\Delta$ rounds $x$ to the centre of the cell of width $\Delta$ that contains it. A $b$-bit quantizer on the interval $[-A,A]$ has $N=2^b$ cells, so $\Delta=2A/2^b$. When the input density is smooth on the scale of $\Delta$, the error $e=Q(x)-x$ is close to uniform on $[-\Delta/2,\Delta/2]$, and its mean square is the variance of that uniform variable,
+\begin{equation}\label{eq:ch07:delta12}
+\E[e^2]\approx\frac{1}{\Delta}\int_{-\Delta/2}^{\Delta/2}e^2\,de=\frac{\Delta^2}{12}.
+\end{equation}
+Bennett derived this granular-noise formula in 1948 \cite{bennett1948}. It is exact for a uniform input whose range matches the quantizer, and approximate otherwise. Inputs outside $[-A,A]$ add an overload error that \cref{eq:ch07:delta12} does not count.
+
+Each extra bit halves $\Delta$ and divides \cref{eq:ch07:delta12} by four. The signal-to-quantization-noise ratio therefore rises by
+\begin{equation}\label{eq:ch07:6db}
+10\log_{10}4\approx6.02\ \text{dB per bit}.
+\end{equation}
+The rule inherits the conditions of \cref{eq:ch07:delta12}. It holds when the step is fine compared with the scale on which the density changes and the overload error is negligible. For an input of variance $\sigma^2$ loaded to $A=k\sigma$, the granular ratio is $\sigma^2/(\Delta^2/12)=3\cdot4^b/k^2$. Within that approximation the slope is $6.02$\,dB per bit whatever the loading, and the loading sets only the intercept. Outside it the rule fails at both ends. At one and two bits the Gaussian Lloyd--Max quantizer of \cref{fig:ch07:snr} gains $4.90$\,dB, not $6.02$. At a fixed loading the overload error does not shrink with $b$, so the true ratio stops rising once the granular error falls below it.
+
+\begin{example}[Three bits on the unit interval]\label{ex:ch07:uniform}
+Let $x$ be uniform on $[-1,1]$ and $b=3$. Then $\Delta=2/8=0.25$ and the levels are $\pm0.125,\pm0.375,\pm0.625,\pm0.875$. The error is uniform on $[-0.125,0.125]$ with mean square $0.25^2/12=1/192\approx0.005208$. The signal variance is $1/3$, so the ratio is $64$, which is $18.06$\,dB, three times $6.02$. A Gaussian input loaded to $\pm4\sigma$ has ratio $12\cdot4^b/64$, which is $6.02b-7.27$\,dB, so $8$ bits give $40.89$\,dB if overload is ignored.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.46\linewidth, height=0.40\linewidth, xmin=-1.05, xmax=1.05, ymin=-1.05, ymax=1.05,
+  xlabel={$x$}, ylabel={$Q(x)$}, xtick={-1,-0.5,0,0.5,1}, ytick={-0.875,0,0.875}, axis lines=middle]
+\addplot[guide, domain=-1:1] {x};
+\addplot[pblue, very thick, const plot] coordinates {(-1,-0.875) (-0.75,-0.625) (-0.5,-0.375) (-0.25,-0.125) (0,0.125) (0.25,0.375) (0.5,0.625) (0.75,0.875) (1,0.875)};
+\node[lbl, pblue] at (axis cs:0.45,-0.55) {$\Delta=0.25$};
+\end{axis}
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.46\linewidth, height=0.40\linewidth, xmin=-1.05, xmax=1.05, ymin=-0.2, ymax=0.2,
+  xlabel={$x$}, ylabel={$Q(x)-x$}, xtick={-1,-0.5,0,0.5,1}, ytick={-0.125,0,0.125}, axis lines=middle,
+  yticklabel style={/pgf/number format/fixed}]
+\addplot[pred, very thick] coordinates {(-1,0.125) (-0.75,-0.125)};
+\addplot[pred, very thick] coordinates {(-0.75,0.125) (-0.5,-0.125)};
+\addplot[pred, very thick] coordinates {(-0.5,0.125) (-0.25,-0.125)};
+\addplot[pred, very thick] coordinates {(-0.25,0.125) (0,-0.125)};
+\addplot[pred, very thick] coordinates {(0,0.125) (0.25,-0.125)};
+\addplot[pred, very thick] coordinates {(0.25,0.125) (0.5,-0.125)};
+\addplot[pred, very thick] coordinates {(0.5,0.125) (0.75,-0.125)};
+\addplot[pred, very thick] coordinates {(0.75,0.125) (1,-0.125)};
+\end{axis}
+\end{tikzpicture}
+\caption{The three-bit uniform quantizer of Example~\ref{ex:ch07:uniform} is a staircase with step $0.25$, and its error is a sawtooth that never leaves $[-0.125,0.125]$. A uniform input makes the error uniform on that interval, with mean square $\Delta^2/12$.}
+\label{fig:ch07:staircase}
+\end{figure}
+
+The loading trades two errors against each other. A larger $k$ widens the range, so fewer samples overload, but it also widens the step, so the granular error grows. For a Gaussian loaded to $\pm4\sigma$ the probability of overload is $2(1-\Phi(4))\approx6.3\times10^{-5}$, small enough that \cref{eq:ch07:delta12} describes almost all of the error at moderate rates. As the rate grows the granular error shrinks like $4^{-b}$ while the overload error stays fixed, so the best loading grows slowly with $b$ \cite{grayneuhoff1998}.
+
+\inproject{\texttt{turboquant-\allowbreak pro/\allowbreak docs/\allowbreak DESIGN\_fast\_adc.md}, Section~2, describes the stored code as a per-dimension scalar quantizer with a shared codebook of $2^b$ levels, bit-packed, with the vector norm kept aside.}
+
+\buildson{Variance of a uniform variable (Primer S of \emph{Data Mining as Observation}). Section 0.7 of the same book.}
+\usedin{\Cref{sec:ch07:lloyd,sec:ch07:alloc}.}
+
+\section{Lloyd--Max quantizers put thresholds at midpoints and levels at centroids}\label{sec:ch07:lloyd}
+
+A uniform staircase is not the best $N$-level quantizer for a Gaussian. Fewer levels belong in the tails, where the density is thin. Lloyd \cite{lloyd1982} and Max \cite{max1960} gave two necessary conditions for a quantizer with thresholds $t_1<\dots<t_{N-1}$ and levels $y_1<\dots<y_N$ to minimize mean squared error for a density $f$. Each condition fixes one set of parameters given the other.
+\begin{equation}\label{eq:ch07:lloydmax}
+t_i=\frac{y_i+y_{i+1}}{2},\qquad
+y_i=\E\big[X\mid t_{i-1}<X\le t_i\big]=\frac{\int_{t_{i-1}}^{t_i}x f(x)\,dx}{\int_{t_{i-1}}^{t_i}f(x)\,dx}.
+\end{equation}
+The first is the nearest-neighbour condition. Given the levels, each $x$ should go to the closest one. The second is the centroid condition. Given the cells, the best level is the conditional mean, the estimator of \cref{ch02}. Lloyd's algorithm alternates the two. The distortion never increases and is bounded below, so its value converges, and a point where the iteration stops satisfies both conditions. The conditions are necessary, not sufficient, and such a point can be a local optimum. For a log-concave density such as the Gaussian the two conditions have only one solution, which is then the global optimum \cite{grayneuhoff1998}. A density with two separated modes can have several.
+
+The centroid condition has a consequence used later in this chapter. For a quantizer that meets it, $y_i$ is the conditional mean on its cell, the error $X-Q(X)$ has mean zero given $Q(X)$. Then $\E[XQ(X)]=\E[Q(X)^2]$, and
+\begin{equation}\label{eq:ch07:centroid}
+\E\big[(X-Q(X))^2\big]=\E[X^2]-\E[Q(X)^2].
+\end{equation}
+The reconstruction has less energy than the source, by exactly the mean squared error. A quantizer whose levels are not centroids, such as a uniform staircase applied to a Gaussian, need not satisfy \cref{eq:ch07:centroid}.
+
+\begin{example}[One and two bits for a standard Gaussian]\label{ex:ch07:lloyd}
+With one bit the threshold is $0$ by symmetry and each level is the mean of a half-Gaussian, $y=\pm\E[X\mid X>0]=\pm\sqrt{2/\pi}\approx\pm0.7979$. By \cref{eq:ch07:centroid} the error is $1-2/\pi\approx0.3634$. With two bits Lloyd's iteration converges to thresholds $0$ and $\pm0.9816$ and levels $\pm0.4528$ and $\pm1.5104$, with mean squared error $0.1175$. The inner cells each hold probability $0.3369$ and the outer cells $0.1631$. For the uniform density on $[-1,1]$ the Lloyd--Max quantizer is the uniform one, with levels $\pm0.25,\pm0.75$ at two bits and error $1/48$.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.70\linewidth, height=0.36\linewidth, xmin=-3.2, xmax=3.2, ymin=0, ymax=0.46,
+  xlabel={$x$}, ylabel={density}, xtick={-1.5104,-0.9816,-0.4528,0,0.4528,0.9816,1.5104},
+  xticklabels={$-1.51$,$-0.98$,$-0.45$,$0$,$0.45$,$0.98$,$1.51$}, ytick=\empty,
+  x tick label style={font=\scriptsize}]
+\addplot[pblue, very thick, domain=-3.2:3.2, samples=120, fill=plight] {exp(-x^2/2)/sqrt(2*pi)} \closedcycle;
+\addplot[pblue, very thick, domain=-3.2:3.2, samples=120] {exp(-x^2/2)/sqrt(2*pi)};
+\draw[pgray, thick] (axis cs:-0.9816,0) -- (axis cs:-0.9816,0.44);
+\draw[pgray, thick] (axis cs:0,0) -- (axis cs:0,0.44);
+\draw[pgray, thick] (axis cs:0.9816,0) -- (axis cs:0.9816,0.44);
+\addplot[only marks, mark=*, mark size=2.6pt, pgreen] coordinates {(-1.5104,0.02) (-0.4528,0.02) (0.4528,0.02) (1.5104,0.02)};
+\node[lbl, pgray] at (axis cs:-2.2,0.40) {$p=0.163$};
+\node[lbl, pgray] at (axis cs:-0.49,0.43) {$0.337$};
+\node[lbl, pgray] at (axis cs:0.49,0.43) {$0.337$};
+\node[lbl, pgray] at (axis cs:2.2,0.40) {$0.163$};
+\end{axis}
+\end{tikzpicture}
+\caption{The two-bit Lloyd--Max quantizer for a standard Gaussian. Gray lines are the thresholds $0$ and $\pm0.98$, each halfway between neighbouring levels, and the green dots are the levels $\pm0.45$ and $\pm1.51$, each the centroid of its cell. The outer cells are wide because the density there is thin.}
+\label{fig:ch07:lloyd}
+\end{figure}
+
+\inproject{\texttt{turboquant-\allowbreak pro/\allowbreak README.md} describes the per-vector flow as norm extraction, unit normalization, a random orthogonal rotation, a Lloyd--Max scalar quantizer and bit-packing, which is the TurboQuant algorithm of Zandieh et al. \cite{zandieh2025turboquant}.}
+
+\subsection*{Entropy coding recovers most of the distance to the rate--distortion bound}\label{sec:ch07:entropy}
+
+A \emph{fixed-rate} quantizer spends $\log_2N$ bits on every sample. If its output indices are instead compressed by an entropy code, the average length can approach the output entropy $H(Q(X))$, which is smaller whenever the cells are not equally likely. The two-bit Gaussian quantizer of Example~\ref{ex:ch07:lloyd} has output entropy
+\begin{equation}\label{eq:ch07:H2}
+H\big(Q(X)\big)=-2\,(0.3369\log_20.3369+0.1631\log_20.1631)\approx1.911\ \text{bits},
+\end{equation}
+so entropy coding saves about $0.09$ bit per sample at the same distortion.
+
+At high rate a uniform quantizer followed by entropy coding is close to optimal. Its output entropy is about $h(X)-\log_2\Delta$, the differential entropy of \cref{ch03} minus the log of the step, and its distortion is $\Delta^2/12$. For a Gaussian of variance $\sigma^2$ the rate--distortion function is $R(D)=\frac12\log_2(\sigma^2/D)$. Substituting $D=\Delta^2/12$ and $h(X)=\tfrac12\log_2(2\pi e\sigma^2)$,
+\begin{equation}\label{eq:ch07:gishpierce}
+H\big(Q(X)\big)-R\big(\Delta^2/12\big)\approx\tfrac12\log_2(2\pi e\sigma^2)-\log_2\Delta-\tfrac12\log_2\frac{12\sigma^2}{\Delta^2}=\tfrac12\log_2\frac{\pi e}{6}\approx0.254\ \text{bit}.
+\end{equation}
+In decibels the excess is $10\log_{10}(\pi e/6)\approx1.53$\,dB. This is Gish and Pierce's result \cite{gishpierce1968}. It says that at high rate the best scalar quantizer with entropy coding is within a quarter bit of the rate--distortion bound, and therefore of every code, scalar or vector. Both approximations in \cref{eq:ch07:gishpierce} are high-rate ones, so the quarter bit is a limit as $\Delta\to0$, not a value at one or two bits.
+
+A fixed-rate quantizer does worse. The Panter--Dite formula, the high-rate distortion of the best fixed-rate Gaussian quantizer, is about $\frac{\sqrt3\pi}{2}\sigma^24^{-b}$ \cite{grayneuhoff1998}. That is a factor $2.72$, or $4.35$\,dB, above $R(D)$. It is an approximation. At $b=2$ it predicts $2.72/16\approx0.170$, while the exact Lloyd--Max value is $0.1175$, which is $2.74$\,dB above $D(R)=1/16$.
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=5.6, ymin=0, ymax=26, xlabel={bits per sample $b$}, ylabel={SNR (dB)}, xtick={0,1,2,3,4}]
+\addplot[pgreen, very thick, mark=none] coordinates {(0,0) (1,6.021) (2,12.04) (3,18.06) (4,24.08)};
+\addplot[porange, very thick, mark=none] coordinates {(1,4.488) (2,10.51) (3,16.53) (4,22.55)};
+\addplot[pblue, very thick, mark=*] coordinates {(1,4.396) (2,9.3) (3,14.62) (4,20.22)};
+\node[lbl, pgreen, anchor=west] at (axis cs:4.08,24.6) {$R(D)$};
+\node[lbl, porange, anchor=west] at (axis cs:4.08,22.4) {entropy-coded};
+\node[lbl, pblue, anchor=west] at (axis cs:4.08,19.9) {Lloyd--Max};
+\end{axis}
+\end{tikzpicture}
+\caption{Signal-to-noise ratio of quantizers for a standard Gaussian. The rate--distortion bound rises $6.02$\,dB per bit. The orange line is the high-rate formula for a uniform quantizer with entropy coding, a constant $1.53$\,dB below the bound, and it is only an approximation at one or two bits. The fixed-rate Lloyd--Max quantizer falls further behind as the rate grows, toward the Panter--Dite excess of $4.35$\,dB.}
+\label{fig:ch07:snr}
+\end{figure}
+
+\buildson{Conditional expectation as the best estimator (\cref{ch02}), differential entropy and the Gaussian $R(D)$ (\cref{ch03}), \cref{sec:ch07:uniform}.}
+\usedin{\Cref{sec:ch07:vq} (k-means is the same two conditions in $\R^d$), \cref{sec:ch07:alloc,sec:ch07:bias}.}
+
+\section{Bits across coordinates are allocated by water-filling}\label{sec:ch07:alloc}
+
+A vector whose coordinates have different variances should not spend the same number of bits on each. Suppose coordinate $i$ has variance $\sigma_i^2$ and receives $b_i$ bits. At high rate its distortion is $c\,\sigma_i^24^{-b_i}$ with a constant $c$ set by the quantizer and the shape of the coordinate's density, taken here to be the same for every coordinate, for example $c=1$ for the Gaussian bound or $\sqrt3\pi/2$ for Panter--Dite. Minimizing $\sum_ic\sigma_i^24^{-b_i}$ subject to $\sum_ib_i=B$ with a Lagrange multiplier (\cref{ch04}) gives
+\begin{equation}\label{eq:ch07:alloc}
+b_i=\frac Bd+\frac12\log_2\frac{\sigma_i^2}{\big(\prod_j\sigma_j^2\big)^{1/d}},\qquad
+c\,\sigma_i^24^{-b_i}=\theta\ \text{for every coordinate that receives bits}.
+\end{equation}
+Every coordinate ends with the same distortion $\theta$. If the formula gives some $b_i<0$, that coordinate gets no bits and keeps its full variance, and the others are recomputed. This is the reverse water-filling of \cref{ch03}, derived again from the high-rate model.
+
+Two caveats come with \cref{eq:ch07:alloc}. Real bit counts are integers, so the formula must be rounded, and rounding can cost more than the allocation gains. The high-rate model also fails at one or two bits, where most of the interesting allocations live. And if a consumer reads coordinate $i$ with weight $p_i$, the same derivation replaces $\sigma_i^2$ by $p_i\sigma_i^2$. That is the consumer-relative water-filling of \cref{ch06}.
+
+\begin{example}[Four coordinates]\label{ex:ch07:alloc}
+Let the variances be $16,4,1,0.25$, with geometric mean $2$. With $B=8$ bits, $B/d=2$ and $b_i=2+\frac12\log_2(\sigma_i^2/2)$ gives $3.5,2.5,1.5,0.5$ bits. Each coordinate's distortion is $c\sigma_i^24^{-b_i}=c/8$, and the total is $0.5c$. Two bits each would give $c(16+4+1+0.25)/16\approx1.328c$, so the allocation gains $10\log_{10}(1.328/0.5)\approx4.24$\,dB. With $B=4$ the formula gives $-0.5$ bits to the last coordinate. Dropping it and recomputing over the first three, whose geometric mean is $4$, gives $7/3$, $4/3$ and $1/3$ bits. The water level is then $c\cdot16\cdot2^{-14/3}\approx0.630c$. For $c=1$ it lies above the last variance $0.25$, so the last coordinate correctly stays off.
+\end{example}
+
+The consumer weights can reverse the allocation entirely. The next example is the flip of \cref{ch06} at the level of bit allocation.
+
+\begin{example}[The same budget, allocated for a consumer]\label{ex:ch07:allocC}
+Keep the variances $16,4,1,0.25$ and the budget $B=4$, and let a consumer read only the last two coordinates, with weights $p=(0,0,1,1)$. The weighted products are $0,0,1,0.25$, whose geometric mean over the two active coordinates is $0.5$, so \cref{eq:ch07:alloc} gives $2+\tfrac12\log_2(1/0.5)=2.5$ and $2+\tfrac12\log_2(0.25/0.5)=1.5$ bits to the third and fourth coordinates and none to the first two. The consumer's distortion is $c(4^{-2.5}+0.25\cdot4^{-1.5})=0.0625c$. The reconstruction allocation of \cref{ex:ch07:alloc} gives the third coordinate $1/3$ bit and the fourth none. The fourth coordinate keeps its full variance $0.25$, which carries no factor $c$, so with $c=1$ the same consumer sees $2^{-2/3}+0.25\approx0.880$, fourteen times more. At $1/3$ bit the high-rate model is far outside its range of validity, so the factor illustrates the flip and does not predict a measured ratio. The reconstruction allocation spends $11/3$ of its $4$ bits on coordinates this consumer never reads.
+\end{example}
+
+\inproject{\texttt{turboquant-\allowbreak pro/\allowbreak README.md} reports that a spectrum-following bit allocation beat uniform widths at four of six byte levels on 1024-dimensional Wikipedia embeddings and lost at every level on GloVe-100, whose spectrum is flat. The registered verdicts there are MIXED and REFUTED. The same README describes \texttt{read\_allocation}, which water-fills bits against a read operator.}
+
+\buildson{Lagrange multipliers (\cref{ch04}), reverse water-filling (\cref{ch03}), \cref{sec:ch07:lloyd}.}
+\usedin{\Cref{sec:ch07:rotation}, \cref{ch06} (the weighted version).}
+
+\section{Vector quantization is k-means, and its codebook grows exponentially}\label{sec:ch07:vq}
+
+A vector quantizer maps $x\in\R^d$ to the nearest of $N$ codewords $c_1,\dots,c_N$ and stores the index. The two conditions of \cref{eq:ch07:lloydmax} carry over unchanged. Cells are the Voronoi regions of the codewords, and each codeword is the mean of the data in its cell,
+\begin{equation}\label{eq:ch07:kmeans}
+\mathcal V_j=\{x:\norm{x-c_j}\le\norm{x-c_l}\ \text{for all}\ l\},\qquad c_j=\E[X\mid X\in\mathcal V_j].
+\end{equation}
+Run on a finite data set, Lloyd's alternation of the two conditions is the k-means algorithm. Its rate is $\log_2N/d$ bits per coordinate.
+
+An optimal vector quantizer is never worse than a scalar one, and it can be better for two reasons that survive entropy coding \cite{grayneuhoff1998}. It can exploit dependence between coordinates, and its cells can be rounder than cubes. A fixed-rate code has a third advantage, since it can match the density of its codewords to the shape of the source density. The second advantage is measured by the normalized second moment of a cell. A cube has $1/12\approx0.0833$, the regular hexagon has $5/(36\sqrt3)\approx0.0802$, a gain of $0.17$\,dB in two dimensions, and the limit as $d\to\infty$ is $10\log_{10}(2\pi e/12)\approx1.53$\,dB. That limit is the same $1.53$\,dB as \cref{eq:ch07:gishpierce}. For a source with independent coordinates, cell shape is all an entropy-coded scalar quantizer gives up at high rate. A source with dependent coordinates also costs it the dependence.
+
+The price is size. A rate of $R$ bits per coordinate in $d$ dimensions needs $N=2^{Rd}$ codewords. At $d=128$ and $2$ bits per coordinate that is $2^{256}\approx10^{77}$, which cannot be stored or searched. Practical vector quantizers therefore impose structure, and \cref{sec:ch07:rotation,sec:ch07:pq} describe the two kinds that vector search uses.
+
+\begin{example}[k-means on six points]\label{ex:ch07:kmeans}
+Take the points $(0,0)$, $(1,0)$, $(0,1)$, $(5,5)$, $(6,5)$ and $(5,6)$, with $N=2$, starting from the codewords $(0,0)$ and $(6,5)$. The first assignment already separates the two clusters, and the centroid step moves the codewords to $(1/3,1/3)$ and $(16/3,16/3)$. Nothing changes after that. The squared errors in the first cluster are $2/9$, $5/9$ and $5/9$, the second cluster mirrors them, and the total is $8/3$, or $4/9$ per point. The boundary between the two cells is the perpendicular bisector of the codewords, the line $x_1+x_2=17/3$.
+\end{example}
+
+\buildson{\Cref{sec:ch07:lloyd}, clustering in \emph{Data Mining as Observation}, Chapter~0, section 0.15.}
+\usedin{\Cref{sec:ch07:pq} (product quantization runs k-means on subvectors), the inverted-file index of \emph{Data Mining as Observation}, Chapter~11.}
+
+\section{A random rotation spreads energy so that one scalar quantizer fits every coordinate}\label{sec:ch07:rotation}
+
+A scalar quantizer applied coordinate by coordinate has a problem with vectors whose energy is concentrated in a few coordinates. Its range must cover the largest coordinate, so the step is large and the small coordinates are quantized coarsely. An orthogonal rotation $\Pi$ fixes this without changing what is stored. It preserves lengths and inner products, $\inner{\Pi x}{\Pi y}=\inner{x}{y}$, so the error after rotating back is the error made in the rotated coordinates,
+\begin{equation}\label{eq:ch07:rot}
+\norm{\Pi\T Q(\Pi x)-x}=\norm{Q(\Pi x)-\Pi x}.
+\end{equation}
+\Cref{ch01} introduced the two rotations used in practice. A random orthogonal matrix, drawn from the Haar distribution, sends a fixed vector to a uniformly random point on the sphere of the same radius. Each coordinate of the result then has mean square $\norm{x}^2/d$, and for large $d$ each coordinate is close to Gaussian, with the coordinates nearly independent. A normalized Hadamard matrix with random signs spreads energy in a similar way in $O(d\log d)$ operations instead of $O(d^2)$, but its output does not follow the law of \cref{eq:ch07:beta}. It sends the basis vector $e_1$ to a vector whose coordinates are all $\pm1/\sqrt d$. Its use as a fast random transform goes back to Ailon and Chazelle \cite{ailonchazelle2009}. Why random directions in high dimension are nearly orthogonal, and why distances survive a random projection, is the subject of \cref{ch11}.
+
+The distribution of one coordinate is known exactly. If $y$ is uniform on the unit sphere in $\R^d$, the coordinate $y_1$ has density
+\begin{equation}\label{eq:ch07:beta}
+f_d(t)\ \propto\ (1-t^2)^{(d-3)/2},\qquad -1\le t\le1,\qquad \E[y_1^2]=\frac1d ,
+\end{equation}
+so $y_1^2$ follows a $\mathrm{Beta}(\tfrac12,\tfrac{d-1}2)$ law. For $d=3$ the density is flat, which is Archimedes' observation that a sphere's area is spread evenly over its height. As $d$ grows the density concentrates near zero with standard deviation $1/\sqrt d$, and $\sqrt d\,y_1$ tends to a standard Gaussian. \Cref{ch11} develops this concentration and what it does to distances.
+
+TurboQuant uses exactly this. It normalizes a vector, rotates it randomly so that the coordinates follow one known distribution, a scaled Beta, and then applies a single Lloyd--Max quantizer designed for that distribution to every coordinate \cite{zandieh2025turboquant}. The rotation needs no training and no side information beyond the seed.
+
+A random rotation equalizes coordinate energy on average over the rotation, and equalization is the opposite of water-filling. When the source spectrum is concentrated, a principal-component rotation followed by the allocation of \cref{sec:ch07:alloc} spends bits where the variance is. A random rotation spreads that variance evenly and gives up the allocation. The main example in the turboquant-pro README applies a principal-component projection before its quantizer.
+
+\begin{example}[A spike made flat]\label{ex:ch07:rotation}
+Let $x=(2,0,0,0)$ and $H=\frac12\begin{psmallmatrix}1&1&1&1\\1&-1&1&-1\\1&1&-1&-1\\1&-1&-1&1\end{psmallmatrix}$, which is orthogonal. Then $Hx=(1,1,1,1)$, with the same length $2$. A $b$-bit uniform quantizer whose range covers the largest coordinate has step $4/2^b$ before the rotation and $2/2^b$ after. The step halves, the mean squared error per coordinate falls by four, and for this vector the rotation is worth $6.02$\,dB, one bit. In $16$ dimensions a vector with energies $9$ and $1$ in two coordinates, rotated by a random orthogonal matrix drawn with a fixed seed, keeps its total energy $10$, and its largest coordinate energy falls from $9$ to $3.025$, against an average of $0.625$.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.48\linewidth, height=0.36\linewidth, ybar, bar width=4pt, xmin=0.3, xmax=16.7, ymin=0, ymax=9.6,
+  xtick={1,4,8,12,16}, xlabel={coordinate}, ylabel={energy $x_i^2$}, title={\small before}]
+\addplot[fill=pblue, draw=pblue] coordinates {(1,9) (2,0) (3,0) (4,0) (5,0) (6,1) (7,0) (8,0) (9,0) (10,0) (11,0) (12,0) (13,0) (14,0) (15,0) (16,0)};
+\end{axis}
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.48\linewidth, height=0.36\linewidth, ybar, bar width=4pt, xmin=0.3, xmax=16.7, ymin=0, ymax=9.6,
+  xtick={1,4,8,12,16}, xlabel={coordinate}, ylabel={energy $(\Pi x)_i^2$}, title={\small after a random rotation}]
+\addplot[fill=pgreen, draw=pgreen] coordinates {(1,0.069) (2,0.455) (3,0.179) (4,0.218) (5,0.168) (6,0.370) (7,1.391) (8,1.149) (9,3.025) (10,0.324) (11,1.020) (12,0.797) (13,0.716) (14,0.090) (15,0.026) (16,0.001)};
+\draw[guide] (axis cs:0.3,0.625) -- (axis cs:16.7,0.625);
+\node[lbl, pgray, anchor=south east] at (axis cs:16.5,0.7) {mean $0.625$};
+\end{axis}
+\end{tikzpicture}
+\caption{A random orthogonal rotation spreads the energy of a spiky vector across all sixteen coordinates. The total stays $10$, the largest coordinate energy falls from $9$ to $3.025$, and one quantizer range now fits every coordinate.}
+\label{fig:ch07:rotation}
+\end{figure}
+
+\inproject{\texttt{turboquant-\allowbreak pro/\allowbreak README.md}, the paragraph on the per-vector flow and the \texttt{PCAMatryoshka} example, which projects to $256$ dimensions before a $3$-bit quantizer.}
+
+\buildson{Orthogonal and Hadamard matrices (\cref{ch01}), \cref{sec:ch07:lloyd,sec:ch07:alloc}.}
+\usedin{\Cref{sec:ch07:bias}.}
+
+\section{Compressed search scores codes by table lookup and scans only the cells it probes}\label{sec:ch07:pq}
+
+Product quantization (PQ), due to J\'egou, Douze and Schmid \cite{jegou2011pq}, is the structured vector quantizer behind most compressed vector indexes. Split $x\in\R^d$ into $m$ subvectors $x=(x^{(1)},\dots,x^{(m)})$ of dimension $d/m$. Run k-means separately on each subspace with $K$ centroids. A vector is stored as $m$ indices, one per subspace, which costs $m\log_2K$ bits. The effective codebook is the product of the $m$ small codebooks, with $K^m$ codewords, but only $mK$ centroids are ever stored. Optimized product quantization adds a learned rotation before the split so that the subspaces carry balanced energy \cite{ge2014opq}.
+
+Search uses \emph{asymmetric distance computation} (ADC). The query $q$ stays in full precision and only the database is quantized. For an inner-product score, build one table per subspace and score each stored code by $m$ lookups and additions,
+\begin{equation}\label{eq:ch07:adc}
+T_j[s]=\inner{q^{(j)}}{c_{j,s}},\qquad
+\inner{q}{\hat x}=\sum_{j=1}^m T_j\big[\mathrm{code}_j(x)\big].
+\end{equation}
+Building the tables costs $mK\cdot(d/m)=Kd$ multiply-adds per query, once. Scoring each of the $n$ database vectors then costs $m$ lookups instead of $d$ multiply-adds. Quantizing the query as well, the symmetric variant (SDC), saves table construction but adds the query's own error. The two score errors are
+\begin{equation}\label{eq:ch07:adcsdc}
+\underbrace{\inner{q}{\hat x}-\inner qx=\inner{q}{\hat x-x}}_{\text{ADC}},\qquad
+\underbrace{\inner{\hat q}{\hat x}-\inner qx=\inner{q}{\hat x-x}+\inner{\hat q-q}{\hat x}}_{\text{SDC}} .
+\end{equation}
+ADC carries one error term, the database error read through the query. SDC adds a second, the query's own quantization error read through the reconstruction, and the two add in mean square when they are uncorrelated. On the seeded toy corpus of \cref{ex:ch07:e2e}, with $m=8$ subspaces of $16$ centroids each, the mean squared score error is $8.46$ for ADC and $15.72$ for SDC, against a mean squared score of $84.4$. On this corpus keeping the query exact nearly halves the error, and it costs nothing in storage, since the query is never stored. That is why ADC is the usual choice \cite{jegou2011pq}. The same reasoning says the lookup table itself should keep enough precision, because rounding the table is a query-side error. turboquant-pro's compiled kernel stores its table in $255$ levels for speed and records the resulting score deviation as part of its accuracy contract.
+
+The arithmetic shows why ADC is fast. Scanning $n=10^6$ vectors of dimension $d=128$ exactly costs $1.28\times10^8$ multiply-adds per query. With $m=8$ and $K=256$, building the tables costs $Kd=32768$ multiply-adds and scoring costs $8\times10^6$ lookups and additions, sixteen times fewer operations. The stored data shrink from $512$ megabytes to $8$ megabytes, so the scan also reads sixty-four times less memory, which on modern hardware matters as much as the arithmetic.
+
+\begin{example}[Four dimensions, two subspaces, two centroids each]\label{ex:ch07:pq}
+Let $d=4$, $m=2$ and $K=2$. Subspace $1$ has centroids $c_{1,0}=(0,0)$ and $c_{1,1}=(1,1)$. Subspace $2$ has $c_{2,0}=(0,1)$ and $c_{2,1}=(1,0)$. Each vector costs $2$ bits. For the query $q=(1,0,0,1)$ the tables are $T_1=(0,1)$ and $T_2=(1,0)$. Items with codes $(1,0)$, $(0,1)$, $(1,1)$ and $(0,0)$ score $1+1=2$, $0+0=0$, $1+0=1$ and $0+1=1$. The first item decodes to $\hat x=(1,1,0,1)$, and $\inner{q}{\hat x}=2$ agrees with the lookup. At realistic sizes, $d=128$ with $m=8$ and $K=256$ stores $8$ bytes per vector, $64$ times less than $32$-bit floats, with $8\cdot256$ centroids of dimension $16$, or $32768$ numbers, in the codebooks.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}[node distance=4mm]
+\foreach \i/\c in {0/pblue,1/pblue,2/pblue,3/pblue,4/pblue,5/pblue,6/pblue,7/pblue} {
+  \draw[thick, fill=plight] (\i*0.55,0) rectangle ++(0.55,0.55);
+}
+\node[lbl, anchor=east] at (-0.1,0.27) {$x\in\R^{d}$};
+\foreach \j/\k in {0/1,1/2,2/3,3/4} {
+  \draw[decorate, decoration={brace, amplitude=4pt, mirror}, thick, pgray] (\j*1.1+0.04,-0.08) -- (\j*1.1+1.06,-0.08);
+  \node[block, minimum width=8mm, font=\scriptsize] (cb\j) at (\j*1.1+0.55,-1.25) {$\mathcal C_{\k}$};
+  \draw[flow] (\j*1.1+0.55,-0.32) -- (cb\j.north);
+  \node[world, draw=porange, text=porange, minimum size=6mm, font=\scriptsize] (id\j) at (\j*1.1+0.55,-2.35) {$s_{\k}$};
+  \draw[flow] (cb\j.south) -- (id\j.north);
+}
+\node[lbl, anchor=west, align=left] at (4.6,-1.25) {$K$ k-means centroids\\per subspace};
+\node[lbl, anchor=west, align=left] at (4.6,-2.35) {code: $m\log_2K$ bits};
+\node[block, fill=white, draw=pgreen, text width=6.2cm, align=center, font=\scriptsize] at (2.2,-3.6) {score $=T_1[s_1]+T_2[s_2]+T_3[s_3]+T_4[s_4]$};
+\end{tikzpicture}
+\caption{Product quantization with $m=4$ subspaces. Each slice of the vector is coded by its own small k-means codebook, the stored code is the list of indices, and a query is scored against the code by adding one table entry per subspace.}
+\label{fig:ch07:pq}
+\end{figure}
+
+
+Table lookup makes each scored vector cheap. An \emph{inverted file} (IVF) reduces how many vectors are scored. A coarse k-means quantizer with $n_{\mathrm{list}}$ centroids partitions the database into cells, and each vector is stored in the list of its cell, often coded as its residual from the centroid. A query ranks the centroids, scans only the $n_{\mathrm{probe}}$ best cells, and returns the best $k$ among the vectors it found. With equal cells the scanned fraction is
+\begin{equation}\label{eq:ch07:ivf}
+\frac{n_{\mathrm{probe}}}{n_{\mathrm{list}}},\qquad
+\mathrm{recall}@k\ =\ \Pr\big[\text{a true neighbour lies in a probed cell}\big]\ \text{when the codes are exact.}
+\end{equation}
+A true neighbour is found exactly when its cell is probed, so recall rises with $n_{\mathrm{probe}}$ and reaches $1$ when every cell is scanned. The trade between recall and cost is set by how well the partition co-locates a query with its neighbours, and summary statistics of the geometry can miss it. \emph{Data Mining as Observation}, Chapter~11, section 11.4 reports a synthetic generator that matched ten registered geometric statistics of a real corpus and still needed $2$ probes for $95$ percent recall at $10$ where the real corpus needed $47$ to $50$.
+
+\begin{example}[Recall against probes on a clustered toy]\label{ex:ch07:ivf}
+Take the seeded corpus of \cref{ex:ch07:e2e}, $4000$ vectors in $\R^{32}$ drawn around $20$ cluster centres, with $200$ queries from the same law. Partition it with k-means into $n_{\mathrm{list}}=32$ cells and score inner products exactly inside the probed cells. One probe scans $3.7$ percent of the vectors and returns $90.8$ percent of the true top $10$. Two probes scan $6.7$ percent for $99.3$ percent, and four probes scan $13.1$ percent and find every true neighbour. This corpus is easy because its neighbourhoods are its clusters, which the partition recovers. The real corpus of the first-course chapter, whose neighbourhoods cross cells, reached only $0.53$ at one probe.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmode=log, log basis x=2, xmin=0.8, xmax=40, ymin=0, ymax=1.08, xtick={1,2,4,8,16,32}, xticklabels={1,2,4,8,16,32},
+  xlabel={cells probed $n_{\mathrm{probe}}$ of $32$}, ylabel={fraction}]
+\addplot[pgreen, very thick, mark=*] coordinates {(1,0.908) (2,0.993) (4,1.0) (8,1.0) (16,1.0) (32,1.0)};
+\addplot[porange, very thick, mark=square*] coordinates {(1,0.037) (2,0.067) (4,0.131) (8,0.261) (16,0.506) (32,1.0)};
+\node[lbl, pgreen, anchor=south west] at (axis cs:2.2,0.86) {recall@10};
+\node[lbl, porange, anchor=north west] at (axis cs:4.3,0.12) {fraction of vectors scanned};
+\end{axis}
+\end{tikzpicture}
+\caption{An inverted file on the clustered toy of \cref{ex:ch07:ivf}. Recall reaches $0.99$ after two of $32$ cells, while the cost grows in proportion to the cells probed. On data whose neighbourhoods cross cells the green curve can rise far more slowly.}
+\label{fig:ch07:ivf}
+\end{figure}
+
+A \emph{graph index} replaces the partition with a navigable graph. HNSW, the hierarchical navigable small-world graph, links each vector to a few near neighbours on several layers of decreasing sparsity, and a query walks greedily from an entry point toward higher scores, keeping a candidate list of size $\mathit{ef}$. Larger $\mathit{ef}$ visits more nodes and usually raises recall, which is the same recall--cost trade as $n_{\mathrm{probe}}$. This chapter states the idea only and does not analyse the graph.
+
+turboquant-pro implements both on top of its codes. Its \texttt{IVFIndex} sorts rows by cell so that a probed cell is one contiguous chunk of the scan, and by default codes each row as its residual from the cell centroid. A residual is shorter than the row on average, since k-means minimizes the mean squared residual, so the same bits carry less absolute error on average. A row near the origin whose cell centroid lies far away is a counterexample for that row. Besides a fixed $n_{\mathrm{probe}}$ it offers an adaptive stop that orders cells by an upper bound on any score they can contain and stops when the next bound cannot beat the current $k$th score. Its \texttt{CompressedHNSW} walks the graph with scores from a centroid-to-centroid lookup table, a symmetric computation, and then reranks the top candidates against the exact query. The rerank restores exact order among the candidates it rescores. It cannot recover a neighbour that the traversal never reached.
+
+\inproject{\texttt{turboquant-\allowbreak pro/\allowbreak turboquant\_pro/\allowbreak ivf.py} (class \texttt{IVFIndex}) and \texttt{turboquant\_pro/\allowbreak hnsw.py} (class \texttt{CompressedHNSW}) implement the two search structures. \texttt{turboquant-\allowbreak pro/\allowbreak docs/\allowbreak DESIGN\_fast\_adc.md}, Section~2, writes the same lookup for per-dimension scalar codes, \texttt{LUT[j, s] = q'[j] * c[s]}. Section~3b records that the compiled kernel quantizes that table to $255$ levels, so it is an approximate scorer, with measured recall at $10$ against the exact scorer between $0.972$ and $0.988$.}
+
+\buildson{\Cref{sec:ch07:vq}, inner products (\cref{ch01}).}
+\usedin{\Cref{sec:ch07:bias,sec:ch07:accept}, \cref{ch08}.}
+
+\section{A centroid quantizer shrinks inner products, and the shrinkage can be undone}\label{sec:ch07:bias}
+
+A search consumer reads inner products $\inner{q}{\hat x}$, not reconstructions. The centroid condition \cref{eq:ch07:centroid} makes the reconstruction lose energy, and that loss shows up as a systematic shrinkage of every inner product. The cleanest statement uses a random rotation.
+
+\begin{proposition}[Shrinkage under a random rotation]\label{prop:ch07:shrink}
+Let $\Pi$ be a Haar-random orthogonal matrix, $y=\Pi x$, and let $Q$ act coordinatewise and satisfy the centroid condition for the marginal distribution of each coordinate of $y$. Write $\varepsilon=\E\norm{Q(y)-y}^2/\norm{x}^2$ for the relative mean squared error. Then for every fixed $q$,
+\begin{equation}\label{eq:ch07:shrink}
+\E_\Pi\big[\Pi\T Q(\Pi x)\big]=(1-\varepsilon)\,x,\qquad
+\E_\Pi\inner{q}{\Pi\T Q(\Pi x)}=(1-\varepsilon)\inner{q}{x}.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Let $f(x)=\E_\Pi[\Pi\T Q(\Pi x)]$. For any orthogonal $U$, $\Pi U$ is again Haar-distributed, so $f(Ux)=Uf(x)$. Every $U$ that fixes $x$ therefore fixes $f(x)$, which forces $f(x)=\alpha x$ for a scalar $\alpha$. To find it, take the inner product with $x$, so that $\alpha\norm{x}^2=\E\inner{y}{Q(y)}=\sum_i\E[y_iQ(y_i)]$. By the centroid condition $\E[y_iQ(y_i)]=\E[Q(y_i)^2]=\E[y_i^2]-\E[(y_i-Q(y_i))^2]$. Summing gives $\alpha\norm{x}^2=\norm{x}^2-\E\norm{Q(y)-y}^2$.
+\end{proof}
+
+The estimator $\inner{q}{\hat x}$ is biased toward zero by the factor $1-\varepsilon$, and dividing by $1-\varepsilon$ removes the bias on average over the rotation. Note what this does not say. For one fixed rotation the error of $\inner{q}{\hat x}$ is a deterministic function of $x$, and the proposition speaks only of its average over rotations.
+
+A different construction gives an estimator that is unbiased for each pair $(q,k)$ over the random projection. For $s\sim\Normal(0,I)$ the pair $(\inner sq,\inner sk)$ is jointly Gaussian with covariance $\inner qk$, and the regression of \cref{ch02} gives
+\begin{equation}\label{eq:ch07:qjl}
+\E\big[\inner sq\,\operatorname{sign}\inner sk\big]=\sqrt{\frac2\pi}\,\frac{\inner qk}{\norm k}.
+\end{equation}
+Storing only the sign of $\inner sk$ and the norm $\norm k$, the quantity $\norm k\sqrt{\pi/2}\,\inner sq\operatorname{sign}\inner sk$ is therefore an unbiased estimate of $\inner qk$. This is the one-bit quantized Johnson--Lindenstrauss transform (QJL) of Zandieh, Daliri and Han \cite{zandieh2024qjl}. TurboQuant states that mean-squared-error-optimal quantizers bias inner products and applies a one-bit QJL step to the residual of its scalar quantizer to obtain an unbiased inner-product quantizer \cite{zandieh2025turboquant}. RaBitQ also starts with a random rotation, stores one bit per dimension, and comes with a theoretical error bound for its distance estimate \cite{gao2024rabitq}.
+
+Squared distances have the opposite bias. Let $x$ lie in a cell with centroid $c$. Because $c$ is the mean of the cell, the cross term vanishes when the true squared distance is averaged over the cell,
+\begin{equation}\label{eq:ch07:distbias}
+\E\big[\norm{q-x}^2\mid x\in\text{cell}\big]=\norm{q-c}^2+\E\big[\norm{x-c}^2\mid x\in\text{cell}\big].
+\end{equation}
+The asymmetric distance $\norm{q-c}^2$ therefore underestimates the average true squared distance by the mean squared error of the cell. J\'egou, Douze and Schmid analyse this distance error and correct the estimate by adding the cell's error back \cite{jegou2011pq}. For a ranking the correction matters only when cells have different errors. A constant offset changes no ranking, and a cell-dependent one can.
+
+Whether the bias matters depends on the consumer. A nearest-neighbour ranking for one query does not change when every score is multiplied by the same positive constant, so a common factor $1-\varepsilon$ is harmless there. A softmax over scores is not scale-invariant. Shrinking every logit by $1-\varepsilon$ flattens the attention distribution, so an attention consumer feels the bias directly.
+
+\begin{example}[One bit per coordinate]\label{ex:ch07:bias}
+For a standard Gaussian coordinate and the one-bit quantizer of Example~\ref{ex:ch07:lloyd}, $\E[XQ(X)]=\sqrt{2/\pi}\,\E|X|=2/\pi\approx0.637$, which is $1-0.3634$, as \cref{eq:ch07:centroid} requires. In $d=8$ dimensions with a Haar rotation, a coordinate of a unit vector has $\E|y_1|=\Gamma(4)/(\sqrt\pi\,\Gamma(4.5))\approx0.2910$, the one-bit centroid quantizer uses levels $\pm0.2910$, and $1-\varepsilon=8\cdot0.2910^2\approx0.678$. A Monte Carlo average over $60000$ random rotations reproduces $0.678$ for both identities in \cref{eq:ch07:shrink}. As $d$ grows the factor tends to $2/\pi$. For the QJL identity with $q=(1,0)$ and $k=(1,1)$, \cref{eq:ch07:qjl} gives $\sqrt{2/\pi}/\sqrt2=1/\sqrt\pi\approx0.564$, and a simulation with two million draws of $s$ agrees.
+\end{example}
+
+\buildson{Centroid condition \cref{eq:ch07:centroid}, \cref{sec:ch07:rotation}, Gaussian regression (\cref{ch02}).}
+\usedin{\Cref{sec:ch07:accept}, \cref{ch06} (the bias term $\mu_\delta\T P_C\mu_\delta$ of the observer distortion).}
+
+\section{An attention cache reads its keys through a softmax and averages its values}\label{sec:ch07:kv}
+
+A transformer language model keeps, for every past token $s$ and every attention head, a key $k_s\in\R^d$ and a value $v_s\in\R^d$. A new query $q$ forms logits $l_s=\inner q{k_s}/\sqrt d$, turns them into weights by a softmax, and outputs a weighted average of the values,
+\begin{equation}\label{eq:ch07:attn}
+p_s=\frac{e^{l_s}}{\sum_te^{l_t}},\qquad o=\sum_sp_sv_s .
+\end{equation}
+The cache of keys and values grows with the context and is a natural target for quantization. The two halves are read by different consumers.
+
+A value error $\delta v_s$ enters the output linearly, $\delta o=\sum_sp_s\delta v_s$. If the errors are independent across tokens with mean zero and variance $\sigma^2$ per coordinate,
+\begin{equation}\label{eq:ch07:valavg}
+\E\norm{\delta o}^2=\sigma^2d\sum_sp_s^2 ,
+\end{equation}
+with the weights $p_s$ held fixed, that is with exact keys. Here $\sum_sp_s^2\le1$, with equality only when all the weight sits on one token. Attention averages independent value errors away. An error shared by every token, such as a common offset $\delta v_s=\delta$, passes through unchanged, since the weights sum to one and $\delta o=\delta$. A key error enters through the logit, $\delta l_s=\inner q{\delta k_s}/\sqrt d$, and then through the exponential. Its read operator is spanned by the queries, as \cref{ch06} derives, and the softmax multiplies each weight by $e^{\delta l_s}$ and renormalizes, so a logit error changes the weights themselves rather than being averaged. A key quantizer must preserve the directions and scales the queries read.
+
+Two scaling choices follow. A \emph{per-token} quantizer gives each key vector its own range. A \emph{per-channel} quantizer gives each coordinate its own range, computed over the tokens. Keys typically contain a few outlier channels with large magnitude or a large constant offset. A per-token range must stretch to cover the outlier in every vector, so the step is large for every other channel. A per-channel range isolates the outlier in its own channel.
+
+\begin{example}[One outlier channel]\label{ex:ch07:kv}
+Draw $64$ keys in $\R^{16}$ with standard normal channels, except that channel $1$ has standard deviation $0.5$ around an offset of $8$, and quantize each to $4$ bits with an asymmetric uniform quantizer. The per-token code has mean squared error $0.0322$ and the per-channel code $0.0077$, a factor of $4.2$. On the fifteen ordinary channels the errors are $0.0343$ and $0.0080$, so nearly all of the per-token loss falls on channels that were never large. For one random query the Kullback--Leibler divergence between the exact and the quantized attention weights is $0.0430$ per token and $0.0057$ per channel. For values the averaging is visible directly. With $64$ tokens and random weights, $\sum_sp_s^2=0.0405$, so \cref{eq:ch07:valavg} shrinks the output error to $1/24.7$ of a single value's error, $0.00648$ against $0.16$ for $\sigma=0.1$, and a simulation agrees.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.46\linewidth, height=0.40\linewidth, ybar, bar width=16pt, ymin=0, ymax=0.04,
+  symbolic x coords={tok,chan}, xtick=data, xticklabels={per token, per channel}, enlarge x limits=0.6,
+  ylabel={key MSE}, nodes near coords, nodes near coords style={font=\scriptsize,/pgf/number format/fixed,/pgf/number format/precision=4},
+  yticklabel style={/pgf/number format/fixed}]
+\addplot[fill=pred, draw=pred] coordinates {(tok,0.0322) (chan,0.0077)};
+\end{axis}
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.46\linewidth, height=0.40\linewidth, ybar, bar width=16pt, ymin=0, ymax=0.05,
+  symbolic x coords={tok,chan}, xtick=data, xticklabels={per token, per channel}, enlarge x limits=0.6,
+  ylabel={attention KL (nats)}, nodes near coords, nodes near coords style={font=\scriptsize,/pgf/number format/fixed,/pgf/number format/precision=4},
+  yticklabel style={/pgf/number format/fixed}]
+\addplot[fill=porange, draw=porange] coordinates {(tok,0.0430) (chan,0.0057)};
+\end{axis}
+\end{tikzpicture}
+\caption{Four-bit keys with one outlier channel, from \cref{ex:ch07:kv}. Scaling each channel separately cuts the key error by a factor of $4.2$ and the damage to the attention weights by a factor of $7.6$, because the per-token range wastes its levels on the outlier.}
+\label{fig:ch07:kv}
+\end{figure}
+
+The programme's keys finding is the same story at scale. PolarQuant normalizes each key and quantizes its direction with a codebook shared across channels, which preserves the norm and discards the per-channel scale that the logits read. \Cref{sec:ch07:accept} gives its numbers. turboquant-pro's \texttt{PerChannelKV} quantizes keys per channel with asymmetric ranges, optionally with non-uniform levels and with the largest $2$ percent of entries per channel kept in 16-bit floats. Its documentation records that the outlier key channels dominate attention and that uniform $4$-bit codes crush them. Values keep the per-vector rotation code, because attention averages them.
+
+\inproject{\texttt{turboquant-\allowbreak pro/\allowbreak docs/\allowbreak KV\_KEYS\_FINDING.md} and the module docstring of \texttt{turboquant\_pro/\allowbreak per\_channel\_kv.py}, which records the keys and values recommendation and the outlier fraction.}
+
+\buildson{Softmax and its Fisher metric (\cref{ch06}), \cref{sec:ch07:uniform,sec:ch07:rotation}.}
+\usedin{\Cref{sec:ch07:accept}, \cref{ch08}.}
+
+\section{An index is accepted on rank fidelity, never on reconstruction cosine}\label{sec:ch07:accept}
+
+A vector index answers queries with ranked lists. Its consumer is the ranking, and the acceptance metric must be a property of the ranking. Two are standard. Recall at $k$ is the overlap between the returned top $k$ and the true top $k$ computed from the uncompressed vectors. Kendall's $\tau$ \cite{kendall1938} compares two whole rankings pair by pair,
+\begin{equation}\label{eq:ch07:recall}
+\mathrm{recall}@k=\frac{\big|\widehat{\mathrm{top}}_k\cap\mathrm{top}_k\big|}{k},\qquad
+\tau=\frac{\#\text{concordant pairs}-\#\text{discordant pairs}}{n(n-1)/2}.
+\end{equation}
+\emph{Data Mining as Observation}, Chapter~0, section 0.8 and Chapter~11, sections 11.3 and 11.4 define both with examples. They add the rank certificate $\tau\ge1-2\hat\mu$ and the rule that recall is measured against exact neighbours, never against the index's own ranking.
+
+\begin{example}[Two metrics, one ranking]\label{ex:ch07:recall}
+Four items have exact scores ordering them $A,B,C,D$, and the compressed scores order them $A,C,B,D$. One of the six pairs, $(B,C)$, is discordant, so $\tau=(5-1)/6\approx0.667$. Recall at $2$ is $|\{A,C\}\cap\{A,B\}|/2=0.5$, and recall at $3$ is $1$. The same compressed ranking is perfect at $k=3$ and half wrong at $k=2$. A report states which $k$ it accepted on.
+\end{example}
+
+A rank certificate turns a measured distortion into a lower bound on $\tau$. Let $r=d_{\mathrm{compressed}}/d_{\mathrm{exact}}$ for each anchor pair, and suppose every ratio lies in $[a,\kappa a]$. Take two pairs with exact distances $d_1<d_2$. Their compressed distances satisfy $\tilde d_1\le\kappa a\,d_1$ and $\tilde d_2\ge a\,d_2$, so if $d_2\ge\kappa d_1$ then $\tilde d_2\ge\kappa a\,d_1\ge\tilde d_1$ and the order is kept. A comparison can be reversed only if its two exact distances are within a factor $\kappa$ of each other. With $\hat\mu(\kappa)$ the fraction of comparisons in the corpus that are that close, the discordant fraction is at most $\hat\mu$, and
+\begin{equation}\label{eq:ch07:cert}
+\tau\ \ge\ 1-2\hat\mu(\kappa),\qquad \rho_S\ \ge\ 1-3\hat\mu(\kappa).
+\end{equation}
+The Spearman bound follows from Daniels' inequality between the two rank correlations, as the turboquant-pro source states. The certificate is distribution-free in the sense that it assumes nothing about the data, only the measured ratio interval.
+The example in turboquant-pro's certificate specification has $\kappa=1.0148$ and $\hat\mu=0.0664$ over $19900$ anchor pairs and reports a floor of $0.8671$. The specification computes its $\kappa$ between the $2.5$th and $97.5$th percentiles, and \emph{Data Mining as Observation}, Chapter~11, section 11.3 explains why that makes the number an estimate rather than a guaranteed floor. When no $\kappa$ gives a positive floor, the certificate is vacuous, and the index must rerank exactly. A floor measured on sampled anchor pairs speaks for the corpus only through a sampling argument with a confidence level, and \cref{ch12} supplies the tail bounds that argument needs. As an illustration only, if $\hat\mu$ were the mean of $m$ independent sampled comparisons, Hoeffding's inequality would give $\mu\le\hat\mu+\sqrt{\ln(1/\alpha)/(2m)}$ with probability at least $1-\alpha$. At $m=10^4$ and $\alpha=0.05$ the margin is $0.012$. The comparisons a certificate counts share anchors and are not independent, so a real statement needs a bound that handles the dependence, and the specification records the anchor count and seed for that purpose rather than supplying the argument.
+
+Reconstruction cosine, $\cos(x,\hat x)$, is not on the list, and the programme's rule is that it is never the acceptance metric. In the language of \cref{ch06}, cosine is the identity reader on the unit sphere. It weights the direction error equally in every direction. A consumer weights it by its read operator. For a dot-product consumer with query distribution $\E[qq\T]$, the score error $\inner{q}{\hat x-x}$ has mean square $\tr(\E[qq\T]M_\delta)$, which can be large while $1-\cos$ is small, whenever the error lies along directions the queries read.
+
+\begin{example}[High cosine, reversed ranking]\label{ex:ch07:cosine}
+Let a query read only the second coordinate, $q=(0,1)$, and let two keys of length $10$ sit at angles $0.30$ and $0.25$ radians, $k_1=(9.553,2.955)$ and $k_2=(9.689,2.474)$. Their exact scores are $2.955>2.474$. A direction-only quantizer keeps each length and moves each angle by $0.10$ radians, to $0.20$ and $0.35$. Both reconstructions have cosine $\cos0.1\approx0.9950$ with their originals, and both relative errors are $2\sin0.05\approx0.0999$. The new scores are $1.987<3.429$, and the ranking is reversed. Cosine reports two nearly perfect reconstructions, and the consumer sees the wrong answer.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}[scale=0.78]
+\draw[guide] (0,0) -- (10.6,0);
+\draw[vec, porange] (0,0) -- (0,3.9) node[lbl, above] {query reads $e_2$};
+\draw[vec, pblue] (0,0) -- (9.553,2.955);
+\node[lbl, pblue, anchor=west] at (10.0,2.95) {$k_1$, score $2.955$};
+\draw[vec, pblue!55] (0,0) -- (9.689,2.474);
+\node[lbl, pblue!55, anchor=west] at (10.0,2.35) {$k_2$, score $2.474$};
+\draw[vec, pred, dashed] (0,0) -- (9.801,1.987);
+\node[lbl, pred, anchor=west] at (10.0,1.75) {$\hat k_1$, score $1.987$};
+\draw[vec, pred!60, dashed] (0,0) -- (9.394,3.429);
+\node[lbl, pred!60, anchor=west] at (10.0,3.55) {$\hat k_2$, score $3.429$};
+\draw[guide] (9.553,2.955) -- (0,2.955);
+\draw[guide] (9.394,3.429) -- (0,3.429);
+\node[lbl, pgray, anchor=east] at (-0.05,2.955) {$2.96$};
+\node[lbl, pgray, anchor=east] at (-0.05,3.429) {$3.43$};
+\end{tikzpicture}
+\caption{Two keys whose reconstructions each have cosine $0.995$ with the original. Their scores against a query that reads the second coordinate swap order, because each $0.1$-radian direction error lies along the direction the query reads.}
+\label{fig:ch07:cosine}
+\end{figure}
+
+The programme's own record contains a large instance of this effect. On Qwen2.5-1.5B-Instruct with WikiText-2, quantizing the post-rotary keys with PolarQuant at four bits gives a perplexity of $10643$ against an fp16 baseline of $12.24$, while the keys read a reconstruction cosine of $0.995$. A per-channel uniform key quantizer at the same width gives $14.91$. The mean key reconstruction errors are $0.062$ for that per-channel code, $0.095$ for PolarQuant and $0.148$ for a per-channel non-uniform quantizer at three bits, $2.4$ times the first. That three-bit code reaches a perplexity of $15.77$, more than $600$ times lower than PolarQuant's. Between PolarQuant and the three-bit code, reconstruction error and perplexity move in opposite directions. The mechanism the project files give is that PolarQuant normalizes each key and quantizes its direction, discarding the per-channel scale that $\mathrm{softmax}(QK\T)$ reads. In \texttt{turboquant-\allowbreak pro/\allowbreak CLAIMS.md} this result carries the status \emph{experimental}, because it is fake quantization measured on Qwen2.5 only. \texttt{geometric-\allowbreak observation/\allowbreak PROTOCOL.md} carries the claim that reconstruction cosine is a proxy for key quality as a standing \texttt{[refuted]} row.
+
+A comparison between two quantizers is meaningful only at matched bytes. Every stored byte counts, including norms, scales and zero points. A $768$-dimensional embedding in $32$-bit floats takes $3072$ bytes. Projected to $256$ dimensions and quantized at $3$ bits it takes $96$ bytes plus a $4$-byte norm, $100$ bytes in all, a ratio of $30.72$. A product quantizer with $m=100$ and $K=256$ also takes $100$ bytes, so these two can be compared directly, and a $3$-bit code that omitted its norm from the count could not. turboquant-pro's public comparison against RaBitQ and optimized PQ was registered in advance with a byte-window rule that pairs configurations within $0.80$ to $1.05$ times the same bytes, and its registered verdicts are MIXED.
+
+The pieces of the chapter meet in one budget. A code is chosen in bytes per vector, the bytes fix the bits per coordinate, and the bits fix a recall that must be measured, because no formula of this chapter converts a distortion into a recall.
+
+\begin{example}[From bytes to recall at $10$ on a seeded toy]\label{ex:ch07:e2e}
+The corpus has $4000$ vectors in $\R^{32}$, drawn around $20$ seeded cluster centres with a per-axis scale proportional to $1/\sqrt i$, and $200$ queries from the same law. In $32$-bit floats a vector takes $128$ bytes. Two codes are compared at matched bytes, with no side information stored for either. The scalar code applies a Haar rotation and a uniform quantizer of $1$, $2$ or $4$ bits per coordinate with range $\pm3$ standard deviations, which is $4$, $8$ or $16$ bytes. The product quantizer uses $m=4$, $8$ or $16$ subspaces with $256$ centroids each, also $4$, $8$ or $16$ bytes. Recall at $10$ is measured against exact inner-product search, first in a single pass and then after rescoring the top $50$ candidates exactly.
+
+\begin{center}\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+code & bytes & recall@10, single pass & recall@10, rerank of $50$ \\
+\midrule
+rotation $+$ scalar, $1$ bit & $4$ & $0.104$ & $0.388$ \\
+rotation $+$ scalar, $2$ bits & $8$ & $0.394$ & $0.847$ \\
+rotation $+$ scalar, $4$ bits & $16$ & $0.762$ & $0.998$ \\
+PQ, $m=4$ & $4$ & $0.369$ & $0.889$ \\
+PQ, $m=8$ & $8$ & $0.521$ & $0.960$ \\
+PQ, $m=16$ & $16$ & $0.781$ & $0.999$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+On this toy the product quantizer wins at $4$ and $8$ bytes and the two tie at $16$. The learned codebooks fit the clusters, while the rotation code spends its levels uniformly. Exact reranking of $50$ candidates lifts every row, and at $16$ bytes it reaches $0.998$ and $0.999$, eight times smaller than the floats. The toy has no principal-component step, no Lloyd--Max levels and no stored norm, all of which turboquant-pro uses, so it says nothing about how turboquant-pro compares with product quantization. That comparison is the registered public campaign described above.
+\end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmode=log, log basis x=2, xmin=3.3, xmax=20, ymin=0, ymax=1.05, xtick={4,8,16}, xticklabels={4,8,16},
+  xlabel={bytes per vector}, ylabel={recall@10}]
+\addplot[pblue, very thick, mark=*] coordinates {(4,0.1035) (8,0.3935) (16,0.762)};
+\addplot[pgreen, very thick, mark=square*] coordinates {(4,0.3685) (8,0.5205) (16,0.781)};
+\addplot[pblue, very thick, dashed, mark=*] coordinates {(4,0.3875) (8,0.8465) (16,0.998)};
+\addplot[pgreen, very thick, dashed, mark=square*] coordinates {(4,0.8885) (8,0.9595) (16,0.999)};
+\node[lbl, pblue, anchor=north west] at (axis cs:5.5,0.25) {rotation $+$ scalar};
+\node[lbl, pgreen, anchor=south east] at (axis cs:7.6,0.55) {PQ};
+\node[lbl, pgray, anchor=south] at (axis cs:6,0.9) {dashed after exact rerank of $50$};
+\end{axis}
+\end{tikzpicture}
+\caption{Recall at $10$ against bytes per vector on the seeded toy of \cref{ex:ch07:e2e}. Solid lines are single-pass compressed search and dashed lines rescore $50$ candidates exactly. On this toy reranking matters more than the choice of code, and at $16$ bytes both codes with reranking recover nearly every true neighbour.}
+\label{fig:ch07:e2e}
+\end{figure}
+
+\inproject{\texttt{turboquant-\allowbreak pro/\allowbreak docs/\allowbreak KV\_KEYS\_FINDING.md} holds the keys table. \texttt{turboquant-\allowbreak pro/\allowbreak README.md} states the rule ``never reconstruction cosine'' and describes the public matched-bytes comparison. \texttt{turboquant-\allowbreak pro/\allowbreak docs/\allowbreak CERTIFICATE\_SPEC.md} specifies the rank certificate, and \texttt{turboquant-\allowbreak pro/\allowbreak docs/\allowbreak HUBNESS\_PRIMER.md} explains why recall should also be read on the anti-hub tail. \Cref{ch11} gives the mathematics of hubs and anti-hubs and shows why mean recall hides that tail.}
+
+\buildson{\Cref{ch06} (the read operator and the flip), \cref{sec:ch07:pq,sec:ch07:bias}.}
+\usedin{\Cref{ch08} (acceptance metrics and registered verdicts).}
+
+\section*{Exercises}
+
+\subsection*{Warm-up}
+
+\begin{exercise}\label{exr:ch07:1}
+A $4$-bit uniform quantizer covers $[-2,2]$ and its input is uniform on that interval. Find $\Delta$, the mean squared error and the signal-to-noise ratio in decibels.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch07:2}
+A product quantizer uses $m=16$ subspaces with $K=256$ centroids each on $768$-dimensional vectors. How many bytes does a vector cost, and what is the compression ratio against $32$-bit floats?
+\end{exercise}
+
+\begin{exercise}\label{exr:ch07:3}
+Explain why multiplying every score by $0.678$ changes no nearest-neighbour ranking but does change the output of a softmax.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch07:4}
+A pull request reports that a new codec raises mean reconstruction cosine from $0.990$ to $0.996$ and asks to merge. Using Example~\ref{ex:ch07:cosine} and the read operator of \cref{ch06}, say what measurement must accompany the request and why.
+\end{exercise}
+
+\subsection*{By hand}
+
+\begin{exercise}\label{exr:ch07:5}
+Find the one-bit Lloyd--Max quantizer for the uniform density on $[0,1]$ and its mean squared error. Check both conditions of \cref{eq:ch07:lloydmax}.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch07:6}
+Allocate $B=2$ bits between two coordinates with variances $9$ and $1$ using \cref{eq:ch07:alloc}. Show that both coordinates end at the same distortion, and compare the total with one bit each.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch07:7}
+Compute Kendall's $\tau$ between the rankings $(1,2,3,4,5)$ and $(2,1,3,5,4)$ of five items.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch07:8}
+For the two-bit Gaussian Lloyd--Max quantizer, find the shrinkage factor $1-\varepsilon$ of Proposition~\ref{prop:ch07:shrink} in the scalar case, $\E[XQ(X)]/\E[X^2]$, and say how much an unbiased rescaling must multiply each reconstructed value by.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch07:9}
+Derive \cref{eq:ch07:gishpierce} in nats instead of bits, and show that the excess in nats is $\frac12\ln(\pi e/6)$.
+\end{exercise}
+
+\subsection*{Programming}
+
+\begin{exercise}\label{exr:ch07:10}
+Implement Lloyd's algorithm for a standard Gaussian using only the normal density and distribution functions. Reproduce the levels and the mean squared errors $0.3634$ and $0.1175$ at one and two bits, and find the three-bit and four-bit errors.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch07:11}
+Draw random orthogonal matrices in $d=8$ by the QR decomposition of a Gaussian matrix, with the signs of the diagonal of $R$ fixed. Apply the one-bit quantizer of Example~\ref{ex:ch07:bias} to $\Pi x$ for a unit vector $x$ and estimate $\E\inner{q}{\Pi\T Q(\Pi x)}/\inner qx$. Compare with $0.678$.
+\end{exercise}
+
+\begin{exercise}\label{exr:ch07:12}
+Generate $10^4$ Gaussian vectors in $\R^{32}$ with a decaying spectrum, build a product quantizer with $m=4$ and $K=16$, and measure recall at $10$ of ADC search against exact search for $100$ queries. Repeat after a random rotation and after a principal-component rotation, at matched bytes.
+\end{exercise}
+
+% checks/ch07_examples.py on Atlas (2026-10-07): 104/104 PASS (plus helper checks/ch07_extra.py)

@@ -15,11 +15,19 @@ programme assumes whenever it wants a closed form, the multivariate normal.
 
 Three ideas carry the chapter. A linear map moves a covariance by
 $\Sigma\mapsto A\Sigma A\T$. Conditioning a Gaussian on part of itself leaves
-a Schur complement, the matrix of chapter~1's section on block elimination.
-And the best estimate of a vector, under any quadratic loss a consumer might
-impose, is the conditional mean. The Kalman filter, the Cram\'er--Rao bound and
+a Schur complement, the matrix of \cref{ch01}'s section on block elimination.
+And the best estimate of a vector, under any quadratic loss with a fixed PSD
+weight that a consumer might impose, is the conditional mean. The Kalman filter, the Cram\'er--Rao bound and
 the Gaussian mutual information all follow from those three. Every number in
 the worked examples is recomputed by \texttt{checks/ch02\_examples.py}.
+
+The chapter also keeps two scores apart that the programme always keeps apart.
+One is the error a consumer feels, $\tr(\PC\Sigma)$ for an error covariance
+$\Sigma$, which depends on which directions the consumer reads. The other is
+the information a reading carries, a log-determinant that does not depend on
+any consumer. The Kalman examples compute both for the same measurement, and
+they disagree about which measurement is worth more. Seeing that disagreement
+in a two-by-two example is the main point of the chapter.
 
 % ---------------------------------------------------------------------------
 \ompnexthead{Mean vectors and covariance matrices}
@@ -32,9 +40,11 @@ one symmetric table.
 
 \begin{definition}[Mean vector, covariance and cross-covariance]\label{def:ch02:cov}
 \begin{equation}\label{eq:ch02:cov}
+\begin{gathered}
 \mu=\E[x],\qquad
-\Sigma=\Cov(x)=\E\big[(x-\mu)(x-\mu)\T\big]=\E[xx\T]-\mu\mu\T,\qquad
+\Sigma=\Cov(x)=\E\big[(x-\mu)(x-\mu)\T\big]=\E[xx\T]-\mu\mu\T,\\
 \Cov(x,y)=\E\big[(x-\mu_x)(y-\mu_y)\T\big].
+\end{gathered}
 \end{equation}
 \end{definition}
 
@@ -43,7 +53,7 @@ off-diagonal entries are the covariances $\Cov(x_i,x_j)$. The matrix is
 symmetric. It is also positive semidefinite, because for any fixed vector $u$
 the number $u\T\Sigma u=\E[(u\T(x-\mu))^2]$ is the variance of the scalar
 $u\T x$ and cannot be negative. The covariance is singular exactly when some
-nonzero combination $u\T x$ is constant, that is, when the vector lives on a
+nonzero combination $u\T x$ is constant with probability one, that is, when the vector lives on a
 lower-dimensional flat. The cross-covariance $\Cov(x,y)$ of two vectors of
 lengths $d$ and $p$ is a $d\times p$ matrix and need not be square or symmetric,
 and $\Cov(y,x)=\Cov(x,y)\T$.
@@ -56,12 +66,12 @@ fixed matrix $A$, a fixed matrix $B$ and a fixed vector $b$,
 The proof is one line, $Ax+b-(A\mu+b)=A(x-\mu)$, so the outer product is
 $A(x-\mu)(x-\mu)\T A\T$, and the expectation passes through the fixed
 matrices. Three special cases recur. With $A=u\T$ a row, the variance of a
-single read is $u\T\Sigma u$, equation~0.4 of chapter~0. With $A=\Sigma^{-1/2}$
-the covariance becomes $I$, which is whitening (chapter~1). With $A$ a
+single read is $u\T\Sigma u$, equation~0.4 of \emph{Data Mining as Observation}. With $A=\Sigma^{-1/2}$
+the covariance becomes $I$, which is whitening (\cref{ch01}). With $A$ a
 consumer's Jacobian $J$, the covariance of the consumer's output error is
 $J\Sd J\T$ to first order, and the output metric $G$ turns it into the scalar
 $\tr(GJ\Sd J\T)=\tr(J\T GJ\,\Sd)=\tr(\PC\Sd)$. That is where the read operator
-of chapter~0 comes from.
+of that book comes from.
 
 For independent vectors the covariances add, $\Cov(x+v)=\Cov(x)+\Cov(v)$, since
 the cross terms $\Cov(x,v)$ vanish. Uncorrelated is enough for this. A sensor
@@ -70,6 +80,22 @@ reading $y=Hx+v$ with noise $v$ uncorrelated with $x$ therefore has
 \Cov(y)=H\Sigma_xH\T+R,\qquad \Cov(x,y)=\Sigma_xH\T,\qquad R=\Cov(v).
 \end{equation}
 These two matrices are all the later sections need to estimate $x$ from $y$.
+
+In practice $\mu$ and $\Sigma$ are estimated from $n$ samples $x_1,\dots,x_n$.
+The sample versions are
+\begin{equation}\label{eq:ch02:sample}
+\bar x=\frac1n\sum_{i=1}^n x_i,\qquad
+\hat\Sigma=\frac1{n-1}\sum_{i=1}^n(x_i-\bar x)(x_i-\bar x)\T .
+\end{equation}
+For independent samples the divisor $n-1$ makes $\hat\Sigma$ unbiased, because one degree of freedom is
+spent on estimating the mean (Primer~S, section~S.4, makes the same point for a
+single column). Two facts about $\hat\Sigma$ matter for the programme. It is a
+sum of $n$ outer products of vectors that sum to zero, so its rank is at most
+$n-1$. With fewer samples than dimensions it is singular, and whitening by
+$\hat\Sigma^{-1/2}$ is then undefined. And its smallest eigenvalues are biased
+downward and are the least reliable, which is the condition-number warning of
+\cref{ch01} in statistical form. A read operator estimated from a few hundred
+gradients in a space of thousands of dimensions has the same problem.
 
 \begin{example}[A sum and a difference]\label{ex:ch02:linmap}
 Let $x$ have mean $\mu=(1,2)\T$ and covariance
@@ -83,13 +109,37 @@ A\Sigma A\T=\begin{pmatrix}7&-1\\-1&3\end{pmatrix}.
 Directly, $\Var(x_1+x_2)=2+3+2\cdot1=7$, $\Var(x_1-x_2)=2+3-2=3$ and
 $\Cov(x_1+x_2,\,x_1-x_2)=\Var(x_1)-\Var(x_2)=2-3=-1$. The sum and difference
 are correlated even though $A$ has orthogonal rows, because the two
-coordinates have different variances.
+coordinates have different variances. \Cref{fig:ch02:map} draws the two
+covariance ellipses.
 \end{example}
 
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=0.62]
+\draw[guide,->] (-1.5,0)--(5.6,0) node[lbl,right] {$x_1$};
+\draw[guide,->] (0,-1)--(0,4.6) node[lbl,above] {$x_2$};
+\draw[thick,pblue,rotate around={58.283:(1,2)}] (1,2) ellipse (1.902 and 1.176);
+\fill[pblue] (1,2) circle (2.5pt) node[lbl,below right] {$\mu$};
+\node[lbl,pblue] at (1,4.25) {$\Sigma$};
+\begin{scope}[xshift=9.5cm,yshift=1.5cm]
+\draw[guide,->] (-1,0)--(6.6,0) node[lbl,right] {$x_1+x_2$};
+\draw[guide,->] (0,-3)--(0,2.6) node[lbl,above] {$x_1-x_2$};
+\draw[thick,porange,rotate around={-13.283:(3,-1)}] (3,-1) ellipse (2.690 and 1.663);
+\fill[porange] (3,-1) circle (2.5pt) node[lbl,below right] {$A\mu$};
+\node[lbl,porange] at (3.3,1.1) {$A\Sigma A\T$};
+\end{scope}
+\draw[flow] (5.4,2.2) to[bend left=15] node[lbl,above] {$x\mapsto Ax$} (8.2,2.2);
+\end{tikzpicture}
+\caption{A linear map moves the centre of the cloud to $A\mu$ and reshapes its
+covariance ellipse to the one of $A\Sigma A\T$. The tilt of the new ellipse is
+the correlation $-1$ between the sum and the difference.}
+\label{fig:ch02:map}
+\end{figure}
+
 \buildson{Primer~S, sections~S.2 and S.5. Chapter~0 of \emph{Data Mining as
-Observation}, section~0.3. Chapter~1, the trace identities.}
-\usedin{Every later section. Chapter~3, where differential entropy depends on
-$\Sigma$ through $\det\Sigma$. Chapter~6, where $\PC=J\T GJ$.}
+Observation}, section~0.3. \Cref{ch01}, the trace identities.}
+\usedin{Every later section. \Cref{ch03}, where differential entropy depends on
+$\Sigma$ through $\det\Sigma$. \Cref{ch06}, where $\PC=J\T GJ$.}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{The multivariate normal}
@@ -107,6 +157,15 @@ p(x)=\frac{1}{(2\pi)^{d/2}\det(\Sigma)^{1/2}}\exp\!\Big(-\tfrac12(x-\mu)\T\Sigma
 \end{equation}
 \end{definition}
 
+The definition is also a recipe for simulation. Draw $z$ with independent
+standard normal entries and return $\mu+Az$ for any $A$ with $AA\T=\Sigma$. The
+symmetric square root works, and so does the Cholesky factor $L$, which is
+lower triangular and cheaper to compute. Both give the right covariance by
+\cref{eq:ch02:linmap}, since $\Cov(Az)=AA\T=\Sigma$, and both give the same
+distribution, because a Gaussian is determined by its mean and covariance. The
+choice of factor changes which sample comes out of a given $z$, not the law of
+the samples. \Cref{exr:ch02:sample} uses the Cholesky factor.
+
 The density follows from the change of variables $x=\mu+\Sigma^{1/2}z$. The
 density of $z$ is a product of $d$ scalar normals,
 $(2\pi)^{-d/2}\exp(-\tfrac12z\T z)$. Substituting
@@ -122,7 +181,8 @@ $r$ is constant, so the level sets are the ellipsoids $r^2=c$. Writing
 $\Sigma=\sum_i\lambda_iv_iv_i\T$, the ellipsoid $r^2=c$ has its axes along the
 eigenvectors $v_i$, with semi-axis lengths $\sqrt{c\lambda_i}$. Since $r^2$ is
 a sum of $d$ squared independent standard normals, it has the chi-square
-distribution with $d$ degrees of freedom. In two dimensions that distribution
+distribution with $d$ degrees of freedom. How fast such probabilities fall off far
+from the mean is the subject of \cref{ch12}. In two dimensions that distribution
 is exponential with mean $2$, so
 \begin{equation}\label{eq:ch02:chi2}
 \Pr\big[r^2\le c\big]=1-e^{-c/2}\qquad(d=2).
@@ -139,9 +199,21 @@ $\Cov(x,y)=0$, the joint covariance is block diagonal, the quadratic form in
 factors. The word ``jointly'' carries the weight. Two variables can each be
 normal and uncorrelated without being independent (\cref{exr:ch02:notjoint}).
 
+A third property explains why the Gaussian is also the cautious choice. Among
+all distributions with a given covariance it has the largest differential
+entropy, a fact \cref{ch03} proves. A result proved for a Gaussian source is
+therefore often a statement about the hardest source with those second
+moments, and in many problems a theorem of the form ``for a Gaussian source
+the rate is'' is then a bound for other sources with the same covariance. Which direction the
+bound runs depends on the problem and is stated where it is used. What the
+Gaussian assumption is not is a description of real data. Embedding vectors,
+key vectors and sensor readings have heavier tails, clusters and constraints,
+and a closed form computed under the Gaussian assumption is a prediction to be
+checked against them.
+
 \begin{example}[Ellipses of a correlated pair]\label{ex:ch02:mvn}
 Let $\mu=0$ and $\Sigma=\begin{pmatrix}5&2\\2&2\end{pmatrix}$, the matrix of
-chapter~1's spectral example, with eigenvalues $6$ and $1$ along
+\cref{ch01}'s spectral example, with eigenvalues $6$ and $1$ along
 $(2,1)\T/\sqrt5$ and $(1,-2)\T/\sqrt5$. Its determinant is $6$ and
 \[
 \Sigma^{-1}=\tfrac16\begin{pmatrix}2&-2\\-2&5\end{pmatrix}.
@@ -159,22 +231,31 @@ Euclidean distance, but its Mahalanobis form is $2$, four times larger. Distance
 in a Gaussian is measured in units of the spread along each direction.
 \end{example}
 
-\begin{figure}[t]
+\begin{figure}[tbp]
 \centering
 \begin{tikzpicture}[scale=0.42]
-\draw[->,gray] (-7,0)--(7,0) node[right] {$x_1$};
-\draw[->,gray] (0,-4.2)--(0,4.6) node[above] {$x_2$};
-\draw[thick,blue!60!black,rotate=26.565] (0,0) ellipse (2.449 and 1);
-\draw[dashed,red!70!black,rotate=26.565] (0,0) ellipse (5.996 and 2.448);
-\draw[->,thick,rotate=26.565] (0,0)--(2.449,0) node[above,pos=1] {\small $\sqrt6\,v_1$};
-\draw[->,thick,rotate=26.565] (0,0)--(0,-1);
-\node[right] at (0.45,-1.1) {\small $v_2$};
-\fill (1,1) circle (4pt) node[above left] {\small $(1,1)$};
+\draw[guide,->] (-7,0)--(7.2,0) node[lbl,right] {$x_1$};
+\draw[guide,->] (0,-4.2)--(0,4.6) node[lbl,above] {$x_2$};
+\draw[thick,pblue,rotate=26.565] (0,0) ellipse (2.449 and 1);
+\draw[thick,dashed,pblue,rotate=26.565] (0,0) ellipse (5.996 and 2.448);
+\draw[vec,porange,rotate=26.565] (0,0)--(2.449,0) node[lbl,above,pos=1] {$\sqrt6\,v_1$};
+\draw[vec,porange,rotate=26.565] (0,0)--(0,-1);
+\node[lbl,porange] at (1.25,-1.3) {$v_2$};
+\fill[pred] (1,1) circle (5pt) node[lbl,above left] {$(1,1)$};
+% marginal densities, drawn on their own baselines
+\draw[pgray] (-7,-8.5)--(7,-8.5);
+\draw[thick,pblue] plot[smooth] coordinates {(-7.0,-8.484) (-6.5,-8.469) (-6.0,-8.442) (-5.5,-8.396) (-5.0,-8.324) (-4.5,-8.217) (-4.0,-8.068) (-3.5,-7.871) (-3.0,-7.630) (-2.5,-7.354) (-2.0,-7.065) (-1.5,-6.790) (-1.0,-6.563) (-0.5,-6.412) (0.0,-6.359) (0.5,-6.412) (1.0,-6.563) (1.5,-6.790) (2.0,-7.065) (2.5,-7.354) (3.0,-7.630) (3.5,-7.871) (4.0,-8.068) (4.5,-8.217) (5.0,-8.324) (5.5,-8.396) (6.0,-8.442) (6.5,-8.469) (7.0,-8.484)};
+\node[lbl,pblue,right] at (3.6,-6.4) {$x_1\sim\Normal(0,5)$};
+\draw[pgray] (-11,-4.5)--(-11,4.5);
+\draw[thick,pblue] plot[smooth] coordinates {(-10.979,-4.5) (-10.938,-4.0) (-10.842,-3.5) (-10.643,-3.0) (-10.290,-2.5) (-9.755,-2.0) (-9.071,-1.5) (-8.364,-1.0) (-7.820,-0.5) (-7.615,0.0) (-7.820,0.5) (-8.364,1.0) (-9.071,1.5) (-9.755,2.0) (-10.290,2.5) (-10.643,3.0) (-10.842,3.5) (-10.938,4.0) (-10.979,4.5)};
+\node[lbl,pblue,rotate=90] at (-6.9,3.5) {$x_2\sim\Normal(0,2)$};
 \end{tikzpicture}
 \caption{Level sets of $\Normal(0,\Sigma)$ with $\Sigma$ having rows $(5,2)$ and
-$(2,2)$. The solid ellipse is $r^2=1$, with semi-axes $\sqrt6$ and $1$ along the
-eigenvectors. The dashed ellipse is $r^2\approx5.991$ and contains probability
-$0.95$. The marked point has $r^2=\tfrac12$.}
+$(2,2)$, and its two marginal densities. The solid ellipse is $r^2=1$, with
+half-axes $\sqrt6$ and $1$ along the eigenvectors. The dashed ellipse is
+$r^2\approx5.991$ and contains probability $0.95$. The red point has
+$r^2=\tfrac12$. The marginals are normal, with the diagonal entries $5$ and $2$ as
+variances, and they do not show the correlation.}
 \label{fig:ch02:ellipse}
 \end{figure}
 
@@ -185,9 +266,9 @@ $\Sigma_x\succ0$'', and the two-stage rate region of section ``Successive
 refinement across observers'' is stated for a Gaussian source. The discussion
 section lists non-Gaussian sources as open.}
 
-\buildson{Primer~S, section~S.3. Chapter~1, whitening and the spectral theorem.}
-\usedin{\Cref{sec:ch02:cond,sec:ch02:mi}. Chapter~3, differential entropy of a
-Gaussian. Chapter~7, the Gaussian model behind scalar quantizer codebooks.}
+\buildson{Primer~S, section~S.3. \Cref{ch01}, whitening and the spectral theorem.}
+\usedin{\Cref{sec:ch02:cond,sec:ch02:mi}. \Cref{ch03}, differential entropy of a
+Gaussian. \Cref{ch07}, the Gaussian model behind scalar quantizer codebooks.}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{Gaussian conditioning}
@@ -228,16 +309,21 @@ keeps its own distribution because it is independent of $y$. That is the claim.
 \end{proof}
 
 The conditional covariance is the Schur complement of $\Sigma_{yy}$ in the
-joint covariance, chapter~1's matrix $D-B\T A^{-1}B$ with the blocks renamed.
+joint covariance, \cref{ch01}'s matrix $D-B\T A^{-1}B$ with the blocks renamed.
 Three consequences are worth stating. First, by the Schur complement test it
 is PSD and it satisfies $\Sigma_{x\mid y}\preceq\Sigma_{xx}$, since the
-subtracted term $\Sigma_{xy}\Sigma_{yy}^{-1}\Sigma_{yx}$ is PSD. Observing
-never increases uncertainty in the Loewner order, which by chapter~1's
-every-reader characterization means it never increases any consumer's
-weighted error. Second, $\Sigma_{x\mid y}$ does not involve the observed value
-of $y$. How much is learned is fixed in advance by the joint covariance, and
-only where the estimate lands depends on the data. This is special to the
-Gaussian. Third, by the block inverse of chapter~1, the $xx$ block of the
+subtracted term $\Sigma_{xy}\Sigma_{yy}^{-1}\Sigma_{yx}$ is PSD. For a Gaussian,
+observing never increases uncertainty in the Loewner order, which by
+\cref{ch01}'s every-reader characterization means it never increases any
+consumer's weighted error. Without the Gaussian assumption this holds only on
+average over $y$, by the law of total covariance below. A particular value of
+$y$ can raise the variance. If $y=1$ with probability $0.1$ and $x=\pm1$ with
+equal probability in that case, while $y=0$ forces $x=0$, then $\Var x=0.1$ but
+$\Var(x\mid y=1)=1$. Second, $\Sigma_{x\mid y}$ does not involve the observed
+value of $y$. How much is learned is fixed in advance by the joint covariance,
+and only where the estimate lands depends on the data. This is a property of
+the Gaussian, not of conditioning in general, and the example just given
+violates it. Third, by the block inverse of \cref{ch01}, the $xx$ block of the
 joint \emph{precision} matrix $\Sigma^{-1}$ is $\Sigma_{x\mid y}^{-1}$.
 Conditional covariances can be read off the inverse of the joint covariance
 without any further algebra,
@@ -251,7 +337,7 @@ $\Cov(x,y)=2$. Then $K=2/2=1$ and $\Sigma_{x\mid y}=4-2\cdot2/2=2$. Observing
 $y=1.5$ gives $x\mid y\sim\Normal(1.5,2)$. Half the variance of $x$ is
 removed, and it would be removed whatever value $y$ took.
 
-For a vector observation, use chapter~1's three-by-three matrix as a joint
+For a vector observation, use \cref{ch01}'s three-by-three matrix as a joint
 covariance, with $x$ the first coordinate and $y$ the last two,
 \[
 \Sigma=\begin{pmatrix}4&2&2\\2&2&1\\2&1&3\end{pmatrix},\qquad
@@ -266,15 +352,66 @@ and $1/0.625=1.6$. With zero means and an observed $y=(1,2)\T$, the conditional
 mean is $0.8\cdot1+0.4\cdot2=1.6$.
 
 Conditioning the other way, on $x$, leaves the Schur complement of the
-$(1,1)$ entry, which chapter~1 computed as $\diag(1,2)$. So given $x$, the
+$(1,1)$ entry, which \cref{ch01} computed as $\diag(1,2)$. So given $x$, the
 last two coordinates are uncorrelated, with variances $1$ and $2$ and
 conditional mean $\tfrac24x\,(1,1)\T=\tfrac{x}{2}(1,1)\T$.
+
+The precision matrix shows the same fact without any conditioning. Its
+cofactors give
+\[
+\Sigma^{-1}=\tfrac18\begin{pmatrix}5&-4&-2\\-4&8&0\\-2&0&4\end{pmatrix},
+\]
+and the zero in position $(2,3)$ says that the second and third coordinates are
+conditionally independent given the first. The lower-right block,
+$\tfrac18\diag(8,4)=\diag(1,\tfrac12)$, is the inverse of the conditional
+covariance $\diag(1,2)$, as \cref{eq:ch02:precision} requires.
 \end{example}
 
-\buildson{Chapter~1, the Schur complement and the block inverse.
+Two more identities complete the picture. The \emph{law of total covariance}
+splits the variance of $x$ into the part the data explain and the part they
+leave,
+\begin{equation}\label{eq:ch02:totalcov}
+\Cov(x)=\E\big[\Cov(x\mid y)\big]+\Cov\big(\E[x\mid y]\big),
+\qquad\text{Gaussian case}\quad \Sigma_{xx}=\Sigma_{x\mid y}+K\Sigma_{yy}K\T .
+\end{equation}
+It holds for any joint distribution with finite second moments. In the scalar
+example, $4=2+1\cdot2\cdot1$. The second identity is the zero pattern just seen.
+For a jointly Gaussian vector, an entry $(\Sigma^{-1})_{ij}=0$ means that
+coordinates $i$ and $j$ are independent given all the others. A zero in the
+covariance is a statement about pairs, and a zero in the precision is a
+statement about pairs given everything else. The two are different and
+neither implies the other.
+
+\Cref{fig:ch02:slice} shows the scalar case as a picture. Conditioning on $y$
+slices the joint density along a vertical line. Every slice is a normal
+density of the same width, centred on the line $x=\mu_x+K(y-\mu_y)$, which is
+the regression line of Primer~S, section~S.5.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=0.62]
+\draw[guide,->] (-4.2,0)--(5.4,0) node[lbl,right] {$y$};
+\draw[guide,->] (0,-5)--(0,5.6) node[lbl,above] {$x$};
+\draw[thick,pblue,rotate=58.283] (0,0) ellipse (2.288 and 0.874);
+\draw[thick,dashed,pblue,rotate=58.283] (0,0) ellipse (5.601 and 2.139);
+\draw[thick,pgreen] (-4,-4)--(5,5) node[lbl,above left] {$\E[x\mid y]=y$};
+\draw[guide] (1.5,-4.8)--(1.5,5.4);
+\draw[thick,porange] plot[smooth] coordinates {(1.531,-2.50) (1.550,-2.25) (1.579,-2.00) (1.621,-1.75) (1.678,-1.50) (1.756,-1.25) (1.855,-1.00) (1.977,-0.75) (2.123,-0.50) (2.287,-0.25) (2.464,0.00) (2.645,0.25) (2.818,0.50) (2.971,0.75) (3.090,1.00) (3.166,1.25) (3.193,1.50) (3.166,1.75) (3.090,2.00) (2.971,2.25) (2.818,2.50) (2.645,2.75) (2.464,3.00) (2.287,3.25) (2.123,3.50) (1.977,3.75) (1.855,4.00) (1.756,4.25) (1.678,4.50) (1.621,4.75) (1.579,5.00) (1.550,5.25) (1.531,5.50)};
+\fill[pgreen] (1.5,1.5) circle (3pt);
+\node[lbl,porange,right] at (3.3,1.0) {$x\mid y{=}1.5\sim\Normal(1.5,2)$};
+\end{tikzpicture}
+\caption{Conditioning slices the joint density. The ellipses are the levels
+$r^2=1$ and $r^2\approx5.991$ of the joint law of $(y,x)$ with variances $2$
+and $4$ and covariance $2$. The orange curve is the conditional density at
+$y=1.5$, centred on the green regression line, with variance $2$ whatever
+value $y$ takes.}
+\label{fig:ch02:slice}
+\end{figure}
+
+\buildson{\Cref{ch01}, the Schur complement and the block inverse.
 \Cref{sec:ch02:moments,sec:ch02:gauss}.}
-\usedin{\Cref{sec:ch02:mmse,sec:ch02:kalman,sec:ch02:mi}. Chapter~3, conditional
-entropy. Chapter~6, side information and leakage.}
+\usedin{\Cref{sec:ch02:mmse,sec:ch02:kalman,sec:ch02:mi}. \Cref{ch03}, conditional
+entropy. \Cref{ch06}, side information and leakage.}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{MMSE and LMMSE estimation}
@@ -298,11 +435,15 @@ estimator $g$ and every $P\psd0$,
 Write $x-g=(x-m)+(m-g)$. Given $y$, the second part is fixed and the first has
 conditional mean zero, so the cross term vanishes. The first part contributes
 $\E[(x-m)\T P(x-m)\mid y]=\tr(P\,\Sigma_{x\mid y})$ by the trace identity of
-chapter~1, and the second contributes $(m-g)\T P(m-g)\ge0$.
+\cref{ch01}, and the second contributes $(m-g)\T P(m-g)\ge0$.
 \end{proof}
 
 The conditional mean is the minimum mean squared error (MMSE) estimator, and
-the theorem shows that changing the reader's weight $P$ does not change it. A
+the theorem shows that changing the reader's weight $P$ does not change it. The
+weight must not depend on the unknown $x$. If it does, as for a read operator
+$\PC(x)$ that varies with the point, the cross term in the proof no longer
+vanishes and the conditional mean can lose. The theorem also assumes finite
+second moments. A
 consumer cannot improve on the posterior mean by asking for its own estimator.
 The consumer changes the \emph{score}, $\tr(P\Sigma_{x\mid y})$, and so changes
 which measurements or which descriptions are worth paying for, but not the
@@ -326,9 +467,36 @@ affine function of the data,
 Indeed $\E[(x-\hat x_{\mathrm L})(y-\mu_y)\T]=\Sigma_{xy}-K\Sigma_{yy}=0$. If
 any affine function of $y$ still correlated with the error, adding a multiple
 of it to the estimate would reduce the error, so orthogonality is both
-necessary and sufficient. The picture is chapter~1's projection. With the
+necessary and sufficient. The picture is \cref{ch01}'s projection. With the
 inner product $\inner{u}{w}=\E[uw]$ on zero-mean random variables, the LMMSE
-estimate is the orthogonal projection of $x$ onto the span of the data.
+estimate is the orthogonal projection of $x$ onto the span of the data
+(\cref{fig:ch02:orth}).
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=1.15]
+\fill[plight] (-0.6,-0.5)--(4.2,-0.5)--(5.2,0.9)--(0.4,0.9)--cycle;
+\node[lbl,pgray] at (4.3,0.6) {span of the data};
+\draw[vec,pblue] (0.8,0.1)--(3.2,2.5) node[lbl,above] {$x-\mu_x$};
+\draw[vec,pgreen] (0.8,0.1)--(3.2,0.1) node[lbl,below] {$\hat x_{\mathrm L}-\mu_x$};
+\draw[vec,pred] (3.2,0.1)--(3.2,2.5) node[lbl,right,midway] {$e=x-\hat x_{\mathrm L}$};
+\draw[pgray] (3.0,0.1)--(3.0,0.3)--(3.2,0.3);
+\draw[vec,pblue!50] (0.8,0.1)--(1.9,0.7) node[lbl,above left] {$y_1-\mu_{y_1}$};
+\draw[vec,pblue!50] (0.8,0.1)--(2.3,-0.3) node[lbl,below] {$y_2-\mu_{y_2}$};
+\end{tikzpicture}
+\caption{The orthogonality principle is a projection. In the space of
+zero-mean random variables with inner product $\E[uw]$, the LMMSE estimate is
+the foot of the perpendicular from $x$ to the span of the data, and the error is
+uncorrelated with every reading.}
+\label{fig:ch02:orth}
+\end{figure}
+
+The LMMSE estimator has the every-reader property too, within its class. Its
+error covariance is below the error covariance of every other affine
+estimator in the Loewner order, so by the every-reader characterization of
+\cref{ch01} it minimizes $\E[(x-\hat x)\T P(x-\hat x)]$ over affine estimators
+for every $P\psd0$ at once. A consumer that is restricted to linear estimates
+also cannot do better by designing its own.
 
 For jointly Gaussian $(x,y)$ the two estimators coincide. In general the LMMSE
 error covariance is an upper bound on the MMSE error covariance, and the two
@@ -353,17 +521,17 @@ which is exact, with error $0$. Uncorrelated is not independent.
 
 \inproject{\nolinkurl{geometric-observation/paper/ot-estimation-control.tex},
 section ``A boundary proposition'' (label \texttt{sec:boundary}), proves
-\cref{thm:ch02:mmse} as the proposition ``Weighted posterior-mean invariance'',
+Theorem~\ref{thm:ch02:mmse} as the proposition ``Weighted posterior-mean invariance'',
 notes that in the linear-Gaussian case the minimizer is the Kalman estimate, and
 draws the conclusion that the programme does not produce a new Kalman filter.
 The remark that follows explains that a read operator depending on $x$ breaks
 the invariance. In \nolinkurl{geometric-observation/paper/observation-theory.tex}
 the same split appears as the lemma ``Conditional mean serves every observer''.}
 
-\buildson{\Cref{sec:ch02:cond}. Chapter~1, the trace identity and the
+\buildson{\Cref{sec:ch02:cond}. \Cref{ch01}, the trace identity and the
 orthogonal projector.}
-\usedin{\Cref{sec:ch02:kalman}. Chapter~3, the converse half of Gaussian
-rate--distortion. Chapter~6, the boundary between estimation and observation.}
+\usedin{\Cref{sec:ch02:kalman}. \Cref{ch03}, the converse half of Gaussian
+rate--distortion. \Cref{ch06}, the boundary between estimation and observation.}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{The Kalman filter}
@@ -393,26 +561,45 @@ belief, $(x_k,y_k)$ is jointly Gaussian with $\Cov(y_k)=H\Sigma_k^-H\T+R$ and
 $\Cov(x_k,y_k)=\Sigma_k^-H\T$, by \cref{eq:ch02:sensor}. Plugging these blocks
 into \cref{eq:ch02:cond} gives the update,
 \begin{equation}\label{eq:ch02:update}
-S_k=H\Sigma_k^-H\T+R,\qquad K_k=\Sigma_k^-H\T S_k^{-1},\qquad
+\begin{gathered}
+S_k=H\Sigma_k^-H\T+R,\qquad K_k=\Sigma_k^-H\T S_k^{-1},\\
 m_k=m_k^-+K_k\big(y_k-Hm_k^-\big),\qquad
 \Sigma_k=\Sigma_k^--K_kS_kK_k\T .
+\end{gathered}
 \end{equation}
 Nothing new has been derived. The innovation $y_k-Hm_k^-$ is the surprise in
 the reading, $S_k$ is its covariance, $K_k$ is the gain $\Sigma_{xy}\Sigma_{yy}^{-1}$
 of \cref{eq:ch02:cond}, and $\Sigma_k$ is the Schur complement. By
-\cref{thm:ch02:mmse}, $m_k$ is the best estimate for every PSD reader. Two
+Theorem~\ref{thm:ch02:mmse}, $m_k$ is the best estimate for every PSD reader. Two
 equivalent forms of the covariance update are in common use,
 \begin{equation}\label{eq:ch02:joseph}
 \Sigma_k=(I-K_kH)\Sigma_k^-
 =(I-K_kH)\Sigma_k^-(I-K_kH)\T+K_kRK_k\T .
 \end{equation}
-The second, the Joseph form, is a sum of PSD terms, so rounding errors cannot
-make it lose positive semidefiniteness. Anderson and Moore treat the filter
+The second, the Joseph form, is a sum of PSD terms for any gain $K_k$, so an
+error in the gain, from rounding or from tuning, cannot by itself make it
+indefinite. It is the more robust form in floating point, though the computed
+matrix should still be symmetrized, since rounding in the products can leave
+tiny asymmetries and negative eigenvalues. Anderson and Moore treat the filter
 in full \cite{andersonmoore1979}.
 
 As in \cref{sec:ch02:cond}, the covariances $\Sigma_k^-$ and $\Sigma_k$ never
 involve the readings. They can be computed before any data arrive, and for a
-time-invariant model they usually settle to a steady state.
+time-invariant model that satisfies the detectability and stabilizability
+conditions given by Anderson and Moore they settle to a steady state.
+
+Three practical remarks belong with the equations. First, the innovations
+$y_k-Hm_k^-$ of a correctly specified filter are uncorrelated over time, each
+with covariance $S_k$. That gives a test of the model. If the recorded
+innovations are correlated, or their spread does not match $S_k$, by more
+than sampling variation allows, then $F$, $Q$, $H$, $R$ or the initial belief
+is wrong. Second, $Q$ and $R$ are rarely known and are tuned, and a
+filter tuned to look good on one data set has used that data set to choose its
+own parameters. \Cref{ch09} treats that kind of selection as fitting. Third,
+when the sensor is a nonlinear function $y=h(x)+v$, the extended Kalman filter
+replaces $H$ by the Jacobian $\partial h/\partial x$ at the current estimate.
+That Jacobian is the same object from which a consumer's read operator
+$\PC=J\T GJ$ is built, with the sensor playing the role of the consumer.
 
 \begin{example}[A scalar random walk]\label{ex:ch02:kalman}
 Let $F=1$, $Q=1$, $H=1$ and $R=2$, with $m_0=0$ and $\Sigma_0=4$. The readings
@@ -432,7 +619,29 @@ Steady state. A fixed point has $\Sigma^-=\Sigma+1$ and
 $\Sigma=\Sigma^-\cdot2/(\Sigma^-+2)$. Substituting gives
 $\Sigma^2+\Sigma-2=0$, so $\Sigma=1$, $\Sigma^-=2$ and $K=\tfrac12$. The two
 computed steps, $\tfrac{10}7$ and $\tfrac{34}{31}$, are approaching $1$.
+\Cref{fig:ch02:saw} continues the recursion for eight steps.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=-0.3, xmax=8.4, ymin=0, ymax=5.5, xtick={0,...,8},
+  xlabel={\small time step $k$}, ylabel={\small variance}]
+\addplot[thick,pblue,mark=*,mark size=1.4pt] coordinates {(0,4.0000) (1,5.0000) (1,1.4286) (2,2.4286) (2,1.0968) (3,2.0968) (3,1.0236) (4,2.0236) (4,1.0059) (5,2.0059) (5,1.0015) (6,2.0015) (6,1.0004) (7,2.0004) (7,1.0001) (8,2.0001) (8,1.0000)};
+\addplot[guide] coordinates {(0,2) (8.4,2)};
+\addplot[guide] coordinates {(0,1) (8.4,1)};
+\node[lbl,pred,above right] at (axis cs:1,5) {predict, $+Q$};
+\node[lbl,pgreen,below left] at (axis cs:1,1.4286) {update};
+\node[lbl,pgray,above] at (axis cs:6.5,2) {steady prior $2$};
+\node[lbl,pgray,below] at (axis cs:6.5,1) {steady posterior $1$};
+\end{axis}
+\end{tikzpicture}
+\caption{The Kalman variance for the scalar random walk of
+Example~\ref{ex:ch02:kalman} rises by $Q=1$ at every prediction and falls at every
+update. The sawtooth settles within a few steps to the steady state, prior
+variance $2$ and posterior variance $1$, and it does not depend on the readings.}
+\label{fig:ch02:saw}
+\end{figure}
 
 \begin{example}[Position read, velocity learned]\label{ex:ch02:kalman2}
 Track position and velocity with $F=\begin{pmatrix}1&1\\0&1\end{pmatrix}$,
@@ -455,7 +664,39 @@ Now score this reading for two consumers. A consumer that reads velocity has
 $\PC=e_2e_2\T$, and the reading lowered its distortion $\tr(\PC\Sigma)$ by
 $2-\tfrac53=\tfrac13$. A consumer that reads position gained $2-\tfrac23=\tfrac43$.
 The same measurement has four times the value for one consumer as for the
-other.
+other. \Cref{fig:ch02:update} shows the error ellipse before and after.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=1.25]
+\draw[guide,->] (-2,0)--(2.2,0) node[lbl,right] {position error};
+\draw[guide,->] (0,-1.9)--(0,2.1) node[lbl,above] {velocity error};
+\draw[thick,pred,rotate=45] (0,0) ellipse (1.732 and 1.000);
+\draw[thick,pgreen,rotate=73.155] (0,0) ellipse (1.330 and 0.752);
+\node[lbl,pred] at (1.75,1.35) {prior $\Sigma_1^-$};
+\node[lbl,pgreen] at (-0.95,0.55) {posterior $\Sigma_1$};
+\end{tikzpicture}
+\caption{One position reading shrinks the error ellipse of
+Example~\ref{ex:ch02:kalman2} from red to green. The green ellipse lies inside the
+red one, so the update helps every consumer, but it shrinks far more along
+position than along velocity.}
+\label{fig:ch02:update}
+\end{figure}
+
+\begin{example}[The best sensor depends on the consumer]\label{ex:ch02:sensor}
+Suppose the tracker of Example~\ref{ex:ch02:kalman2} can afford one reading at
+step one, from either a position sensor $h=e_1$ or a velocity sensor $h=e_2$,
+each with noise variance $r=1$. The prior is $\Sigma_1^-$ with rows $(2,1)$ and
+$(1,2)$, so $h\T\Sigma_1^-h+r=3$ for both sensors. For a scalar reading and a
+rank-one consumer $\PC=gg\T$ the reduction in distortion is
+$(g\T\Sigma_1^-h)^2/(h\T\Sigma_1^-h+r)$, the formula in the box below. The
+velocity consumer, $g=e_2$, gains $1^2/3=\tfrac13$ from the position sensor and
+$2^2/3=\tfrac43$ from the velocity sensor. The position consumer, $g=e_1$, gains
+$\tfrac43$ from the position sensor and $\tfrac13$ from the velocity sensor.
+Both sensors convey the same $\tfrac12\log3$ nats about the state, by
+\cref{sec:ch02:mi}. The information is the same and the choice is opposite,
+because each consumer reads a different direction of the same error.
 \end{example}
 
 \inproject{\nolinkurl{geometric-observation/paper/ot-estimation-control.tex}, section
@@ -463,7 +704,7 @@ other.
 value of a measurement as $V_C=\tr\big(\PC(\Sigma^--\Sigma^+)\big)$, the read
 operator composed with the Kalman covariance reduction, and proves the rank-one
 form $V_C=(g\T\Sigma^-h)^2/(h\T\Sigma^-h+r)$ for $\PC=gg\T$ and a scalar
-reading $h\T x+v$. In \cref{ex:ch02:kalman2}, $h=e_1$, $r=1$ and
+reading $h\T x+v$. In Example~\ref{ex:ch02:kalman2}, $h=e_1$, $r=1$ and
 $h\T\Sigma_1^-h+r=3$. The velocity reader has $g\T\Sigma_1^-h=1$ and
 $V_C=\tfrac13$, and the position reader has $g\T\Sigma_1^-h=2$ and
 $V_C=\tfrac43$, as computed above. The paper states that the covariance algebra is
@@ -471,7 +712,7 @@ classical and places the proposed contribution in where $\PC$ comes from.}
 
 \buildson{\Cref{sec:ch02:moments,sec:ch02:cond,sec:ch02:mmse}. Elementary
 difference equations from the reader's ODE course.}
-\usedin{Chapter~6, consumer-relative value of observation.}
+\usedin{\Cref{ch06}, consumer-relative value of observation.}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{Fisher information and Cram\'er--Rao}
@@ -498,11 +739,34 @@ differentiation and integration can be exchanged. The second expression for
 $\mathcal I$ follows by differentiating $\E[s]=0$ once more. The second form
 explains the name. Sharply curved log-likelihoods carry much information
 about $\theta$. For $n$ independent observations the log-likelihoods add, so the
-information adds, $\mathcal I_n=n\,\mathcal I_1$.
+information adds, $\mathcal I_n=n\,\mathcal I_1$. \Cref{fig:ch02:fisher} shows
+the two log-likelihoods of a normal mean with $\sigma^2=1$, from $n=2$ and
+from $n=16$ readings. The second is eight times as curved.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=-1.5, xmax=1.5, ymin=-6.6, ymax=0.6,
+  xlabel={\small $\theta-\bar y$}, ylabel={\small $\log p(y;\theta)-\max$}]
+\addplot[thick,pblue] coordinates {(-1.5,-2.250) (-1.4,-1.960) (-1.3,-1.690) (-1.2,-1.440) (-1.1,-1.210) (-1.0,-1.000) (-0.9,-0.810) (-0.8,-0.640) (-0.7,-0.490) (-0.6,-0.360) (-0.5,-0.250) (-0.4,-0.160) (-0.3,-0.090) (-0.2,-0.040) (-0.1,-0.010) (0.0,-0.000) (0.1,-0.010) (0.2,-0.040) (0.3,-0.090) (0.4,-0.160) (0.5,-0.250) (0.6,-0.360) (0.7,-0.490) (0.8,-0.640) (0.9,-0.810) (1.0,-1.000) (1.1,-1.210) (1.2,-1.440) (1.3,-1.690) (1.4,-1.960) (1.5,-2.250)};
+\addplot[thick,porange] coordinates {(-0.9,-6.480) (-0.8,-5.120) (-0.7,-3.920) (-0.6,-2.880) (-0.5,-2.000) (-0.4,-1.280) (-0.3,-0.720) (-0.2,-0.320) (-0.1,-0.080) (0.0,-0.000) (0.1,-0.080) (0.2,-0.320) (0.3,-0.720) (0.4,-1.280) (0.5,-2.000) (0.6,-2.880) (0.7,-3.920) (0.8,-5.120) (0.9,-6.480)};
+\node[lbl,pblue] at (axis cs:1.05,-0.55) {$n=2$, $\mathcal I=2$};
+\node[lbl,porange] at (axis cs:0.25,-4.6) {$n=16$, $\mathcal I=16$};
+\draw[guide] (axis cs:-0.25,-0.5)--(axis cs:0.25,-0.5);
+\draw[guide] (axis cs:-0.707,-0.5)--(axis cs:0.707,-0.5);
+\end{axis}
+\end{tikzpicture}
+\caption{Fisher information is the curvature of the log-likelihood at its peak.
+Sixteen readings give a curve eight times as sharp as two readings. The dashed
+segments, where each curve has dropped by $\tfrac12$, have half-widths
+$1/\sqrt{\mathcal I}$, equal to $0.707$ and $0.25$, the Cram\'er--Rao standard
+deviations.}
+\label{fig:ch02:fisher}
+\end{figure}
 
 \begin{theorem}[Cram\'er--Rao bound]\label{thm:ch02:crb}
-Under the same regularity, every unbiased estimator $\hat\theta(y)$ of $\theta$
-satisfies
+Under the same regularity, and with $\mathcal I(\theta)\pd0$, every unbiased
+estimator $\hat\theta(y)$ of $\theta$ satisfies
 \begin{equation}\label{eq:ch02:crb}
 \Cov(\hat\theta)\ \psd\ \mathcal I(\theta)^{-1},\qquad\text{so}\qquad
 \E\big[(\hat\theta-\theta)\T P(\hat\theta-\theta)\big]\ \ge\ \tr\big(P\,\mathcal I(\theta)^{-1}\big)\ \text{for every } P\psd0 .
@@ -516,16 +780,17 @@ $\Cov(\hat\theta,s)=I$. The joint covariance of $(\hat\theta,s)$ is therefore
 \[
 \begin{pmatrix}\Cov(\hat\theta)&I\\I&\mathcal I(\theta)\end{pmatrix}\ \psd\ 0 .
 \]
-By the Schur complement test of chapter~1, applied with the roles of the two
+By the Schur complement test of \cref{ch01}, applied with the roles of the two
 blocks exchanged and $\mathcal I\pd0$, the Schur complement
 $\Cov(\hat\theta)-\mathcal I^{-1}$ is PSD. The weighted form follows
 from the trace monotonicity of the Loewner order.
 \end{proof}
 
 The bound is a Loewner inequality, so by the every-reader characterization of
-chapter~1 it holds for every consumer's weighting at once. It is not a
+\cref{ch01} it holds for every consumer's weighting at once. It is not a
 statement about biased estimators, which can beat it, and it is not always
-attainable. For the linear Gaussian model it is attained.
+attainable. For the linear Gaussian model with $H\T R^{-1}H$ invertible it is
+attained.
 With $y=H\theta+v$ and $v\sim\Normal(0,R)$, the log-likelihood is
 $-\tfrac12(y-H\theta)\T R^{-1}(y-H\theta)$ plus a constant, its Hessian is
 $-H\T R^{-1}H$, and the weighted least-squares estimator attains the bound,
@@ -535,14 +800,35 @@ $-H\T R^{-1}H$, and the weighted least-squares estimator attains the bound,
 \Cov(\hat\theta)=(H\T R^{-1}H)^{-1}=\mathcal I^{-1}.
 \end{equation}
 
+The most common case is a Gaussian with unknown mean vector and known
+covariance. For $n$ independent readings $y_i\sim\Normal(\theta,\Sigma)$ the
+information is $\mathcal I_n=n\Sigma^{-1}$, the bound is $\Sigma/n$, and the
+sample mean, whose covariance is exactly $\Sigma/n$, attains it. The directions
+in which the noise is small are the directions in which the mean is learned
+well, and a consumer reading $g\T\theta$ faces the bound $g\T\Sigma g/n$.
+
+Fisher information changes under a change of parameters in a way that should
+look familiar. If $\theta=f(\phi)$ with Jacobian $J=\partial\theta/\partial\phi$,
+the chain rule turns the score for $\theta$ into the score for $\phi$, and
+\begin{equation}\label{eq:ch02:fisherpull}
+\mathcal I_\phi(\phi)=J\T\,\mathcal I_\theta\big(f(\phi)\big)\,J .
+\end{equation}
+This is the form $\PC=J\T GJ$ of the read operator, with the Fisher information
+in the role of the output metric $G$. Information about $\theta$ becomes
+information about $\phi$ only through the directions that $J$ maps onto. A
+parameter direction in $\ker J$ has no effect on the data and gets no
+information at all. For example, with $\mathcal I_\theta=\diag(4,1)$ and
+$J=(1,1)\T$, so that both coordinates of $\theta$ equal the scalar $\phi$, the
+information about $\phi$ is $4+1=5$.
+
 Fisher information also gives the Kalman update a second form. With a
-Gaussian prior of covariance $\Sigma^-$, the posterior precision is the prior
-precision plus the information in the reading,
+Gaussian prior of covariance $\Sigma^-\pd0$ and sensor noise $R\pd0$, the
+posterior precision is the prior precision plus the information in the reading,
 \begin{equation}\label{eq:ch02:infoform}
 \Sigma^{-1}=(\Sigma^-)^{-1}+H\T R^{-1}H .
 \end{equation}
 That this agrees with $\Sigma^--\Sigma^-H\T S^{-1}H\Sigma^-$ of
-\cref{eq:ch02:update} is the Woodbury identity of chapter~1.
+\cref{eq:ch02:update} is the Woodbury identity of \cref{ch01}.
 
 \begin{example}[One mean, and two parameters read three ways]\label{ex:ch02:fisher}
 For $n$ independent readings $y_i\sim\Normal(\theta,\sigma^2)$, each has
@@ -562,7 +848,7 @@ consumer reading the difference, $g=(1,-1)\T$, has bound
 $\tfrac{2+1+1+2}3=2$, three times larger. The data pin down the sum better than
 the difference.
 
-For the information form, use \cref{ex:ch02:kalman2}.
+For the information form, return to Example~\ref{ex:ch02:kalman2}. There
 $(\Sigma_1^-)^{-1}=\tfrac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix}$, and adding
 $H\T R^{-1}H=\diag(1,0)$ gives $\begin{pmatrix}5/3&-1/3\\-1/3&2/3\end{pmatrix}$,
 with determinant $\tfrac{10}9-\tfrac19=1$. Its inverse is
@@ -574,37 +860,37 @@ $\begin{pmatrix}2/3&1/3\\1/3&5/3\end{pmatrix}$, the $\Sigma_1$ found there.
 \texttt{prop:softmax}). Its proof uses ``the Fisher metric of
 $\mathrm{softmax}$'', $G=\diag(p)-pp\T$, as the output metric $G$ in
 $\PC=J\T GJ$. Fisher information is the local quadratic form of a KL
-divergence, which chapter~3 derives and chapter~5 treats as a Riemannian
+divergence, which \cref{ch03} derives and \cref{ch05} treats as a Riemannian
 metric.}
 
-\buildson{Primer~S, sections~S.2 and S.6. Chapter~1, the Schur complement test
+\buildson{Primer~S, sections~S.2 and S.6. \Cref{ch01}, the Schur complement test
 and the Woodbury identity. Calculus, the Hessian.}
-\usedin{Chapter~3, the KL divergence and its second-order expansion. Chapter~5,
+\usedin{\Cref{ch03}, the KL divergence and its second-order expansion. \Cref{ch05},
 the Fisher metric.}
 
 % ---------------------------------------------------------------------------
 \ompnexthead{Gaussian mutual information}
 \section{The mutual information between jointly Gaussian vectors is a log-determinant}\label{sec:ch02:mi}
 
-Chapter~3 defines mutual information through entropy. For jointly Gaussian
+\Cref{ch03} defines mutual information through entropy. For jointly Gaussian
 vectors the result can be stated now, because it involves only the matrices
 this chapter has built. The differential entropy of $\Normal(\mu,\Sigma)$ in
 $\R^d$ is $\tfrac12\log\big((2\pi e)^d\det\Sigma\big)$, and the mutual
 information is the entropy of $x$ minus the entropy left once $y$ is known.
 Since the conditional covariance does not depend on $y$, the difference is a
-ratio of determinants,
+ratio of determinants. For a positive definite joint covariance,
 \begin{equation}\label{eq:ch02:gaussmi}
 \MI{x}{y}=\tfrac12\log\frac{\det\Sigma_{xx}}{\det\Sigma_{x\mid y}}
 =\tfrac12\log\frac{\det\Sigma_{xx}\,\det\Sigma_{yy}}{\det\Sigma}\quad\text{nats}.
 \end{equation}
-The second form follows from the Schur determinant formula of chapter~1,
+The second form follows from the Schur determinant formula of \cref{ch01},
 $\det\Sigma=\det\Sigma_{yy}\det\Sigma_{x\mid y}$. It is symmetric in $x$ and
 $y$, as mutual information must be. For two scalars with correlation $\rho$
-it reduces to $-\tfrac12\log(1-\rho^2)$. For a reading $y=Hx+v$, the same
+it reduces to $-\tfrac12\log(1-\rho^2)$ (\cref{fig:ch02:mi}). For a reading $y=Hx+v$, the same
 determinant identity applied in the other order gives
 $\det\Sigma^-/\det\Sigma^+=\det S/\det R$, so a Kalman update conveys
 $\tfrac12\log(\det S/\det R)$ nats about the state. This section only uses
-\cref{eq:ch02:gaussmi}. Chapter~3 derives it.
+\cref{eq:ch02:gaussmi}. \Cref{ch03} derives it.
 
 Two cautions go with the formula. First, the mutual information depends on the
 covariances only through determinants, so it is unchanged by any invertible
@@ -614,18 +900,51 @@ formula is exact only for jointly Gaussian vectors. For other distributions
 with the same covariances the mutual information is in general a different
 number, and the determinant ratio is then only a summary of second moments.
 
+The log-determinant form is also the bridge to rate--distortion theory. A
+compressor that describes a Gaussian source $x$ by a reconstruction $\hat x$
+pays at least $\MI{x}{\hat x}$ nats, and if the error is Gaussian with
+covariance $\Sd$ independent of $\hat x$, that rate is
+$\tfrac12\log(\det\Sigma_x/\det\Sd)$. Making $\det\Sd$ large while keeping a
+consumer's $\tr(\PC\Sd)$ below a budget is the max-det problem quoted in
+\cref{ch01}, and \cref{ch03} solves it by water-filling. The rate counts
+volume, and the budget counts what the consumer reads. The two are different
+functions of the same matrix, and that difference is where consumer-relative
+compression comes from.
+
 \begin{example}[Half a bit, and the value of one Kalman update]\label{ex:ch02:mi}
-For the pair of \cref{ex:ch02:cond} with variances $4$ and $2$ and covariance
+For the pair of Example~\ref{ex:ch02:cond} with variances $4$ and $2$ and covariance
 $2$, $\rho^2=4/8=\tfrac12$, so $\MI{x}{y}=-\tfrac12\log\tfrac12=\tfrac12\log2\approx0.3466$
 nats, which is exactly $\tfrac12$ bit. The determinant form agrees,
 $\det\Sigma_{xx}\det\Sigma_{yy}/\det\Sigma=8/4=2$.
 
-For the update of \cref{ex:ch02:kalman2}, $\det\Sigma_1^-=3$ and $\det\Sigma_1=1$,
+Rescaling either variable leaves this unchanged. Replacing $x$ by $3x$ multiplies
+$\Var x$ by $9$ and $\Cov(x,y)$ by $3$, so $\rho^2$ is still $\tfrac{36}{72}=\tfrac12$.
+A consumer that reads $x$ three times as strongly sees nine times the
+distortion, but exactly the same number of nats.
+
+For the update of Example~\ref{ex:ch02:kalman2}, $\det\Sigma_1^-=3$ and $\det\Sigma_1=1$,
 so the reading carried $\tfrac12\log3\approx0.5493$ nats about the state, and
 $\det S_1/\det R=3/1$ gives the same. The information is one number for the
 reading. The two consumers of that example valued it at $\tfrac13$ and
 $\tfrac43$.
 \end{example}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=1, ymin=0, ymax=1.25,
+  xlabel={\small correlation $\rho$}, ylabel={\small $\MI{x}{y}$ (nats)}]
+\addplot[thick,pblue] coordinates {(0.00,-0.0000) (0.05,0.0013) (0.10,0.0050) (0.15,0.0114) (0.20,0.0204) (0.25,0.0323) (0.30,0.0472) (0.35,0.0653) (0.40,0.0872) (0.45,0.1131) (0.50,0.1438) (0.55,0.1801) (0.60,0.2231) (0.65,0.2745) (0.70,0.3367) (0.75,0.4133) (0.80,0.5108) (0.85,0.6410) (0.90,0.8304) (0.95,1.1640)};
+\addplot[only marks, mark=*, mark size=2pt, pgreen] coordinates {(0.7071,0.3466)};
+\node[lbl,pgreen,above left] at (axis cs:0.7071,0.3466) {$\rho^2=\tfrac12$, half a bit};
+\addplot[guide] coordinates {(1,0) (1,1.25)};
+\end{axis}
+\end{tikzpicture}
+\caption{The mutual information of two jointly Gaussian scalars depends only on
+their correlation. It is nearly flat for weak correlation and grows without
+bound as $\abs\rho\to1$, where one variable determines the other.}
+\label{fig:ch02:mi}
+\end{figure}
 
 \inproject{\nolinkurl{geometric-observation/paper/observation-theory.tex}, section
 ``Successive refinement across observers'', the lemma on the information bound
@@ -636,10 +955,10 @@ the leakage of a one-dimensional description in the proof of the theorem
 labelled \texttt{thm:onedim} is $\tfrac12\log(1+b\T\Kc b/\sigma^2)$, the scalar
 case of \cref{eq:ch02:gaussmi}.}
 
-\buildson{\Cref{sec:ch02:cond}. Chapter~1, the Schur determinant formula and
+\buildson{\Cref{sec:ch02:cond}. \Cref{ch01}, the Schur determinant formula and
 the log-determinant.}
-\usedin{Chapter~3, where \cref{eq:ch02:gaussmi} is derived and the Gaussian
-rate--distortion function is built from it. Chapter~6, leakage.}
+\usedin{\Cref{ch03}, where \cref{eq:ch02:gaussmi} is derived and the Gaussian
+rate--distortion function is built from it. \Cref{ch06}, leakage.}
 
 
 % ---------------------------------------------------------------------------
@@ -698,20 +1017,20 @@ $\tfrac1n\sum_i(y_i-\theta)^2$ attain the second bound?
 \end{exercise}
 
 \begin{exercise}\label{exr:ch02:mi}
-Compute the information carried by the first reading of \cref{ex:ch02:kalman}
+Compute the information carried by the first reading of Example~\ref{ex:ch02:kalman}
 in nats, in two ways.
 \end{exercise}
 
 \subsection*{Programming}
 
 \begin{exercise}\label{exr:ch02:sample}
-Draw $10^5$ samples of $\Normal(\mu,\Sigma)$ from \cref{ex:ch02:linmap} as
+Draw $10^5$ samples of $\Normal(\mu,\Sigma)$ from Example~\ref{ex:ch02:linmap} as
 $\mu+Lz$ with $L$ the Cholesky factor of $\Sigma$. Check that the sample
 covariance of $Ax$ approaches $A\Sigma A\T$.
 \end{exercise}
 
 \begin{exercise}\label{exr:ch02:kf}
-Simulate the random walk of \cref{ex:ch02:kalman} for $200$ steps, run the
+Simulate the random walk of Example~\ref{ex:ch02:kalman} for $200$ steps, run the
 filter, and repeat $2000$ times. Compare the empirical variance of
 $x_k-m_k$ at each step with $\Sigma_k$, and confirm that both approach $1$.
 \end{exercise}
@@ -722,4 +1041,4 @@ noise $\Normal(0,0.1)$ to $y$ and estimate by simulation the mean squared error
 of the LMMSE estimator and of a nearest-neighbour estimate of $\E[x\mid y]$.
 \end{exercise}
 
-% checks/ch02_examples.py on Atlas: CHECKRESULT
+% checks/ch02_examples.py on Atlas: 112/112 PASS

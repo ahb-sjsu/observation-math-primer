@@ -1,22 +1,16 @@
 \chapter{Observation Theory weighs an error by what its consumer reads}\label{ch06}\chaptermark{Observation Theory}
-% Short running heads for this chapter, following chapter 3. \section keeps its full
-% sentence title in the text and the table of contents. The standard \sectionmark is
-% suspended for the chapter and restored at its end.
-\providecommand{\shortsecmark}[1]{\markright{\MakeUppercase{\thesection.\ #1}}}
-\let\savedsectionmarkvi\sectionmark
-\renewcommand{\sectionmark}[1]{}
 
 The first five chapters built tools one at a time. Positive semidefinite matrices and the Loewner order came from \cref{ch01}. Gaussian vectors and conditional covariances came from \cref{ch02}. \Cref{ch03} gave rate and distortion and the water-filling solution. \Cref{ch04} gave the Lagrangian and the KKT conditions behind it. \Cref{ch05} gave pullback metrics and quotients. This chapter assembles them into the objects that Observation Theory (OT) works with.
 
-The idea fits in one sentence. A compressed representation is always read by something, and the error that matters is the error that the reader sees. The reader is called the \emph{consumer}. Its sensitivity, measured in the metric its output is judged by, is a positive semidefinite matrix called the \emph{read operator}. The read operator turns reconstruction error into the consumer's error, turns Shannon's rate--distortion function into a weighted one, and decides which of two codes is better.
+The idea fits in one sentence. A compressed representation is always read by something, and the error that matters is the error that the reader sees. The reader is called the \emph{consumer}. Its sensitivity, measured in the metric its output is judged by, is a positive semidefinite matrix called the \emph{read operator}. To second order in the error, the read operator turns reconstruction error into the consumer's error, turns Shannon's rate--distortion function into a weighted one, and decides which of two codes is better.
 
-Much of this is classical mathematics under new names, and the programme's own novelty assessment says so plainly (\texttt{geometric-observation/\allowbreak articles/\allowbreak 2026-10-01-ot-novelty-assessment.md}). The read operator is the active-subspace matrix of Constantine \cite{constantine2014,constantine2015}. The consumer's distortion is the weighted squared error of Sakrison \cite{sakrison1968}. The consumer-relative rate--distortion function is a weighted or indirect rate--distortion function \cite{dobrushin1962,wolfziv1970,witsenhausen1980}. The observation that the best code for reconstruction is not the best code for a task is the premise of task-based quantization \cite{shlezinger2019}. Each section below names the classical parent next to the OT name. Where a result is the programme's own, the section says what status the project files give it.
+Much of this is classical mathematics under new names, and the programme's own novelty assessment says so plainly (\texttt{geometric-\allowbreak observation/\allowbreak articles/\allowbreak 2026-\allowbreak 10-\allowbreak 01-\allowbreak ot-\allowbreak novelty-\allowbreak assessment.md}). The read operator is the active-subspace matrix of Constantine \cite{constantine2014,constantine2015}. The consumer's distortion is the weighted squared error of Sakrison \cite{sakrison1968}. The consumer-relative rate--distortion function is a weighted or indirect rate--distortion function \cite{dobrushin1962,wolfziv1970,witsenhausen1980}. The observation that the best code for reconstruction is not the best code for a task is the premise of task-based quantization \cite{shlezinger2019}. Each section below names the classical parent next to the OT name. Where a result is the programme's own, the section says what status the project files give it.
 
 The reader who took the first course has met the read operator in \emph{Data Mining as Observation}, Chapter~0, sections 0.5 to 0.7. Those sections define $P_C$ as an average of gradient outer products, give the trace identity for the consumer's error, and introduce water-filling over sensitivity-weighted variances. This chapter starts one level higher. It derives the read operator from a divergence, proves what a finite-difference probe can recover, solves the Gaussian rate--distortion problem for a weighted error, and prices what goes wrong when the read operator is estimated badly or shared between two consumers.
 
 Logarithms are natural and rates are in nats unless the text writes $\log_2$ and bits.
 
-\section{An observer is a consumer, an output metric and a budget}\label{sec:ch06:observer}\shortsecmark{The observer triple}
+\section{An observer is a consumer, an output metric and a budget}\label{sec:ch06:observer}
 
 A \emph{consumer} is a computation $C:\R^d\to\R^m$ that reads a representation $x$ and outputs something. A classifier's logits, an attention head's weights and a ranking score are consumers. The consumer's output is judged by a divergence $D_Y(u,v)$ between the output $u=C(x)$ it would have produced and the output $v=C(\hat x)$ it does produce. A divergence is zero when its arguments agree and positive otherwise. The \emph{output metric} $G(u)$ is the Hessian of that divergence at the diagonal. For the Kullback--Leibler divergence between output distributions $G$ is the Fisher information matrix, and for squared error it is the identity. A \emph{budget} $B$ limits the observation, for example a rank or a rate in bits.
 
@@ -28,10 +22,30 @@ O=(C,G,B),\qquad C:\R^d\to\R^m,\qquad G(u)=\nabla_v^2 D_Y(u,v)\big|_{v=u}\psd 0,
 of a consumer, its local output metric and a budget.
 \end{definition}
 
+\Cref{fig:ch06:observer} draws the triple as a pipeline. The code sits between the source and the consumer, and the observer is everything downstream of the code.
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}[node distance=7mm]
+\node[block, draw=pblue] (src) {source\\$x\in\R^d$};
+\node[block, right=of src] (code) {code\\$\hat x=x+\delta$};
+\node[block, right=of code, draw=porange] (cons) {consumer\\$C(\hat x)$};
+\node[block, right=of cons, draw=porange] (met) {output metric\\$D_Y$, local $G$};
+\draw[flow] (src) -- (code);
+\draw[flow] (code) -- (cons);
+\draw[flow] (cons) -- (met);
+\node[lbl, pred, below=6mm of code] (bud) {budget $B$};
+\draw[flow, pred] (bud) -- (code);
+\draw[decorate, decoration={brace, amplitude=5pt}, thick, porange] ([yshift=3mm]cons.north west) -- ([yshift=3mm]met.north east) node[midway, above=5pt, lbl, porange] {observer $O=(C,G,B)$};
+\node[lbl, below=6mm of met, align=center] {$\dO=\tr(P_C\Sd)$\\$P_C=J\T GJ$};
+\end{tikzpicture}
+\caption{An observer reads the coded representation through its consumer and scores the result in its output metric, under a budget that limits the code. The read operator $P_C$ is what this pipeline looks like to the error $\delta$.}
+\label{fig:ch06:observer}
+\end{figure}
+
 The read operator comes from expanding the divergence to second order in the error $\delta=\hat x-x$. Write $J(x)=\partial C/\partial x$ for the $m\times d$ Jacobian of the consumer.
 
 \begin{proposition}[Consumer-projected distortion]\label{prop:ch06:expansion}
-Let $D_Y$ be twice differentiable with $D_Y(u,u)=0$ and $\nabla_v D_Y(u,v)|_{v=u}=0$. Then
+Let $C$ be differentiable at $x$, and let $D_Y$ be twice differentiable with $D_Y(u,u)=0$ and $\nabla_v D_Y(u,v)|_{v=u}=0$. Then
 \begin{equation}\label{eq:ch06:expansion}
 D_Y\big(C(x),C(x+\delta)\big)=\tfrac12\,\delta\T P_C(x)\,\delta+o(\norm{\delta}^2),\qquad P_C(x)=J(x)\T G\big(C(x)\big)J(x)\psd 0 .
 \end{equation}
@@ -58,12 +72,12 @@ Its eigenvalues are $(3\pm\sqrt5)/2$, which are $2.618$ and $0.382$. Both are po
 
 For a nonlinear consumer $P_C(x)$ changes with $x$. The softmax attention head is the case the programme uses most. Its output metric is the Fisher matrix $\diag(p)-pp\T$ of the attention distribution $p$, and the paper derives that its feature-space read operator reduces to the query second moment $\E[qq\T]$ only under an uncorrelatedness proviso.
 
-\inproject{\texttt{geometric-observation/\allowbreak paper/\allowbreak observation-theory.tex}, Proposition ``Consumer-projected distortion'' and Proposition ``Softmax attention''. The same definition in first-course form is equation 0.11 of \emph{Data Mining as Observation}, Chapter~0.}
+\inproject{\texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak observation-\allowbreak theory.tex}, Proposition ``Consumer-projected distortion'' and Proposition ``Softmax attention''. The same definition in first-course form is equation 0.11 of \emph{Data Mining as Observation}, Chapter~0.}
 
 \buildson{Pullback metrics (\cref{ch05}), Loewner order and PSD matrices (\cref{ch01}), Taylor expansion.}
-\usedin{Every later section of this chapter, \cref{ch07}, \cref{ch08}, and \texttt{turboquant-pro/\allowbreak README.md} (the \texttt{read\_operators} providers).}
+\usedin{Every later section of this chapter, \cref{ch07}, \cref{ch08}, and \texttt{turboquant-\allowbreak pro/\allowbreak README.md} (the \texttt{read\_operators} providers).}
 
-\section{The read operator can be measured from outside by finite differences}\label{sec:ch06:probe}\shortsecmark{Measuring the read operator}
+\section{The read operator can be measured from outside by finite differences}\label{sec:ch06:probe}
 
 For a linear consumer the read operator is a formula. For a trained network, a third-party scoring service or a physical estimator it is not, and it has to be measured from the outside. The measurement uses only the ability to call the consumer. The programme calls it the \emph{blind probe}. In classical terms it is finite-difference estimation of the active-subspace matrix \cite{constantine2015}.
 
@@ -71,7 +85,7 @@ The central difference approximates one column of the Jacobian with two calls,
 \begin{equation}\label{eq:ch06:central}
 \hat J e_j=\frac{C(x+h e_j)-C(x-h e_j)}{2h}=J e_j+O(h^2),\qquad j=1,\dots,d .
 \end{equation}
-The one-sided difference $(C(x+he_j)-C(x))/h$ costs one call fewer and is wrong by the curvature times $h/2$. Probing all $d$ coordinates costs $2d$ calls per operating point. Averaging the estimated outer products over $n$ points drawn from $\mu$ gives the estimator
+The one-sided difference $(C(x+he_j)-C(x))/h$ costs one call fewer and is wrong, to leading order, by the curvature times $h/2$. Probing all $d$ coordinates costs $2d$ calls per operating point. Averaging the estimated outer products over $n$ points drawn from $\mu$ gives the estimator
 \begin{equation}\label{eq:ch06:probe}
 \hat P_{C,\mu}=\frac1n\sum_{t=1}^n \hat J(x_t)\T G\big(C(x_t)\big)\hat J(x_t).
 \end{equation}
@@ -90,7 +104,7 @@ which has rank $r$ and column space equal to the row space of $W$.
 The chain rule gives $J=\diag(f'(Wx))\,W$, so $J\T J=W\T\diag(f'^2)W$. The middle matrix averages to a diagonal matrix with positive entries, so the product has the rank and the column space of $W\T$.
 \end{proof}
 
-The top $r$ eigenvectors of $\hat P$ therefore span the read subspace. Three limits come with this result. It recovers the subspace, not the eigenvalues of a general operator with a general $G$. The operator depends on the probing distribution $\mu$, so it is identifiable from queries under a stated $\mu$, not from the callable alone. And a probe that may only query $k<d$ directions at an operating point cannot resolve the read subspace in general. \emph{Data Mining as Observation}, Chapter~11, section 11.7 measures this budget cliff and reports the theorem behind it.
+The top $r$ eigenvectors of $\E_x[J\T J]$ therefore span the read subspace, and those of the estimate $\hat P$ approximate it up to the finite-difference error and the sampling error of $n$ points. Three limits come with this result. It recovers the subspace, not the eigenvalues of a general operator with a general $G$. The operator depends on the probing distribution $\mu$, so it is identifiable from queries under a stated $\mu$, not from the callable alone. And a probe that may only query $k<d$ directions at an operating point cannot resolve the read subspace in general. \emph{Data Mining as Observation}, Chapter~11, section 11.7 measures this budget cliff and reports the theorem behind it.
 
 \begin{example}[Probing a quadratic consumer]\label{ex:ch06:probe}
 Let $C(x)=\tfrac12(x_1+2x_2)^2$, whose gradient is $g=(x_1+2x_2)(1,2)$. At $x=(1,0)$ with $h=0.1$ the four calls give $C(1.1,0)=0.605$, $C(0.9,0)=0.405$, $C(1,0.1)=0.72$ and $C(1,-0.1)=0.32$. The central differences are $0.2/0.2=1$ and $0.4/0.2=2$, which is the exact gradient $(1,2)$. Central differences are exact for a quadratic. The forward differences are $1.05$ and $2.2$. Their errors, $0.05$ and $0.2$, are $h/2$ times the curvatures $1$ and $4$. Probing the three points $(1,0)$, $(0,1)$ and $(1,1)$ costs $3\times 2d=12$ calls. There $x_1+2x_2$ takes the values $1$, $2$ and $3$, and
@@ -100,14 +114,33 @@ Let $C(x)=\tfrac12(x_1+2x_2)^2$, whose gradient is $g=(x_1+2x_2)(1,2)$. At $x=(1
 This matrix has rank one, eigenvalue $\tfrac{14}{3}\cdot 5=\tfrac{70}{3}\approx 23.33$ and eigenvector $(1,2)/\sqrt5$. The direction $(2,-1)$ is in its kernel, and the consumer cannot see a change along it.
 \end{example}
 
-The programme's record for the probe has a positive result and a recorded miss. On planted read subspaces a blind probe recovered the subspace at overlap $0.936$ against a chance level of $0.059$ and predicted the flip of \cref{sec:ch06:flip} on $12$ of $12$ seeds. That is a \texttt{[predicted]} result (GO-P-2026-011). On a trained Llama-3.2-3B attention layer a first sealed attempt reached median overlap $0.567$ and missed its bar of $0.60$. It is kept as the negative NEG-12. A corrected, reconstruction-matched rematch reached $0.647$ and is \texttt{[demonstrated]} (GO-P-2026-021).
+\Cref{fig:ch06:probe} shows the four calls of Example~\ref{ex:ch06:probe} on the level lines of the consumer.
 
-\inproject{\texttt{geometric-observation/\allowbreak chapters/\allowbreak ch10\_the\_blind\_probe.md} tells the planted, legal-retrieval and Llama stories with their registry numbers. \texttt{geometric-observation/\allowbreak paper/\allowbreak observation-theory.tex}, Proposition ``Recovery of the read subspace''.}
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}[scale=6]
+\foreach \c in {0.8,1.0,1.2} { \draw[guide] (\c+0.4,-0.2) -- (\c-0.5,0.25); }
+\node[lbl, pgray, anchor=south west] at (0.22,0.27) {level lines $x_1+2x_2=c$};
+\draw[vec, porange] (1,0) -- (1.134,0.268) node[lbl, porange, above] {$g\propto(1,2)$};
+\draw[vec, pgray, dashed] (1,0) -- (1.268,-0.134) node[lbl, pgray, right] {kernel $(2,-1)$};
+\fill[pblue] (1,0) circle (0.25pt);
+\draw[pblue, thin] (1,0) -- (0.78,-0.16) node[lbl, pblue, anchor=north east] {$x=(1,0)$};
+\fill[pred] (1.1,0) circle (0.2pt) node[lbl, pred, anchor=south west, font=\scriptsize] {$0.605$};
+\fill[pred] (0.9,0) circle (0.2pt) node[lbl, pred, anchor=east, font=\scriptsize] {$0.405$};
+\fill[pred] (1,0.1) circle (0.2pt) node[lbl, pred, anchor=east, font=\scriptsize] {$0.72$};
+\fill[pred] (1,-0.1) circle (0.2pt) node[lbl, pred, anchor=east, font=\scriptsize] {$0.32$};
+\end{tikzpicture}
+\caption{The blind probe at $x=(1,0)$ with $h=0.1$. Red dots are the four consumer calls with their values. Their central differences give the gradient $(1,2)$, which is orthogonal to the gray level lines, and the dashed direction $(2,-1)$ along the level lines is the kernel the consumer cannot see.}
+\label{fig:ch06:probe}
+\end{figure}
+
+The programme's record for the probe has a positive result and a recorded miss. On planted read subspaces a blind probe recovered the subspace at overlap $0.936$ against a chance level of $0.059$ and predicted the flip of \cref{sec:ch06:flip} on $12$ of $12$ seeds. That is a \texttt{[predicted]} result (GO-P-2026-011). On a trained Llama-3.2-3B attention layer a first sealed attempt reached median overlap $0.567$ and missed its bar of $0.60$. It is kept as the negative NEG-12. A corrected, reconstruction-matched rematch reached $0.647$ and is \texttt{[demonstrated]} (GO-P-2026-021). Subspace overlap, its chance level $r/d$, the principal angles behind it and the Davis--Kahan bound on how far a sampled estimate can turn are the subject of \cref{ch13}.
+
+\inproject{\texttt{geometric-\allowbreak observation/\allowbreak chapters/\allowbreak ch10\_the\_blind\_probe.md} tells the planted, legal-retrieval and Llama stories with their registry numbers. \texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak observation-\allowbreak theory.tex}, Proposition ``Recovery of the read subspace''.}
 
 \buildson{Taylor expansion with remainder, eigenvectors of a PSD matrix (\cref{ch01}).}
 \usedin{\Cref{sec:ch06:mismatch} (what an imperfect probe costs), \cref{ch07} (read-operator providers in turboquant-pro), \cref{ch08}.}
 
-\section{Observer distortion is a weighted squared error, and its kernel is a quotient}\label{sec:ch06:distortion}\shortsecmark{Observer distortion and the quotient}
+\section{Observer distortion is a weighted squared error, and its kernel is a quotient}\label{sec:ch06:distortion}
 
 Taking the expectation of \cref{eq:ch06:expansion} over the error, with the $\tfrac12$ dropped, gives the observer distortion. For a fixed read operator $P$ it is exact algebra.
 
@@ -126,10 +159,10 @@ In classical terms $\dO$ is a weighted mean squared error. Sakrison solved the G
 For a nonlinear consumer the exact first-order distortion is $\E_x[\delta(x)\T P_C(x)\delta(x)]$. Replacing it by $\tr(\bar P_{C,\mu}\bar M_\delta)$ is exact when the pointwise operator and the error's outer product are uncorrelated across inputs. Otherwise it is an approximation, and the paper keeps the coupled form wherever the two co-vary.
 
 \begin{example}[A biased error read through $P_C$]\label{ex:ch06:bias}
-Take $P_C=\begin{pmatrix}1&1\\1&2\end{pmatrix}$ from \cref{ex:ch06:linear} and an error with mean $\mu_\delta=(0.1,0)$ and covariance $\Sd=\diag(0.01,0.04)$. Then $\tr(P_C\Sd)=1\cdot0.01+2\cdot0.04=0.09$ and $\mu_\delta\T P_C\mu_\delta=0.01$, so $\dO=0.10$. The identity reader gives $\tr\Sd+\norm{\mu_\delta}^2=0.05+0.01=0.06$. The consumer finds this error two thirds worse than plain squared error does, because the error's larger variance lies along the coordinate it weights by two.
+Take $P_C=\begin{pmatrix}1&1\\1&2\end{pmatrix}$ from Example~\ref{ex:ch06:linear} and an error with mean $\mu_\delta=(0.1,0)$ and covariance $\Sd=\diag(0.01,0.04)$. Then $\tr(P_C\Sd)=1\cdot0.01+2\cdot0.04=0.09$ and $\mu_\delta\T P_C\mu_\delta=0.01$, so $\dO=0.10$. The identity reader gives $\tr\Sd+\norm{\mu_\delta}^2=0.05+0.01=0.06$. The consumer finds this error two thirds worse than plain squared error does, because the error's larger variance lies along the coordinate it weights by two.
 \end{example}
 
-The kernel of the read operator is the set of directions the consumer cannot see. Let $\Pi$ be the orthogonal projector onto $\range P_C$. Then $\delta\T P_C\delta=(\Pi\delta)\T P_C(\Pi\delta)$, so any error in $\ker P_C=\range(I-\Pi)$ costs nothing. Two inputs whose difference lies in $\ker P_C$ are equivalent for this consumer, and the set of equivalence classes is the quotient $\R^d/\ker P_C$ of \cref{ch05}. The novelty assessment's plain name for it is the quotient by the kernel of the gradient outer-product matrix. \emph{Data Mining as Observation}, Chapter~0, section 0.6 separates this workload-averaged equivalence from exact equivalence of outputs and from local null directions, and the three agree only for an affine consumer.
+The kernel of the read operator is the set of directions the consumer cannot see. Let $\Pi$ be the orthogonal projector onto $\range P_C$. Then $\delta\T P_C\delta=(\Pi\delta)\T P_C(\Pi\delta)$, so any error in $\ker P_C=\range(I-\Pi)$ costs nothing. Two inputs whose difference lies in $\ker P_C$ are equivalent for this read operator, and the set of equivalence classes is the quotient $\R^d/\ker P_C$ of \cref{ch05}. The novelty assessment's plain name for it is the quotient by the kernel of the gradient outer-product matrix. \emph{Data Mining as Observation}, Chapter~0, section 0.6 separates this workload-averaged equivalence from exact equivalence of outputs and from local null directions. The three agree for an affine consumer with a positive definite output metric, and in general they disagree for a nonlinear one. Agreement is possible without affinity. The consumer $\tanh(w\T x)$ has the hyperplanes $w\T x=c$ as exact classes, local null directions and workload kernel alike.
 
 The quotient has an operational meaning. For a discrete source, describing $X$ to a consumer with zero distortion requires only the part the consumer reads.
 
@@ -140,18 +173,18 @@ R_C(0)=H(\Pi X)\le H(X),\qquad H(X)-R_C(0)=H(X\mid \Pi X)\ge 0 .
 \end{equation}
 \end{proposition}
 
-Achievability sends $\Pi X$ losslessly. The converse notes that zero distortion forces $\Pi\hat X=\Pi X$, so $I(X;\hat X)\ge H(\Pi X)$. The lossless, discrete form of coding a source for a function of it is the classical problem of coding for computing \cite{orlitskyroche2001}. For a continuous source the zero-distortion rate is infinite, and what survives is that no rate is spent on $\ker P_C$ at any $D>0$ (\cref{sec:ch06:rd}).
+Achievability sends $\Pi X$ losslessly. The converse notes that zero distortion forces $\Pi\hat X=\Pi X$, so $I(X;\hat X)\ge H(\Pi X)$. The lossless, discrete form of coding a source for a function of it is the classical problem of coding for computing \cite{orlitskyroche2001}. For a source with a density and $P_C\ne0$ the zero-distortion rate is infinite, and what survives is that no rate is spent on $\ker P_C$ at any $D>0$ (\cref{sec:ch06:rd}). The code describes $\Pi X$ alone. When an unread component is correlated with a read one, that description still informs about it, at no extra rate.
 
 \begin{example}[Two bits, one read]\label{ex:ch06:quotient}
 Let $X$ be uniform on $\{0,1\}^2$ and let the consumer read the first coordinate, $P_C=\diag(1,0)$. Then $H(X)=2$ bits, $\Pi X=X_1$ has $H(\Pi X)=1$ bit, and $H(X\mid\Pi X)=1$ bit is saved. The saving is exactly the second coordinate, which lies in $\ker P_C$.
 \end{example}
 
-\inproject{\texttt{geometric-observation/\allowbreak paper/\allowbreak observation-theory.tex}, the proposition on the consumer-lossless floor for a discrete source, and the subsection ``Distinguishability, and the observer's quotient''.}
+\inproject{\texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak observation-\allowbreak theory.tex}, the proposition on the consumer-lossless floor for a discrete source, and the subsection ``Distinguishability, and the observer's quotient''.}
 
 \buildson{Trace of a product of PSD matrices, projectors (\cref{ch01}), entropy (\cref{ch03}), quotients (\cref{ch05}).}
 \usedin{\Cref{sec:ch06:rd,sec:ch06:flip}, \cref{ch07} (why cosine is the identity reader on the sphere), \cref{ch08}.}
 
-\section{Consumer-relative rate--distortion is water-filling on a tilted source}\label{sec:ch06:rd}\shortsecmark{Rate--distortion on a tilted source}
+\section{Consumer-relative rate--distortion is water-filling on a tilted source}\label{sec:ch06:rd}
 
 \Cref{ch03} derived the rate--distortion function of a Gaussian vector under the weighted error \cref{eq:ch06:dO}, with Sakrison's name for it beside the OT name. This section restates the result in the form the rest of this chapter uses and applies it. Replacing squared error by a weighted error changes only which eigenvalues are filled.
 
@@ -182,26 +215,42 @@ The maximizer is unique because $\log\det$ is strictly concave on positive defin
 \begin{equation}\label{eq:ch06:sigmastar}
 \Sigma^\star=\Sigma_x^{1/2}V\diag\Big(\min\big(1,\theta/\tilde p_k\big)\Big)V\T\Sigma_x^{1/2},
 \end{equation}
-with the convention $\min(1,\theta/0)=1$. A direction the consumer does not read keeps its full source variance. The constraint $\Sigma\preceq\Sigma_x$ binds there, which is easy to forget. The programme's own verification log records that an early harness assumed it never binds and was wrong (VI-4 in \texttt{claims/\allowbreak LEDGER.md}).
+with the convention $\min(1,\theta/0)=1$. A whitened direction the consumer does not read keeps its full source variance. The constraint $\Sigma\preceq\Sigma_x$ binds there, which is easy to forget. In the original coordinates the statement holds for the component $a\T x$ that is uncorrelated with everything the consumer reads, that is $P\Sigma_xa=0$. An unread direction that is correlated with a read one still loses error variance. In \cref{ex:ch06:tilt} below at $D=0.625$, the unread direction $(1,-1)/\sqrt2$ has source variance $2.5$ and error variance $1.825$, while the uncorrelated component $x_1/4-x_2$ keeps its variance $1.25$. The programme's own verification log records that an early harness assumed it never binds and was wrong (VI-4 in \texttt{claims/\allowbreak LEDGER.md}).
 
 \begin{example}[A consumer that reads a diagonal]\label{ex:ch06:tilt}
 Let $\Sigma_x=\diag(4,1)$ and let the consumer read the direction $u=(1,1)/\sqrt2$, so $P=uu\T=\tfrac12\begin{pmatrix}1&1\\1&1\end{pmatrix}$. This $P$ is a projector, so $P^{1/2}=P$, and the tilted covariance has eigenvalues $u\T\Sigma_xu=(4+1)/2=2.5$ and $0$. Hence $\RC(D)=\tfrac12\log_2(2.5/D)$ bits for $D<2.5$ and $\RC(D)=0$ beyond. At $D=0.625$ the consumer-aware code needs exactly $1$ bit. A reconstruction-optimal code with error $\theta I$ gives consumer distortion $u\T(\theta I)u=\theta$, so to reach $0.625$ it needs $\theta=0.625$ on both coordinates and spends $\tfrac12\log_2(4/0.625)+\tfrac12\log_2(1/0.625)=\tfrac12\log_2 10.24\approx1.678$ bits. For this consumer the reconstruction-optimal code spends $0.68$ bits more for the same consumer distortion.
 \end{example}
 
-\inproject{\texttt{geometric-observation/\allowbreak paper/\allowbreak observation-theory.tex}, the proposition on Gaussian rate--distortion by Berger's reduction, and the lemma giving the max-det form of the Gaussian optimum and its uniqueness. In turboquant-pro the same water-filling allocates bits against a read operator (\texttt{read\_allocation}, described in \texttt{turboquant-pro/\allowbreak README.md}).}
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}[scale=1.0]
+\draw[guide] (-2.6,0) -- (2.6,0);
+\draw[guide] (0,-1.6) -- (0,1.6);
+\draw[pblue, very thick, fill=plight] (0,0) ellipse (2 and 1);
+\draw[porange, very thick] (-1.6,-1.6) -- (1.6,1.6) node[lbl, above right] {read direction $u$};
+\draw[pgreen, very thick] (-1.118,-1.118) -- (1.118,1.118);
+\fill[pgreen] (1.118,1.118) circle (1.6pt);
+\fill[pgreen] (-1.118,-1.118) circle (1.6pt);
+\node[lbl, pblue, anchor=north] at (0,-1.7) {source $\Sigma_x=\diag(4,1)$, standard deviations $2$ and $1$};
+\node[lbl, pgreen, anchor=west] at (1.2,0.75) {$\sqrt{u\T\Sigma_xu}=\sqrt{2.5}\approx1.58$};
+\end{tikzpicture}
+\caption{The source of Example~\ref{ex:ch06:tilt} and the one direction its consumer reads. The consumer sees only the spread of the source along $u$, $1.58$ standard deviations, so its rate--distortion function water-fills the single number $2.5$ and ignores the long axis of the ellipse.}
+\label{fig:ch06:readsignal}
+\end{figure}
+
+\inproject{\texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak observation-\allowbreak theory.tex}, the proposition on Gaussian rate--distortion by Berger's reduction, and the lemma giving the max-det form of the Gaussian optimum and its uniqueness. In turboquant-pro the same water-filling allocates bits against a read operator (\texttt{read\_allocation}, described in \texttt{turboquant-\allowbreak pro/\allowbreak README.md}).}
 
 \buildson{Reverse water-filling (\cref{ch03}), KKT conditions and concavity of $\log\det$ (\cref{ch04}), whitening (\cref{ch01}).}
 \usedin{\Cref{sec:ch06:flip,sec:ch06:mismatch,sec:ch06:two}, bit allocation in \cref{ch07}.}
 
-\section{The flip is a ranking reversal between reconstruction error and consumer error}\label{sec:ch06:flip}\shortsecmark{The flip}
+\section{The flip is a ranking reversal between reconstruction error and consumer error}\label{sec:ch06:flip}
 
-Fix a rate and compare three codes for the same source. The \emph{reconstruction-oriented} code O minimizes $\tr\Sd$ by reverse water-filling on $\Sigma_x$. The \emph{read-preserving} code R minimizes $\tr(P_C\Sd)$ by the water-filling of \cref{prop:ch06:gaussRD}. The \emph{anti} code A starves the read directions on purpose and serves as a control. The programme's \emph{flip} is the joint event
+Fix a rate and compare three codes for the same source. The \emph{reconstruction-oriented} code O minimizes $\tr\Sd$ by reverse water-filling on $\Sigma_x$. The \emph{read-preserving} code R minimizes $\tr(P_C\Sd)$ by the water-filling of Proposition~\ref{prop:ch06:gaussRD}. The \emph{anti} code A starves the read directions on purpose and serves as a control. The programme's \emph{flip} is the joint event
 \begin{equation}\label{eq:ch06:flip}
 \underbrace{\tr\!\big(P_C\Sd^{\mathrm R}\big)\le\tr\!\big(P_C\Sd^{\mathrm O}\big)}_{\text{consumer prefers R}}
 \qquad\text{and}\qquad
 \underbrace{\tr\Sd^{\mathrm O}\le\tr\Sd^{\mathrm R}}_{\text{reconstruction prefers O}} .
 \end{equation}
-The two inequalities point in opposite directions. A code can win on reconstruction and lose on the task. The novelty assessment's plain name for the flip is a ranking reversal between reconstruction error and task loss, and it is the starting point of task-based quantization \cite{shlezinger2019}.
+The two inequalities point in opposite directions. A code can win on reconstruction and lose on the task. When O and R are exactly optimal at a common rate, both inequalities hold automatically, because each code is optimal for its own measure. The flip then has content only when both are strict, so that the two measures rank the codes oppositely. The novelty assessment's plain name for the flip is a ranking reversal between reconstruction error and task loss, and it is the starting point of task-based quantization \cite{shlezinger2019}.
 
 \begin{example}[The flip for $\Sigma_x=\diag(4,1)$ and a consumer that reads $e_2$]\label{ex:ch06:flip}
 Let $P_C=\diag(0,1)$ and allow a total of $1$ bit. The O code water-fills on the variances $4$ and $1$. At water level $\theta=1$ the rate is $\tfrac12\log_2(4/1)=1$ bit, all of it on $e_1$, so $\Sd^{\mathrm O}=\diag(1,1)$. The R code spends the bit on $e_2$, the only direction the consumer reads, so $\Sd^{\mathrm R}=\diag(4,\ 1\cdot2^{-2})=\diag(4,0.25)$. Then
@@ -212,34 +261,64 @@ Let $P_C=\diag(0,1)$ and allow a total of $1$ bit. The O code water-fills on the
 O reconstructs better and serves the consumer four times worse. At $2$ bits the O water level is $\theta=0.5$, giving $\Sd^{\mathrm O}=\diag(0.5,0.5)$ with reconstruction $1$ and consumer distortion $0.5$, while R gives $\diag(4,1/16)$ with reconstruction $4.0625$ and consumer distortion $0.0625$. The consumer's ratio grows to eight. Each code is rate--distortion optimal for its own distortion measure, so neither is a bad code. They answer different questions.
 \end{example}
 
-\begin{figure}[ht]
+\begin{figure}[tbp]
 \centering
 \begin{tikzpicture}[scale=0.85]
 \draw[->,gray] (-3.2,0) -- (3.4,0) node[right,black] {$e_1$};
 \draw[->,gray] (0,-1.7) -- (0,1.9) node[above,black] {$e_2$};
-\draw[thick,gray!70,dashed] (0,0) ellipse (2 and 1);
-\draw[thick,blue] (0,0) circle (1);
-\draw[thick,red] (0,0) ellipse (2 and 0.5);
-\draw[very thick,->,green!40!black] (2.9,-0.6) -- (2.9,0.6);
-\node[green!40!black,right,align=left,font=\small] at (2.95,0) {consumer\\reads $e_2$};
-\node[gray,font=\small] at (-2.3,1.25) {source};
-\node[blue,font=\small] at (0.55,1.25) {O};
-\node[red,font=\small] at (-1.2,-0.75) {R};
+\draw[thick,pblue,dashed] (0,0) ellipse (2 and 1);
+\draw[very thick,pgray] (0,0) circle (1);
+\draw[very thick,pgreen] (0,0) ellipse (2 and 0.5);
+\draw[vec,porange] (4.0,-0.6) -- (4.0,0.6);
+\node[porange,right,align=left,font=\small] at (4.05,0) {consumer\\reads $e_2$};
+\node[pblue,font=\small] at (-2.3,1.25) {source};
+\node[pgray,font=\small] at (0.55,1.25) {O};
+\node[pgreen,font=\small] at (-2.25,-0.35) {R};
 \end{tikzpicture}
-\caption{The flip of \cref{ex:ch06:flip} at $1$ bit, drawn as one-standard-deviation ellipses. The dashed ellipse is the source $\Sigma_x=\diag(4,1)$. The reconstruction-oriented error O is the unit circle with total variance $2$. The read-preserving error R is wider along $e_1$, with total variance $4.25$, and thinner along $e_2$, the only direction the consumer reads.}
+\caption{The flip of Example~\ref{ex:ch06:flip} at $1$ bit, drawn as one-standard-deviation ellipses. The dashed ellipse is the source $\Sigma_x=\diag(4,1)$. The reconstruction-oriented error O is the unit circle with total variance $2$. The read-preserving error R is wider along $e_1$, with total variance $4.25$, and thinner along $e_2$, the only direction the consumer reads.}
 \label{fig:ch06:flip}
 \end{figure}
 
-The mechanism is visible in the water-filling. The O code spends its rate where the source has energy, on $e_1$. The consumer reads only $e_2$, where the source has less energy, so the O code spends the whole budget on a direction the consumer ignores. The flip appears exactly when the read directions are misaligned with the source's high-energy directions at the operating rate. \Cref{sec:ch06:fail} turns that condition into a test.
+\Cref{fig:ch06:flipbars} puts the two orderings side by side, and \cref{fig:ch06:ratecurves} shows that the ordering holds at every target. For this source and consumer the reconstruction-optimal code reaches consumer distortion $D<1$ only at rate $\log_2(2/D)$, while the consumer-aware code needs $\tfrac12\log_2(1/D)$.
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, width=0.60\linewidth, height=0.42\linewidth, ybar, bar width=20pt, ymin=0, ymax=5,
+  symbolic x coords={recon,consumer}, xtick=data, xticklabels={reconstruction error $\tr\Sd$, consumer error $\tr(P_C\Sd)$},
+  enlarge x limits=0.45, ylabel={error at $1$ bit}, nodes near coords, nodes near coords style={font=\scriptsize},
+  legend style={at={(0.98,0.97)}, anchor=north east}]
+\addplot[fill=pblue, draw=pblue] coordinates {(recon,2) (consumer,1)};
+\addplot[fill=pgreen, draw=pgreen] coordinates {(recon,4.25) (consumer,0.25)};
+\legend{reconstruction-optimal O, consumer-aware R}
+\end{axis}
+\end{tikzpicture}
+\caption{The flip in one picture. At the same rate of $1$ bit the consumer-aware code reconstructs worse yet serves the consumer four times better, for $\Sigma_x=\diag(4,1)$ and a consumer that reads $e_2$.}
+\label{fig:ch06:flipbars}
+\end{figure}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=1.05, ymin=0, ymax=5.6, xlabel={consumer distortion $D$}, ylabel={rate (bits)}]
+\addplot[pblue, very thick, smooth] coordinates {(0.050,5.322) (0.100,4.322) (0.200,3.322) (0.300,2.737) (0.400,2.322) (0.500,2.000) (0.600,1.737) (0.700,1.515) (0.800,1.322) (0.900,1.152) (1.000,1.000)};
+\addplot[pgreen, very thick, smooth] coordinates {(0.050,2.161) (0.100,1.661) (0.200,1.161) (0.300,0.868) (0.400,0.661) (0.500,0.500) (0.600,0.368) (0.700,0.257) (0.800,0.161) (0.900,0.076) (1.000,0.000)};
+\node[lbl, pblue, anchor=south west] at (axis cs:0.32,2.8) {reconstruction-optimal, $\log_2(2/D)$};
+\node[lbl, pgreen, anchor=south west] at (axis cs:0.22,1.15) {$\RC(D)=\tfrac12\log_2(1/D)$};
+\end{axis}
+\end{tikzpicture}
+\caption{Rate needed to reach a consumer distortion $D$ when $\Sigma_x=\diag(4,1)$ and the consumer reads $e_2$. The reconstruction-optimal code always pays more, because it first spends a full bit on $e_1$, which the consumer never reads.}
+\label{fig:ch06:ratecurves}
+\end{figure}
+
+The mechanism is visible in the water-filling. The O code spends its rate where the source has energy, on $e_1$. The consumer reads only $e_2$, where the source has less energy, so the O code spends the whole budget on a direction the consumer ignores. For these two optimal codes the flip is strict exactly when the reconstruction-optimal error covariance is not optimal for the consumer at the operating rate. Reading directions that are misaligned with the source's high-energy directions is the usual cause, and the rate matters as much as the alignment. A consumer that reads $e_1$ alone sees no flip at $1$ bit, where O spends everything on $e_1$, and does see one at $2$ bits, where O starts spending on $e_2$ (\cref{ex:ch06:coupling}). \Cref{sec:ch06:fail} turns that condition into a test.
 
 The evidence for the flip in the programme carries several tags. In \texttt{observation-theory.tex} a matched-reconstruction dissociation on softmax attention is \texttt{[demonstrated]}. The flip under a change of query bank is \texttt{[demonstrated]}. Its replication on retrieval ranking is \texttt{[replicated]}. The out-of-sample extension to an optimizer read through a Hessian, with the $H=I$ control where reconstruction tracks perfectly, is \texttt{[predicted]}. Paper~IV reports six sealed flip confirmations across synthetic, acoustic, seismic, retrieval and bioacoustic consumers, and a weaker mechanism confirmation on language-model attention keys. The paper also states a precondition. The flip is observable only between codes matched in reconstruction. Without a tie one code can dominate on both metrics, and then reconstruction is not falsified.
 
-\inproject{\texttt{geometric-observation/\allowbreak paper/\allowbreak paper-IV-consumer-relative-flip.tex}, equation \texttt{eq:flip} and Section ``Theory''. \texttt{geometric-observation/\allowbreak OBSERVATION.md}, the VALUE row of the ``one object, three shadows'' table.}
+\inproject{\texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak paper-\allowbreak IV-\allowbreak consumer-\allowbreak relative-\allowbreak flip.tex}, equation \texttt{eq:flip} and Section ``Theory''. \texttt{geometric-\allowbreak observation/\allowbreak OBSERVATION.md}, the VALUE row of the ``one object, three shadows'' table.}
 
-\buildson{\Cref{prop:ch06:gaussRD}, reverse water-filling (\cref{ch03}).}
+\buildson{Proposition~\ref{prop:ch06:gaussRD}, reverse water-filling (\cref{ch03}).}
 \usedin{\Cref{sec:ch06:fail}, \cref{ch07} (why reconstruction cosine is not an acceptance metric), \cref{ch08}.}
 
-\section{A misidentified observer pays a bounded tax or hits a floor}\label{sec:ch06:mismatch}\shortsecmark{The price of a misidentified observer}
+\section{A misidentified observer pays a bounded tax or hits a floor}\label{sec:ch06:mismatch}
 
 A coder rarely knows $P$ exactly. It water-fills for an estimate $\hat P$, from a probe or a guess, while the consumer reads with the true $P$. The paper's appendix ``The price of a misidentified observer'' shows that the two ways of being wrong cost very different amounts. Mis-weighting a direction the coder does read costs a bounded amount of rate. Omitting a direction the consumer reads raises a distortion floor that no rate removes. Throughout, $X\sim\Normal(0,\Sigma_x)$ with $\Sigma_x\pd 0$, $\Sigma^\star$ is the optimum \cref{eq:ch06:maxdet}, and rates are in nats.
 
@@ -264,35 +343,57 @@ Suppose $\range P\not\subseteq\range\hat P$. Let $\tilde P=\Sigma_x^{1/2}P\Sigma
 \begin{equation}\label{eq:ch06:omission}
 D_{\mathrm{floor}}=\tr(\tilde P\,\Pi)\ \le\ \tr(P\Sd)\ \le\ \tr(P\Sigma_x),
 \end{equation}
-with $D_{\mathrm{floor}}>0$. Reaching any $D<D_{\mathrm{floor}}$ costs infinite rate, and the rate diverges as $D\downarrow D_{\mathrm{floor}}$.
+with $D_{\mathrm{floor}}>0$. No allocation in the family reaches a true distortion below $D_{\mathrm{floor}}$ at any rate. If in addition the consumer reads some of the coded subspace, that is $\tr\big(\tilde P\,(I-\Pi)\big)>0$, then the true distortion approaches $D_{\mathrm{floor}}$ only as the rate grows without bound, so the rate diverges as $D\downarrow D_{\mathrm{floor}}$.
 \end{theorem}
 
-The proof writes $\Sd=\Sigma_x^{1/2}S(\theta)\Sigma_x^{1/2}$ with $S(\theta)$ equal to $1$ on the whitened kernel and $\min(1,\theta/\hat p_k)$ on the read modes. Then $\Pi\preceq S(\theta)\preceq I$, and tracing against $P$ gives the band. As $\theta\to0$ the read-mode error vanishes, $S\to\Pi$, and the distortion falls to $D_{\mathrm{floor}}$ while the rate on the read modes grows without bound. The distortion is never unbounded. It is the rate that diverges.
+The proof writes $\Sd=\Sigma_x^{1/2}S(\theta)\Sigma_x^{1/2}$ with $S(\theta)$ equal to $1$ on the whitened kernel and $\min(1,\theta/\hat p_k)$ on the read modes. Then $\Pi\preceq S(\theta)\preceq I$, and tracing against $P$ gives the band. As $\theta\to0$ the read-mode error vanishes, $S\to\Pi$, and the distortion falls toward $D_{\mathrm{floor}}$ while the rate on the read modes grows without bound. The distortion is never unbounded. Whether the rate must diverge to approach the floor depends on the extra condition. When $\tr(\tilde P(I-\Pi))>0$ the consumer feels the coded modes, every finite rate leaves some of their error, and the distortion stays strictly above the floor. When $\tr(\tilde P(I-\Pi))=0$ the consumer reads nothing the coder codes, the distortion equals $D_{\mathrm{floor}}$ at every rate, and the rate is wasted rather than divergent. \Cref{ex:ch06:disjoint} is that case.
+
+\begin{example}[A coder whose effort the consumer never reads]\label{ex:ch06:disjoint}
+Let $\Sigma_x=I_2$, the estimate $\hat P=\diag(1,0)$ and the truth $P=\diag(0,1)$. The coder spends all its rate on $e_1$ and the consumer reads only $e_2$. Here $\Pi=\diag(0,1)$, so $D_{\mathrm{floor}}=\tr(\tilde P\Pi)=1$ and $\tr(\tilde P(I-\Pi))=0$. At rate $R$ the error is $\diag(e^{-2R},1)$ and the true distortion is $0\cdot e^{-2R}+1\cdot1=1$ at every rate, including $R=0$. The floor is reached at zero rate and no rate improves on it. The positive floor holds, and the divergence statement does not apply because its extra condition fails.
+\end{example}
 
 \begin{example}[An uncorrelated omission]\label{ex:ch06:omission}
 Let $\Sigma_x=I_2$, the estimate $\hat P=\diag(1,0)$ and the truth $P=I$. The coder spends everything on $e_1$, so at rate $R$ its error is $\diag(e^{-2R},1)$ and the true distortion is $1+e^{-2R}$. The floor is $\tr(\tilde P\Pi)=1$. Reaching $D=1.1$ costs $R=\tfrac12\log10\approx1.151$ nats, while the coder that knows $P$ reaches $1.1$ at water level $0.55$ for $\log(1/0.55)\approx0.598$ nats. Reaching $D\le1$ is impossible at any rate.
 \end{example}
 
-The whitening in \cref{thm:ch06:omission} matters, and it carries the caveat the reader should remember. The floor concerns only the part of an unread feature that is independent of what the coder keeps. When features are correlated, describing the kept feature well also describes part of the unread one.
+The whitening in Theorem~\ref{thm:ch06:omission} matters, and it carries the caveat the reader should remember. The floor concerns only the part of an unread feature that is independent of what the coder keeps. When features are correlated, describing the kept feature well also describes part of the unread one.
 
 \begin{example}[A correlated omission loses only the independent part]\label{ex:ch06:corr}
 Let $\Sigma_x=\begin{pmatrix}1&0.8\\0.8&1\end{pmatrix}$, let the coder read only $x_1$, so $\hat P=\diag(1,0)$, and let the consumer read only $x_2$, so $P=\diag(0,1)$. As the rate grows the coder learns $x_1$ exactly, and the best estimate of $x_2$ from $x_1$ leaves the conditional variance $\Var(x_2\mid x_1)=1-\rho^2=0.36$ (\cref{ch02}). The theorem gives the same number. The limiting error covariance is $\Sigma_x^{1/2}\Pi\Sigma_x^{1/2}=\diag(0,0.36)$, and $D_{\mathrm{floor}}=0.36$. A naive floor computed from the unwhitened kernel $\ker\hat P=\operatorname{span}(e_2)$ would charge the full variance $1$ and overstate the floor by $0.64$. The paper's verification log reports that this naive kernel overstated the floor by about $30\%$ on its own test instances.
 \end{example}
 
-The appendix also turns a measured probe overlap into a floor. If $P$ and $\hat P$ are projectors of rank $r$ with overlap $o=\tfrac1r\tr(\Pi_R\Pi_{\hat R})$ and $\Sigma_x=I$, then $D_{\mathrm{floor}}=r(1-o)$. The median Llama overlap $0.647$ then corresponds to a floor of $0.353$ of the read energy. The paper calls this a conditional certificate. It holds only if the recovered subspace omits part of the true one and the read weights are equal, and a probe that over-covers the true subspace has no floor.
+\Cref{fig:ch06:mismatch} compares the two failures on the toy instances of Examples~\ref{ex:ch06:commission} and~\ref{ex:ch06:omission}. The mis-weighting coder stays a small distance above its oracle and goes to zero with it. The omitting coder flattens onto its floor.
 
-The paper verified both theorems numerically under the sealed registration GO-P-2026-024, and its verification log records a fresh-context derivation pass (VI-6). The downstream consequence was tested on trained Llama read operators. A sealed finite-rate test first missed (GO-P-2026-026), because the reducible error still dominated at the rates swept. A sealed held-out test then confirmed the floor on all $16$ KV heads (GO-P-2026-027). The ledger carries this as NEG-13, resolved to \texttt{[demonstrated]}. The floor is a high-resolution effect.
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}
+\begin{axis}[primer, xmin=0, xmax=4.2, ymin=0, ymax=3.2, xlabel={rate $R$ (nats)}, ylabel={true distortion $\tr(P\Sd)$}]
+\addplot[guide, pred, thick, domain=0:4.2] {1};
+\addplot[pred, very thick, smooth] coordinates {(0.000,2.000) (0.250,1.607) (0.500,1.368) (0.750,1.223) (1.000,1.135) (1.500,1.050) (2.000,1.018) (2.500,1.007) (3.000,1.002) (3.500,1.001) (4.000,1.000)};
+\addplot[porange, very thick, smooth] coordinates {(0.000,3.000) (0.250,2.336) (0.500,1.820) (0.750,1.417) (1.000,1.104) (1.500,0.669) (2.000,0.406) (2.500,0.246) (3.000,0.149) (3.500,0.091) (4.000,0.055)};
+\addplot[pgreen, very thick, dashed, smooth] coordinates {(0.000,3.000) (0.250,2.213) (0.500,1.716) (0.750,1.336) (1.000,1.041) (1.500,0.631) (2.000,0.383) (2.500,0.232) (3.000,0.141) (3.500,0.085) (4.000,0.052)};
+\node[lbl, pred, anchor=north east] at (axis cs:4.1,0.92) {floor $D_{\mathrm{floor}}=1$};
+\node[lbl, pred, anchor=south west] at (axis cs:2.0,1.08) {omitting coder};
+\node[lbl, porange, anchor=south east] at (axis cs:1.55,0.22) {mis-weighted coder};
+\end{axis}
+\end{tikzpicture}
+\caption{The price of a misidentified observer. A coder that mis-weights the directions it reads, $\hat P=I$ against the truth $\diag(1,2)$, tracks the oracle, drawn dashed, to zero distortion. A coder that omits a read direction, $\hat P=\diag(1,0)$ against the truth $I$, never gets below the floor $1$ at any rate.}
+\label{fig:ch06:mismatch}
+\end{figure}
 
-\inproject{\texttt{geometric-observation/\allowbreak paper/\allowbreak observation-theory.tex}, Appendix ``The price of a misidentified observer'', Theorems ``Commission tax'' and ``Omission floor''. \texttt{turboquant-pro/\allowbreak README.md} describes \texttt{tqp feasibility}, which reports a measured omission floor before any compression sweep.}
+The appendix also turns a measured probe overlap into a floor. If $P$ and $\hat P$ are projectors of rank $r$ with overlap $o=\tfrac1r\tr(\Pi_R\Pi_{\hat R})$ and $\Sigma_x=I$, then $D_{\mathrm{floor}}=r(1-o)$. The formula also assumes an isotropic source, $\Sigma_x=I$. Under these assumptions the median Llama overlap $0.647$ would correspond to a floor of $0.353$ of the read energy. \Cref{ch13} relates this overlap to the principal angles between the two subspaces. The paper calls this a conditional certificate. It holds only if the recovered subspace omits part of the true one and the read weights are equal, and a probe that over-covers the true subspace has no floor.
+
+The paper verified both theorems numerically under the sealed registration GO-P-2026-024, and its verification log records a fresh-context derivation pass (VI-6). The downstream consequence was tested on trained Llama read operators. A sealed finite-rate test first missed (GO-P-2026-026), because the reducible error still dominated at the rates swept. A sealed held-out test then confirmed the floor on all $16$ KV heads (GO-P-2026-027). The ledger carries this as NEG-13, resolved to \texttt{[demonstrated]}. The floor bounds the distortion at every rate, but it dominates the error only at high rate, after the reducible error has been coded away.
+
+\inproject{\texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak observation-\allowbreak theory.tex}, Appendix ``The price of a misidentified observer'', Theorems ``Commission tax'' and ``Omission floor''. \texttt{turboquant-\allowbreak pro/\allowbreak README.md} describes \texttt{tqp feasibility}, which reports a measured omission floor before any compression sweep.}
 
 \buildson{\Cref{eq:ch06:maxdet,eq:ch06:sigmastar}, Loewner order (\cref{ch01}), conditional variance of Gaussians (\cref{ch02}).}
 \usedin{\Cref{ch07}, \cref{ch08}.}
 
-\section{Two observers share one description only when their optimal error ellipsoids nest}\label{sec:ch06:two}\shortsecmark{Two observers}
+\section{Two observers share one description only when their optimal error ellipsoids nest}\label{sec:ch06:two}
 
 Two consumers often read the same stored representation. A natural design sends a base layer that serves consumer~1 and a refinement that, together with the base, serves consumer~2. Consumer $i$ has read operator $P_i$, target $D_i$ and single-stage rate $R_i(D_i)$. The pair is \emph{successively refinable} if the base layer can be optimal for consumer~1 and the two layers together optimal for consumer~2, so that nothing is lost by layering. \Cref{ch03} introduced the question and stated the criterion. This section gives the whole rate region behind it, the rate lost when the criterion fails, and a worked case. For a single squared-error criterion and a Gaussian source refinability always holds, which is the theorem of Equitz and Cover \cite{equitzcover1991}. Rimoldi characterized the achievable rates when the two stages use different distortion measures \cite{rimoldi1994}. Nayak, Tuncel, G\"und\"uz and Erkip showed that refinability of a vector Gaussian source can fail under individual per-component criteria \cite{nayak2010}.
 
-Write $\Sigma(\hat X)=\E[\Cov(X\mid\hat X)]$ for the error covariance left by the best estimate from $\hat X$. The paper's Theorem ``Complete two-stage rate region'' states the region as a covariance program. With $R_2$ the total rate of both stages, $(R_1,R_2)$ is achievable if and only if there exist $\Sigma_f\preceq\Sigma_b\preceq\Sigma_x$ with
+Write $\Sigma(\hat X)=\E[\Cov(X\mid\hat X)]$ for the error covariance left by the best estimate from $\hat X$. For a Gaussian source the paper's Theorem ``Complete two-stage rate region'' states the region as a covariance program. With $R_2$ the total rate of both stages, $(R_1,R_2)$ is achievable if and only if there exist $\Sigma_f\preceq\Sigma_b\preceq\Sigma_x$ with
 \begin{equation}\label{eq:ch06:region}
 \tr(P_1\Sigma_b)\le D_1,\quad \tr(P_2\Sigma_f)\le D_2,\quad
 R_1\ge\tfrac12\log\frac{\det\Sigma_x}{\det\Sigma_b},\quad
@@ -321,19 +422,40 @@ With $D_2=1.5$, water-filling on the variances $4$ and $1$ gives $\theta=0.75$ a
 
 With $D_2=2.5$, the water level is $\theta=1.5$. It covers $e_2$ entirely, so $\Sigma_2^\star=\diag(1.5,1)$ at $R_2(2.5)=\tfrac12\log(4/1.5)\approx0.490$ nats. Its first entry $1.5$ exceeds $1$, so \cref{eq:ch06:nest} fails. The constrained optimum must keep $\Sigma\preceq\diag(1,1)$, and its trace constraint $\sigma_1+\sigma_2\le2.5$ is then slack, so $\Sigma^\circ=\diag(1,1)$ and $L=\tfrac12\log1.5\approx0.203$ nats. The minimal total rate is $R_1=0.693$ nats, which is $0.490$ plus the loss. The second stage sends nothing, because the base layer already serves consumer~2. It does so at a higher rate than consumer~2 alone would pay, because consumer~1 demanded more precision on $e_1$ than consumer~2 wants.
 
-In the extreme case of orthogonal readers, $P_1=\diag(1,0)$ and $P_2=\diag(0,1)$, the optima $\diag(D_1,1)$ and $\diag(1,D_2)$ never nest, $\Sigma^\circ=\diag(D_1,D_2)$, and $L=\tfrac12\log(1/D_1)=R_1(D_1)$. Nothing in the base layer is reused.
+In the extreme case of orthogonal readers, $P_1=\diag(1,0)$ and $P_2=\diag(0,1)$ with $D_1<4$ and $D_2<1$, the optima $\diag(D_1,1)$ and $\diag(4,D_2)$ never nest, $\Sigma^\circ=\diag(D_1,D_2)$, and $L=\tfrac12\log(4/D_1)=R_1(D_1)$. Nothing in the base layer is reused.
 \end{example}
+
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}[scale=1.25]
+\draw[guide] (-1.5,0) -- (1.5,0); \draw[guide] (0,-1.3) -- (0,1.3);
+\draw[pblue, very thick] (0,0) circle (1);
+\draw[pgreen, very thick] (0,0) circle (0.866);
+\node[lbl, pblue, anchor=south] at (0,1.02) {$\Sigma_1^\star=\diag(1,1)$};
+\node[lbl, pgreen, anchor=north west] at (0.62,-0.62) {$\Sigma_2^\star=0.75\,I$};
+\node[lbl, font=\small\bfseries] at (0,-1.55) {$D_2=1.5$, nested};
+\end{tikzpicture}\hspace{1.2cm}
+\begin{tikzpicture}[scale=1.25]
+\draw[guide] (-1.5,0) -- (1.5,0); \draw[guide] (0,-1.3) -- (0,1.3);
+\draw[pblue, very thick] (0,0) circle (1);
+\draw[pred, very thick] (0,0) ellipse (1.225 and 1);
+\node[lbl, pblue, anchor=south] at (0,1.02) {$\Sigma_1^\star=\diag(1,1)$};
+\node[lbl, pred, anchor=west] at (1.23,0.25) {$\Sigma_2^\star=\diag(1.5,1)$};
+\node[lbl, font=\small\bfseries] at (0,-1.55) {$D_2=2.5$, not nested};
+\end{tikzpicture}
+\caption{The optimal error ellipses of Example~\ref{ex:ch06:two}, drawn at one standard deviation. On the left the identity reader's ellipse fits inside consumer~1's, and one layered description serves both. On the right it pokes out along $e_1$, and the layered code loses $0.203$ nats.}
+\label{fig:ch06:two}
+\end{figure}
 
 For a single read operator, $P_1=P_2=P$, the optimum \cref{eq:ch06:sigmastar} decreases in the Loewner order as $D$ decreases in a fixed eigenbasis. Hence $D_2\le D_1$ gives \cref{eq:ch06:nest} automatically, and Equitz and Cover's theorem is recovered. Conflict requires genuinely different observers. The paper extends the region to a chain of $k$ observers, which is refinable if and only if the single-stage optima form a nested chain $\Sigma_k^\star\preceq\dots\preceq\Sigma_1^\star$.
 
 The paper states the region for two arbitrary positive semidefinite read operators as its own contribution, written ``to our knowledge'', and credits the qualitative phenomena to Nayak et al.\ and to Op 't Veld and Gastpar. The novelty assessment lists the topic under known parents. The region and its corollaries were checked numerically under sealed registrations GO-P-2026-022 and GO-P-2026-023, and the verification log records that a fresh-context pass caught two errors before publication (VI-5).
 
-\inproject{\texttt{geometric-observation/\allowbreak paper/\allowbreak observation-theory.tex}, Section ``Successive refinement across observers'', Theorem ``Complete two-stage rate region'', Corollaries ``Refinability'', ``Exact rate loss'' and ``The $k$-observer chain''. Correction~2 in \texttt{geometric-observation/\allowbreak articles/\allowbreak 2026-10-01-ot-novelty-assessment.md}.}
+\inproject{\texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak observation-\allowbreak theory.tex}, Section ``Successive refinement across observers'', Theorem ``Complete two-stage rate region'', Corollaries ``Refinability'', ``Exact rate loss'' and ``The $k$-observer chain''. Correction~2 in \texttt{geometric-\allowbreak observation/\allowbreak articles/\allowbreak 2026-\allowbreak 10-\allowbreak 01-\allowbreak ot-\allowbreak novelty-\allowbreak assessment.md}.}
 
 \buildson{Max-det form \cref{eq:ch06:maxdet}, law of total covariance (\cref{ch02}), Loewner order (\cref{ch01}).}
-\usedin{\Cref{ch08}, and the multi-consumer tax of \texttt{geometric-observation/\allowbreak paper/\allowbreak ot-estimation-control.tex}.}
+\usedin{\Cref{ch08}, and the multi-consumer tax of \texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak ot-\allowbreak estimation-\allowbreak control.tex}.}
 
-\section{The flip fails in four recognisable ways}\label{sec:ch06:fail}\shortsecmark{Four failure modes}
+\section{The flip fails in four recognisable ways}\label{sec:ch06:fail}
 
 A result that only lists its successes cannot be used to decide where it applies. Paper~IV sorts the programme's failures of the flip into four observed modes. It describes them as the four degeneracies of the read operator and states that it does not claim the list is exhaustive.
 
@@ -352,7 +474,28 @@ D4 Mechanism absent & the claimed nuisance is not in $\ker P_C$ & no, a refutati
 \label{tab:ch06:modes}
 \end{table}
 
-Coupling is the informative mode because it depends on the rate. Let $\Sigma_x=\diag(\lambda_1\ge\dots\ge\lambda_d)$ and let the consumer read the top $r$ coordinates. Define the rate at which reconstruction water-filling just fills the read block to the level of the first unread eigenvalue,
+\begin{figure}[tbp]\centering
+\begin{tikzpicture}[scale=0.85]
+\foreach \x/\y/\t in {0/0/D1 coupling,6.5/0/D2 precondition,0/-3.6/D3 identifiability,6.5/-3.6/D4 mechanism absent} {
+  \draw[pblue, thick, fill=plight] (\x,\y) ellipse (1.6 and 0.8);
+  \node[lbl, font=\small\bfseries, anchor=south] at (\x,\y+1.25) {\t};
+}
+\draw[vec, porange, very thick] (0,0) -- (2.1,0);
+\node[lbl, porange, anchor=north] at (0,-0.9) {reads the long axis};
+\draw[vec, porange, dotted, thick] (6.5,0) -- (7.5,0.6);
+\node[lbl, porange, anchor=north] at (6.5,-0.9) {consumer at chance};
+\draw[vec, porange, very thick] (0,-3.6) -- (0,-2.4);
+\draw[vec, pred, dashed, very thick] (0,-3.6) -- (2.1,-3.6);
+\node[lbl, anchor=north] at (0,-4.5) {\textcolor{porange}{true read} and \textcolor{pred}{estimate}};
+\draw[vec, porange, very thick] (6.5,-3.6) -- (7.6,-2.6);
+\draw[vec, pred, dashed, very thick] (6.45,-3.68) -- (7.62,-2.75);
+\node[lbl, anchor=north] at (6.5,-4.5) {\textcolor{pred}{claimed nuisance} is \textcolor{porange}{read}};
+\end{tikzpicture}
+\caption{The four observed failure modes, with the source ellipse in blue and the read direction in orange. Coupling reads where the source already has energy. A consumer at chance reads nothing useful. A mis-estimated operator protects the wrong direction. A claimed nuisance that the consumer actually reads cannot be discarded.}
+\label{fig:ch06:modes}
+\end{figure}
+
+Coupling is the informative mode because it depends on the rate. Let $\Sigma_x=\diag(\lambda_1\ge\dots\ge\lambda_d)$ and let the consumer read the top $r$ coordinates with equal weights, so that $P_C$ is the projector onto them. Define the rate at which reconstruction water-filling just fills the read block to the level of the first unread eigenvalue,
 \begin{equation}\label{eq:ch06:rstar}
 R^\star=\tfrac12\sum_{i=1}^r\log_2\frac{\lambda_i}{\lambda_{r+1}}\ \text{bits}.
 \end{equation}
@@ -360,6 +503,8 @@ R^\star=\tfrac12\sum_{i=1}^r\log_2\frac{\lambda_i}{\lambda_{r+1}}\ \text{bits}.
 \begin{proposition}[Finite-rate coupling criterion, Paper~IV]\label{prop:ch06:coupling}
 For $R\le R^\star$ the O code activates only read modes, so O and R allocate identically and there is no flip. For $R>R^\star$ the O code spends rate on unread modes that R spends on read modes, and the flip \cref{eq:ch06:flip} holds strictly.
 \end{proposition}
+
+The equal weights matter. With $\Sigma_x=\diag(4,2,1)$ and $P_C=\diag(1,10,0)$ the consumer reads the top two coordinates, and $R^\star=1.5$ bits. At $0.5$ bit, below $R^\star$, O puts its rate on $e_1$ and leaves $\diag(2,2,1)$, while R water-fills the weighted variances $(4,20)$, puts its rate on $e_2$ and leaves $\diag(4,1,1)$. The consumer distortions are $22$ and $14$ and the reconstruction errors are $5$ and $6$, a strict flip below $R^\star$.
 
 \begin{example}[Coupling at one bit, a flip at two]\label{ex:ch06:coupling}
 Take $\Sigma_x=\diag(4,1)$ again but let the consumer read $e_1$, the high-energy direction. Then $R^\star=\tfrac12\log_2(4/1)=1$ bit. At $1$ bit both codes put everything on $e_1$, both errors are $\diag(1,1)$, and there is nothing to choose. At $2$ bits the O code water-fills to $\theta=0.5$ on both coordinates, with consumer distortion $0.5$ and reconstruction $1$. The R code puts both bits on $e_1$, with consumer distortion $4\cdot2^{-4}=0.25$ and reconstruction $0.25+1=1.25$. The consumer prefers R and reconstruction prefers O. Coupling is therefore a low-rate effect, not a wall. This is Paper~IV's counterexample to an unconditional null.
@@ -369,18 +514,18 @@ Paper~IV summarizes alignment by the fraction of the best possible $r$-dimension
 \begin{equation}\label{eq:ch06:kappa}
 \kappa=\frac{\tr(\bar\Pi_C\,\Sigma_x)}{\sum_{i=1}^r\lambda_i(\Sigma_x)}\in\left[\frac{\sum_{i=d-r+1}^d\lambda_i}{\sum_{i=1}^r\lambda_i},\ 1\right],
 \end{equation}
-where $\bar\Pi_C$ is the projector onto the rank-$r$ read subspace. The consumer of \cref{ex:ch06:flip} has $\kappa=1/4$, the smallest value possible for $\diag(4,1)$, and the consumer of \cref{ex:ch06:coupling} has $\kappa=1$. In matrix-analysis language $\kappa$ is a normalized alignment between two PSD matrices, close to the kernel alignment used in machine learning. The paper is explicit about what $\kappa$ does not do. Near $\kappa=1$ it predicts the coupling null. The stronger claim that the size of the flip decreases monotonically in $\kappa$ was tested in a faithful coupling model and is not supported, so the paper did not seal the magnitude prediction it had reserved. The size of the flip depends on where the read subspace's signal sits relative to the reconstruction allocation, and one scalar does not capture that.
+where $\bar\Pi_C$ is the projector onto the rank-$r$ read subspace. The consumer of Example~\ref{ex:ch06:flip} has $\kappa=1/4$, the smallest value possible for $\diag(4,1)$, and the consumer of Example~\ref{ex:ch06:coupling} has $\kappa=1$. In matrix-analysis language $\kappa$ is a normalized alignment between two PSD matrices, close to the kernel alignment used in machine learning. The paper is explicit about what $\kappa$ does not do. At $\kappa=1$, with equal read weights, it predicts the coupling null below $R^\star$. The stronger claim that the size of the flip decreases monotonically in $\kappa$ was tested in a faithful coupling model and is not supported, so the paper did not seal the magnitude prediction it had reserved. The size of the flip depends on where the read subspace's signal sits relative to the reconstruction allocation, and one scalar does not capture that.
 
 The other three modes are qualitative. D2 says the flip needs a consumer that works. Moral judgement on frozen embeddings sat at chance, and the flip appeared once the classifier was trained. D3 says an estimated read operator can be wrong. A covariance stand-in for the legal-retrieval consumer captured what the signal varies in rather than what the consumer reads, and the blind probe fixed it on the same held-out data. D4 says the hypothesised nuisance must actually lie in the kernel. The $\alpha=1$ density quotient was refuted in four prospective tests outside diffusion, because a direct inner-product consumer reads the density. In the language of \cref{sec:ch06:mismatch}, discarding it is an omission.
 
-\inproject{\texttt{geometric-observation/\allowbreak paper/\allowbreak paper-IV-consumer-relative-flip.tex}, Section ``Four observed failure modes'', Proposition ``exact finite-rate coupling criterion'' and Remark ``what $\kappa$ does and does not predict''. \texttt{geometric-observation/\allowbreak chapters/\allowbreak ch12\_failure\_taxonomy\_and\_kappa.md}.}
+\inproject{\texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak paper-\allowbreak IV-\allowbreak consumer-\allowbreak relative-\allowbreak flip.tex}, Section ``Four observed failure modes'', Proposition ``exact finite-rate coupling criterion'' and Remark ``what $\kappa$ does and does not predict''. \texttt{geometric-\allowbreak observation/\allowbreak chapters/\allowbreak ch12\_failure\_taxonomy\_and\_kappa.md}.}
 
 \buildson{\Cref{sec:ch06:flip}, reverse water-filling (\cref{ch03}).}
 \usedin{\Cref{ch08} (deciding before a test which outcomes are possible).}
 
-\section{Each result carries a status and a parent}\label{sec:ch06:status}\shortsecmark{Status and parents}
+\section{Each result carries a status and a parent}\label{sec:ch06:status}
 
-The programme sorts every claim by the evidence behind it, and this chapter has used its tags. \texttt{geometric-observation/\allowbreak PROTOCOL.md} defines them. \texttt{[proved]} needs a complete written proof and a logged independent line-by-line check. \texttt{[demonstrated]} needs a pre-registered experiment whose registry entry predates the run. \texttt{[replicated]} needs the result in at least two independent settings. \texttt{[predicted]} needs an out-of-sample prediction registered in advance. \texttt{[exploratory]} is suggestive only. \texttt{[refuted]} is a negative result reported with the same prominence as a positive one. A statement such as ``the flip is a property of observation'' is an umbrella claim, and the protocol lets it cite only the proved, replicated and predicted rows.
+The programme sorts every claim by the evidence behind it, and this chapter has used its tags. \texttt{geometric-\allowbreak observation/\allowbreak PROTOCOL.md} defines them. \texttt{[proved]} needs a complete written proof and a logged independent line-by-line check. \texttt{[demonstrated]} needs a pre-registered experiment whose registry entry predates the run. \texttt{[replicated]} needs the result in at least two independent settings. \texttt{[predicted]} needs an out-of-sample prediction registered in advance. \texttt{[exploratory]} is suggestive only. \texttt{[refuted]} is a negative result reported with the same prominence as a positive one. A statement such as ``the flip is a property of observation'' is an umbrella claim, and the protocol lets it cite only the proved, replicated and predicted rows.
 
 \Cref{tab:ch06:parents} lines up each object of the chapter with its classical parent, following the novelty assessment.
 
@@ -403,7 +548,7 @@ conditional content & conditional leakage of secure source coding \cite{villard2
 \label{tab:ch06:parents}
 \end{table}
 
-The last row needs a sentence of explanation. Under a deterministic encoder with message $M$ and a party holding side information $S^n$, the identity $H(X^n\mid M,S^n)=H(X^n\mid S^n)-H(M\mid S^n)$ holds. So the quantity the programme once called conditional content or conditional work, $H(M\mid S^n)/n$, is the conditional leakage $I(X^n;M\mid S^n)/n$ of secure source coding. The discrete rate--leakage region is Theorem~3 of Villard and Piantanida \cite{villard2013}. The vector Gaussian endpoint is close to Theorem~5 of Ekrem and Ulukus \cite{ekrem2013}, who wrote that they had been unable to solve the joint rate--leakage problem. The assessment's verdict is that what is new, after a search and not as a proof of absence, is the structure of the Gaussian rate--leakage region when the encoder observes a correlated context and the decoder has no side information. That structure includes the pencil closed form and a read direction that turns with the budget. That work is \texttt{geometric-observation/\allowbreak paper/\allowbreak tit-rate-leakage/\allowbreak tit-rate-leakage.tex}, and \cref{ch03} supplies the information theory it needs.
+The last row needs a sentence of explanation. Under a deterministic encoder with message $M$ and a party holding side information $S^n$, the identity $H(X^n\mid M,S^n)=H(X^n\mid S^n)-H(M\mid S^n)$ holds. So the quantity the programme once called conditional content or conditional work, $H(M\mid S^n)/n$, is the conditional leakage $I(X^n;M\mid S^n)/n$ of secure source coding. The discrete rate--leakage region is Theorem~3 of Villard and Piantanida \cite{villard2013}. The vector Gaussian endpoint is close to Theorem~5 of Ekrem and Ulukus \cite{ekrem2013}, who wrote that they had been unable to solve the joint rate--leakage problem. The assessment's verdict is that what is new, after a search and not as a proof of absence, is the structure of the Gaussian rate--leakage region when the encoder observes a correlated context and the decoder has no side information. That structure includes the pencil closed form and a read direction that turns with the budget. That work is \texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak tit-\allowbreak rate-\allowbreak leakage/\allowbreak tit-\allowbreak rate-\allowbreak leakage.tex}, and \cref{ch03} supplies the information theory it needs.
 
 One more boundary keeps the theory honest. For a fixed $P\psd0$, the posterior mean minimizes $\E[(X-\hat x)\T P(X-\hat x)\mid Y]$ over every estimator, because
 \begin{equation}\label{eq:ch06:posterior}
@@ -415,7 +560,7 @@ V_C=\tr\big(gg\T(\Sigma^--\Sigma^+)\big)=\frac{(g\T\Sigma^-h)^2}{h\T\Sigma^-h+r}
 \end{equation}
 With $\Sigma^-=I$, $h=e_1$ and $r=1$, a consumer reading $e_1$ gains $V_C=0.5$, and a consumer reading $e_2$ gains nothing. If the prior correlates the coordinates with off-diagonal $0.5$, the consumer reading $e_2$ gains $0.25/2=0.125$. The paper \texttt{ot-estimation-control.tex} records a Lean check and a fresh-context derivation pass for both \cref{eq:ch06:posterior} and \cref{eq:ch06:voi}, which is the evidence \texttt{PROTOCOL.md} asks of a \texttt{[proved]} item. It also says plainly that the covariance algebra is classical.
 
-\inproject{\texttt{geometric-observation/\allowbreak PROTOCOL.md}, Section~1 ``Claim classes''. \texttt{geometric-observation/\allowbreak paper/\allowbreak ot-estimation-control.tex}, Propositions ``Weighted posterior-mean invariance'' and ``Rank-one form''. \texttt{geometric-observation/\allowbreak claims/\allowbreak LEDGER.md} for every registry number quoted in this chapter.}
+\inproject{\texttt{geometric-\allowbreak observation/\allowbreak PROTOCOL.md}, Section~1 ``Claim classes''. \texttt{geometric-\allowbreak observation/\allowbreak paper/\allowbreak ot-\allowbreak estimation-\allowbreak control.tex}, Propositions ``Weighted posterior-mean invariance'' and ``Rank-one form''. \texttt{geometric-\allowbreak observation/\allowbreak claims/\allowbreak LEDGER.md} for every registry number quoted in this chapter.}
 
 \buildson{Every earlier section, Kalman filtering (\cref{ch02}).}
 \usedin{\Cref{ch08}, and every project file that tags a claim.}
@@ -443,7 +588,7 @@ A colleague reports that a new code ``reconstructs the embeddings better than th
 \subsection*{By hand}
 
 \begin{exercise}\label{exr:ch06:5}
-Repeat \cref{ex:ch06:flip} at $3$ bits. Find the O water level, both error covariances, both reconstruction errors and both consumer distortions.
+Repeat Example~\ref{ex:ch06:flip} at $3$ bits. Find the O water level, both error covariances, both reconstruction errors and both consumer distortions.
 \end{exercise}
 
 \begin{exercise}\label{exr:ch06:6}
@@ -451,7 +596,7 @@ Let $\Sigma_x=I_2$, $\hat P=I$ and suppose only $I\preceq P\preceq 3I$ is known.
 \end{exercise}
 
 \begin{exercise}\label{exr:ch06:7}
-Redo \cref{ex:ch06:corr} with correlation $\rho=0.5$. Compute the omission floor both from \cref{thm:ch06:omission} and from the conditional variance, and explain in one sentence why they agree.
+Redo Example~\ref{ex:ch06:corr} with correlation $\rho=0.5$. Compute the omission floor both from Theorem~\ref{thm:ch06:omission} and from the conditional variance, and explain in one sentence why they agree.
 \end{exercise}
 
 \begin{exercise}\label{exr:ch06:8}
@@ -459,7 +604,7 @@ Let $\Sigma_x=\diag(4,1)$, let consumer~1 read the low-variance coordinate, $P_1
 \end{exercise}
 
 \begin{exercise}\label{exr:ch06:9}
-For $\Sigma_x=\diag(9,4,1)$ and a consumer that reads $e_2$ only, compute $\kappa$ from \cref{eq:ch06:kappa} and the interval it can range over. Is the coupling null of \cref{prop:ch06:coupling} expected at low rate?
+For $\Sigma_x=\diag(9,4,1)$ and a consumer that reads $e_2$ only, compute $\kappa$ from \cref{eq:ch06:kappa} and the interval it can range over. Is the coupling null of Proposition~\ref{prop:ch06:coupling} expected at low rate?
 \end{exercise}
 
 \subsection*{Programming}
@@ -473,9 +618,7 @@ Simulate the flip with real quantizers. Draw $10^5$ samples from $\Normal(0,\dia
 \end{exercise}
 
 \begin{exercise}\label{exr:ch06:12}
-Write a function that returns $\Sigma^\star(P,D)$ from \cref{eq:ch06:sigmastar}. Use it to check \cref{thm:ch06:commission} on $300$ random diagonal triples $(\Sigma_x,\hat P,P)$ in $\R^3$, reporting the largest ratio of the observed excess rate to the bound.
+Write a function that returns $\Sigma^\star(P,D)$ from \cref{eq:ch06:sigmastar}. Use it to check Theorem~\ref{thm:ch06:commission} on $300$ random diagonal triples $(\Sigma_x,\hat P,P)$ in $\R^3$, reporting the largest ratio of the observed excess rate to the bound.
 \end{exercise}
 
-\let\sectionmark\savedsectionmarkvi
-
-% checks/ch06_examples.py run on Atlas: see the last line of the script output.
+% checks/ch06_examples.py on Atlas (2026-10-07): 107/107 PASS

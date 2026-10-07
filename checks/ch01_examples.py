@@ -384,6 +384,105 @@ check("fig Rayleigh: max 3 at 26.565 deg, min 1 at 153.435 deg", close(max(rqf),
 check("fig Rayleigh: value 2 at 0 deg", close(rq[0], 2))
 figdata("ch01rayleigh", " ".join(f"({t},{v:.4f})" for t, v in zip(angs, rq)))
 
+check("fig plane: |x|^2 = 14 = 12 + 2", 9 + 1 + 4 == 14 and 4 * 3 == 12 and 1 + 1 == 2)
+# Loewner picture: support function sqrt(u^T S u) compares ellipses
+D31 = np.diag([3., 1.]); C21 = np.array([[2., 1.], [1., 2.]])
+e1_ = np.array([1., 0.]); u45 = np.array([1., 1.]) / np.sqrt(2)
+check("fig Loewner: along e1 diag(3,1) reaches 1.732 > 1.414 of the other", close(np.sqrt(e1_ @ D31 @ e1_), 1.732, 5e-4) and close(np.sqrt(e1_ @ C21 @ e1_), 1.414, 5e-4))
+check("fig Loewner: along 45 deg the other reaches 1.732 > 1.414; tip (1.225,1.225)", close(np.sqrt(u45 @ C21 @ u45), 1.732, 5e-4) and close(np.sqrt(u45 @ D31 @ u45), 1.414, 5e-4) and close(np.sqrt(3) / np.sqrt(2), 1.225, 5e-4))
+okE = True
+for _ in range(200):
+    S1_ = rng.standard_normal((2, 2)); S1_ = S1_ @ S1_.T; S2_ = rng.standard_normal((2, 2)); S2_ = S2_ @ S2_.T
+    th_ = np.linspace(0, np.pi, 721); U_ = np.stack([np.cos(th_), np.sin(th_)])
+    inside = np.all(np.einsum('iu,ij,ju->u', U_, S2_, U_) <= np.einsum('iu,ij,ju->u', U_, S1_, U_) + 1e-12)
+    okE &= (inside == is_psd(S1_ - S2_)) or abs(min(np.linalg.eigvalsh(S1_ - S2_))) < 1e-3
+check("ellipse of S2 inside ellipse of S1 iff S1 >= S2 (random)", okE)
+check("fig Rayleigh: extreme directions 126.87 deg apart, not orthogonal", close(153.435 - 26.565, 126.87, 1e-9))
+check("fig Hadamard: 2.4/sqrt8 ~ 0.849", close(2.4 / np.sqrt(8), 0.849, 5e-4))
+
+# ---------------------------------------------------------------- hypothesis-discipline additions
+# G-projector is symmetric when the subspace is spanned by an eigenvector of G
+Gd = sp.diag(2, 1); a_ = M_([1, 0])
+PGe = a_ * (a_.T * Gd * a_).inv() * a_.T * Gd
+check("Pi_G symmetric when span is an eigenvector of G", PGe == PGe.T)
+check("Pi_G symmetric when G = cI", (lambda P_: P_ == P_.T)(u * (u.T * (3 * sp.eye(2)) * u).inv() * u.T * (3 * sp.eye(2))))
+# a few consumers agreeing does not give the Loewner order
+C09 = M_([[1, R(9, 10)], [R(9, 10), 1]])
+check("I and [[1,.9],[.9,1]] tie for e1 e1^T and e2 e2^T", C09[0, 0] == 1 and C09[1, 1] == 1)
+check("I - [[1,.9],[.9,1]] has eigenvalues +-0.9 (incomparable)", set((sp.eye(2) - C09).eigenvals().keys()) == {R(9, 10), -R(9, 10)})
+# indefinite pair not simultaneously diagonalizable by a real congruence
+mu_ = sp.symbols('mu')
+Ai = sp.diag(1, -1); Bi = M_([[0, 1], [1, 0]])
+dp = sp.expand((Ai - mu_ * Bi).det())
+check("det(diag(1,-1) - mu [[0,1],[1,0]]) = -1 - mu^2", dp == -1 - mu_ ** 2)
+check("... which has no real root", all(not r.is_real for r in sp.solve(dp, mu_)))
+# Rayleigh quotient unbounded when the denominator form is only PSD
+rq_ = [(e ** 2 + 1) / e ** 2 for e in [1e-1, 1e-2, 1e-3]]
+check("x^T I x / x^T diag(1,0) x grows without bound as x -> e2 (101, 10001, 1000001)", close(rq_[0], 101, 1e-6) and close(rq_[1], 10001, 1e-4) and close(rq_[2], 1000001, 1e-1))
+# strict concavity of log det: tr(E^2) > 0 for symmetric E != 0 (random)
+okS = all(np.trace(E_ @ E_) > 0 for E_ in [(lambda Z: Z + Z.T)(rng.standard_normal((3, 3))) for _ in range(100)])
+check("tr(E^2) > 0 for random symmetric E != 0", okS)
+# smaller determinant does not imply Loewner-smaller
+check("det diag(1,1) = 1 < det diag(4,1/2) = 2", sp.diag(1, 1).det() == 1 and sp.diag(4, R(1, 2)).det() == 2)
+check("diag(1,1) and diag(4,1/2) incomparable", set(sp.diag(4 - 1, R(1, 2) - 1).eigenvals().keys()) == {3, -R(1, 2)})
+# naive kernel is exact when Sigma_x = diag(2,1), Phat = e1 e1^T
+Sd_ = np.diag([2., 1.]); Sh_ = np.sqrt(Sd_)
+ok_naive = True
+for _ in range(50):
+    g_ = rng.standard_normal((2, 2)); P_ = g_ @ g_.T
+    Pt_ = Sh_ @ P_ @ Sh_
+    K_ = Sh_ @ np.diag([1., 0.]) @ Sh_
+    w_, V_ = np.linalg.eigh(K_); k_ = V_[:, np.argmin(np.abs(w_))]
+    Pi_w = np.outer(k_, k_)
+    Pi_naive = np.diag([0., 1.])
+    ok_naive &= close(np.trace(Pt_ @ Pi_w), np.trace(Pt_ @ Pi_naive), 1e-9)
+check("Sigma=diag(2,1), Phat=e1e1^T: whitened kernel = span(e2), naive floor exact", ok_naive)
+# Example floor: Schur complement 1/2 is also the best linear predictor error variance
+S2 = np.array([[2., 1.], [1., 1.]])
+check("best linear predictor of x2 from x1 has error variance 1/2", close(S2[1, 1] - S2[0, 1] ** 2 / S2[0, 0], 0.5))
+
+# ---------------------------------------------------------------- turboquant-pro two-window Hadamard (2026-10-07 fix)
+def fwht(v):
+    v = v.copy(); h = 1; n = v.shape[-1]
+    while h < n:
+        for i in range(0, n, 2 * h):
+            a = v[..., i:i + h].copy(); b = v[..., i + h:i + 2 * h].copy()
+            v[..., i:i + h] = a + b; v[..., i + h:i + 2 * h] = a - b
+        h *= 2
+    return v
+
+
+def two_window(x, d, rg):
+    m = 1 << (d.bit_length() - 1)
+    s1 = rg.choice([-1.0, 1.0], size=d); p1 = rg.permutation(d)
+    s2 = rg.choice([-1.0, 1.0], size=d); q2 = rg.permutation(m)
+    y = (x * s1)[..., p1]
+    y = np.concatenate((fwht(y[..., :m]) / np.sqrt(m), y[..., m:]), axis=-1)
+    if m != d:
+        y = y * s2; lo = d - m
+        w = fwht(y[..., lo:][..., q2]) / np.sqrt(m)
+        y = np.concatenate((y[..., :lo], w), axis=-1)
+    return y
+
+
+rgT = np.random.default_rng(1007)
+for d_ in [12, 6144]:
+    m_ = 1 << (d_.bit_length() - 1)
+    check(f"d={d_}: m={m_} > d/2 and windows [0,m), [d-m,d) cover [0,d)", m_ > d_ / 2 and d_ - m_ < m_)
+Rm = two_window(np.eye(12), 12, np.random.default_rng(7))
+check("two-window rotation is orthogonal (d=12)", np.allclose(Rm @ Rm.T, np.eye(12)))
+yT = two_window(np.eye(6144)[0], 6144, rgT)
+check("d=6144: one-hot input keeps length 1 and its largest coordinate falls below 0.05",
+      close(np.linalg.norm(yT), 1.0) and np.max(np.abs(yT)) < 0.05)
+check("d=6144: windows are [0,4096) and [2048,6144)", (1 << (6144).bit_length() - 1) == 4096 and 6144 - 4096 == 2048)
+check("d=8192 is a power of two, so only one window is used", (1 << (8192).bit_length() - 1) == 8192)
+sgn = np.random.default_rng(3).choice([-1.0, 1.0], size=8); perm = np.random.default_rng(4).permutation(8)
+check("sign flip plus permutation leaves a one-hot vector one-hot (spreads no energy)",
+      np.count_nonzero((np.eye(8)[0] * sgn)[perm]) == 1)
+# numbers quoted from turboquant-pro CHANGELOG.md, 2026-10-07
+check("quoted: old path 0.89 vs spreading 0.054, more than ten times worse", 0.89 / 0.054 > 10)
+check("quoted: 0.0444 lies within one SE (0.0034) of 0.0453", abs(0.0444 - 0.0453) < 0.0034)
+
 n_pass = sum(results)
 print(f"{n_pass}/{len(results)} PASS")
 sys.exit(0 if n_pass == len(results) else 1)

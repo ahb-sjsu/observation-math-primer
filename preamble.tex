@@ -49,15 +49,30 @@
 \numberwithin{equation}{chapter}
 
 % ---------- environments ----------
+% Definitions, examples and results share one numbering sequence. Each gets
+% an alias counter so that \cref prints its own name instead of "Definition".
+\usepackage{aliascnt}
+\newcommand{\sharedtheorem}[3]{% #1 env, #2 name, #3 plural
+  \newaliascnt{#1}{definition}%
+  \newtheorem{#1}[#1]{#2}%
+  \aliascntresetthe{#1}%
+  \crefname{#1}{#2}{#3}\Crefname{#1}{#2}{#3}}
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[chapter]
-\newtheorem{example}[definition]{Example}
+\crefname{definition}{Definition}{Definitions}
+\sharedtheorem{example}{Example}{Examples}
 \newtheorem{exercise}{Exercise}[chapter]
+\crefname{exercise}{Exercise}{Exercises}
 \theoremstyle{plain}
-\newtheorem{theorem}[definition]{Theorem}
-\newtheorem{proposition}[definition]{Proposition}
-\newtheorem{lemma}[definition]{Lemma}
-\newtheorem{corollary}[definition]{Corollary}
+\sharedtheorem{theorem}{Theorem}{Theorems}
+\sharedtheorem{proposition}{Proposition}{Propositions}
+\sharedtheorem{lemma}{Lemma}{Lemmas}
+\sharedtheorem{corollary}{Corollary}{Corollaries}
+
+% Running heads. Chapter and section titles in this book are full
+% sentences, too long for a page header, so the header shows numbers only.
+\renewcommand{\chaptermark}[1]{\markboth{\MakeUppercase{\chaptername\ \thechapter}}{}}
+\renewcommand{\sectionmark}[1]{\markright{\MakeUppercase{Section\ \thesection}}}
 \theoremstyle{remark}
 \newtheorem*{remark}{Remark}
 

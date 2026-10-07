@@ -266,6 +266,55 @@ vs = np.mean((rng.normal(0, np.sqrt(2), size=(200000, 4))) ** 2, axis=1)
 check("Ex2.8: MC variance of estimator ~ 2", abs(vs.var() - 2) < 0.05)
 check("Ex2.9: 1/2 log(5/(10/7)) = 1/2 log 3.5 ~ 0.6264 = 1/2 log(7/2)", close(0.5 * np.log(5 / (10 / 7)), 0.6264, 5e-5) and close(0.5 * np.log(3.5), 0.5 * np.log(7 / 2)))
 
+check("fig Fisher: drop of 1/2 at 1/sqrt(I) for I = 2 and 16", close(-2 * (1 / np.sqrt(2)) ** 2 / 2, -0.5) and close(-16 * 0.25 ** 2 / 2, -0.5) and 16 / 2 == 8)
+check("fig MI: marked point (0.7071, 0.3466)", close(-0.5 * np.log(1 - 0.7071 ** 2), 0.3466, 2e-4))
+check("fig update: position var 2 -> 2/3, velocity 2 -> 5/3", Spr[0, 0] == 2 and S1[0, 0] == R(2, 3) and Spr[1, 1] == 2 and S1[1, 1] == R(5, 3))
+check("fig saw: first update 10/7 ~ 1.4286, label positions use computed values", close(saw[2][1], 1.4286, 5e-5) and close(saw[1][1], 5.0))
+
+# ---------------------------------------------------------------- added prose numbers
+check("precision = (1/8)[[5,-4,-2],[-4,8,0],[-2,0,4]]", Sj.inv() == M_([[5, -4, -2], [-4, 8, 0], [-2, 0, 4]]) / 8)
+check("precision lower-right (1/8)diag(8,4) = diag(1,1/2) = inverse of diag(1,2)", Sj.inv()[1:, 1:] == sp.diag(1, R(1, 2)) and sp.diag(1, 2).inv() == sp.diag(1, R(1, 2)))
+check("law of total covariance scalar: 4 = 2 + 1*2*1", 4 == 2 + 1 * 2 * 1)
+XYt = rng.multivariate_normal([0, 0], [[4, 2], [2, 2]], size=300000)
+check("MC: Var(E[x|y]) = Var(y) = 2 and E Var(x|y) = 2", abs(np.var(XYt[:, 1]) - 2) < 0.03 and abs(np.var(XYt[:, 0] - XYt[:, 1]) - 2) < 0.03)
+for g, h, val in [((0, 1), (1, 0), R(1, 3)), ((0, 1), (0, 1), R(4, 3)), ((1, 0), (1, 0), R(4, 3)), ((1, 0), (0, 1), R(1, 3))]:
+    g_, h_ = M_(g), M_(h)
+    Kh = Spr * h_ / ((h_.T * Spr * h_)[0] + 1); Spost = Spr - Kh * (h_.T * Spr)
+    check(f"sensor example g={g} h={h}: gain {val}", (g_.T * Spr * h_)[0] ** 2 / ((h_.T * Spr * h_)[0] + 1) == val and (g_ * g_.T * (Spr - Spost)).trace() == val and Spr.det() / Spost.det() == 3)
+check("Fisher pullback: J^T diag(4,1) J = 5 for J = (1,1)", (M_([[1, 1]]) * sp.diag(4, 1) * M_([1, 1]))[0] == 5)
+check("rescaling x by 3: rho^2 = 36/72 = 1/2", R((3 * 2) ** 2, 9 * 4 * 2) == R(1, 2))
+Sm_ = np.array([[2., 1.], [1., 3.]]); mus = []
+for _ in range(20000):
+    mus.append(rng.multivariate_normal([0, 0], Sm_, size=5).mean(axis=0))
+check("MC: sample mean of n=5 has covariance Sigma/5 (CRB)", np.max(np.abs(np.cov(np.array(mus).T) - Sm_ / 5)) < 0.02)
+Zs = rng.standard_normal((4, 6)); Ss = np.cov(Zs.T)
+check("sample covariance of n=4 points in R^6 has rank <= 3", np.linalg.matrix_rank(Ss) <= 3)
+
+# ---------------------------------------------------------------- hypothesis-discipline additions
+# non-Gaussian: a particular observation can raise the variance; conditional variance depends on y
+from fractions import Fraction as Fr
+law = [(Fr(9, 10), 0, 0), (Fr(1, 20), 1, 1), (Fr(1, 20), 1, -1)]  # (prob, y, x)
+Ex_ = sum(p * x for p, y, x in law); Vx_ = sum(p * x * x for p, y, x in law) - Ex_ ** 2
+p1 = sum(p for p, y, x in law if y == 1)
+Ex1 = sum(p * x for p, y, x in law if y == 1) / p1
+Vx1 = sum(p * x * x for p, y, x in law if y == 1) / p1 - Ex1 ** 2
+Vx0 = sum(p * x * x for p, y, x in law if y == 0) / sum(p for p, y, x in law if y == 0)
+check("non-Gaussian example: P(y=1) = 0.1, Var x = 0.1", p1 == Fr(1, 10) and Vx_ == Fr(1, 10))
+check("non-Gaussian example: Var(x | y=1) = 1 > Var x, Var(x | y=0) = 0", Vx1 == 1 and Vx0 == 0)
+check("non-Gaussian example: E[Var(x|y)] = 0.1 <= Var x (total covariance)", p1 * Vx1 + (1 - p1) * Vx0 <= Vx_)
+# x-dependent weight: the conditional mean is no longer optimal (y uninformative, x in {1,2}, P(x)=x)
+xs_ = np.array([1.0, 2.0]); Pw = xs_
+m_ = xs_.mean(); gstar = np.sum(Pw * xs_) / np.sum(Pw)
+loss = lambda g: np.mean(Pw * (xs_ - g) ** 2)
+check("x-dependent weight P(x)=x on x in {1,2}: weighted optimum 5/3 beats the mean 3/2", close(gstar, 5 / 3) and loss(gstar) < loss(m_))
+# Joseph form stays PSD for a wrong gain; the short form need not
+Sm_ = np.array([[2., 1.], [1., 2.]]); H_ = np.array([[1., 0.]]); R_ = np.array([[1.]])
+Kbad = np.array([[3.0], [0.0]])
+Jos = (np.eye(2) - Kbad @ H_) @ Sm_ @ (np.eye(2) - Kbad @ H_).T + Kbad @ R_ @ Kbad.T
+Sho = (np.eye(2) - Kbad @ H_) @ Sm_
+check("Joseph form with a wrong gain is PSD", min(np.linalg.eigvalsh(Jos)) >= -1e-12)
+check("short form with the same wrong gain is not symmetric PSD", not np.allclose(Sho, Sho.T) or min(np.linalg.eigvalsh(Sho)) < 0)
+
 n_pass = sum(results)
 print(f"{n_pass}/{len(results)} PASS")
 sys.exit(0 if n_pass == len(results) else 1)

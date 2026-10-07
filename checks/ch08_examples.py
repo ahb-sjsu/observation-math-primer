@@ -252,6 +252,60 @@ print("FIGDATA bars before:", p2, "after:", p3)
 # Fig best responses: a1 = 0.5 a2 + 1 on a2 in [0,2] from (1,0) to (2,2); a2 = 0.5 a1 from (0,0) to (2,1)
 check("fig: BR1 endpoints (1,0),(2,2); BR2 endpoints (0,0),(2,1)", 0.5 * 0 + 1 == 1 and 0.5 * 2 + 1 == 2 and 0.5 * 2 == 1)
 
+# ---------------------------------------------------------------- exercise answers
+rk = {"p": 3, "q": 2, "r": 2, "s": 2, "t": 1}
+uc = {a: sum(rk[a] >= rk[b] for b in rk) for a in rk}
+check("exercise: counting utility (5,4,4,4,1)", [uc[k] for k in "pqrst"] == [5, 4, 4, 4, 1])
+check("exercise: Luce p(b|bc) = 2/3, p(b|abc) = 1/3, ratio b/c = 2",
+      close(luce("b", "bc"), 2 / 3, 1e-12) and close(luce("b", "abc"), 1 / 3, 1e-12) and close(luce("b", "abc") / luce("c", "abc"), 2, 1e-12))
+xm = np.array([0.5, 0.5])
+check("exercise: matching pennies mixed (1/2,1/2) makes opponent indifferent",
+      close((MP @ xm)[0], (MP @ xm)[1], 1e-12) and close((xm @ -MP)[0], (xm @ -MP)[1], 1e-12))
+check("exercise: fixed Pi=I p(a|ab) = e^-4/(e^-4+e^-1) = 0.0474", close(np.exp(-4) / (np.exp(-4) + np.exp(-1)), 0.0474) and close(f2["a"], np.exp(-4) / (np.exp(-4) + np.exp(-1)), 1e-12))
+check("exercise: symmetric game contraction factor 1/4 per round", close(0.5 * 0.5, 0.25, 1e-12))
+z = np.array([10., -7.])
+for _ in range(40):
+    z = np.array([0.5 * z[1] + 1, 0.5 * (0.5 * z[1] + 1) + 1])
+check("exercise: iterated best response reaches (2,2) from (10,-7)", np.allclose(z, [2, 2]))
+# representable orders on collinear 0,1,2: enumerate weak orders and test by random search
+import itertools as it
+def orders3():
+    out = set()
+    for r in it.product(range(3), repeat=3):
+        out.add(tuple(r))
+    return out
+rep = set()
+rng2 = np.random.default_rng(5)
+for _ in range(20000):
+    g = rng2.exponential(); t0 = rng2.uniform(-3, 5)
+    q_ = [g * (sx - t0) ** 2 for sx in (0, 1, 2)]
+    rep.add(tuple(int(np.sign(q_[i] - q_[j])) for i in range(3) for j in range(3)))
+rep.add(tuple([0] * 9))  # g = 0 gives total indifference
+middle_worst = any(r[3] > 0 and r[5] > 0 for r in rep)  # q1 > q0 and q1 > q2
+check("exercise: no sampled (g,t) makes the middle strictly worst", not middle_worst)
+
+# red bus / blue bus
+wb = {"car": 1., "red": 1., "blue": 1.}
+lb = lambda x, A: wb[x] / sum(wb[y] for y in A)
+check("red bus: Luce car share 1/2 then 1/3", close(lb("car", ["car", "red"]), 0.5, 1e-12) and close(lb("car", ["car", "red", "blue"]), 1 / 3, 1e-12))
+check("red bus: substitute-aware split 1/2, 1/4, 1/4 sums to 1", close(0.5 + 0.25 + 0.25, 1, 1e-12))
+check("admissibility example distances d(a)=1<d(b)=2<d(p)=3", d["a"] < d["b"] < d["p"])
+
+# Hypothesis-discipline additions
+cheb = lambda f: max(f)
+check("Chebyshev tie: (2,1) and (2,0) both score 2 with t=0, equal weights; (2,0) dominates (2,1)",
+      cheb((2, 1)) == cheb((2, 0)) == 2 and (2 <= 2 and 0 < 1))
+ch_pairs = {("a", "b"): "a", ("b", "c"): "b", ("a", "c"): "c"}
+warp_ok = True
+for M1, x1 in ch_pairs.items():
+    for M2, x2 in ch_pairs.items():
+        for u in M1:
+            for v in M1:
+                if u in M2 and v in M2 and x1 == u and x2 == v and u != x2:
+                    warp_ok = False
+check("pairwise cyclic choices satisfy WARP vacuously (no two menus share two alternatives)", warp_ok)
+check("log-score vs Brier divergence ratio at this P is 2.01 (about twice)", close(klpq / brier_div, 2.01, 5e-3))
+
 npass = sum(RESULTS)
 print(f"{npass}/{len(RESULTS)} PASS")
 sys.exit(0 if npass == len(RESULTS) else 1)
