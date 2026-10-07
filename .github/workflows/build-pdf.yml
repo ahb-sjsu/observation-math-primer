@@ -19,6 +19,9 @@ jobs:
         uses: xu-cheng/latex-action@v4
         with:
           root_file: main.tex
+          # \include writes build/chapters/*.aux, and TeX Live does not create
+          # subdirectories of -outdir the way MiKTeX does.
+          pre_compile: mkdir -p build/chapters
           args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -outdir=build
 
       - name: Report unresolved references and citations
