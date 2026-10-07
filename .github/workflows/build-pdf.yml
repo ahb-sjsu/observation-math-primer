@@ -1,0 +1,36 @@
+name: Build PDF
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compile the book with latexmk (TeX Live)
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: main.tex
+          args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -outdir=build
+
+      - name: Report unresolved references and citations
+        if: always()
+        run: |
+          if [ -f build/main.log ]; then
+            grep -E "undefined|Citation .* undefined|There were undefined references" build/main.log || echo "No undefined references or citations."
+          fi
+
+      - name: Upload the PDF
+        uses: actions/upload-artifact@v7
+        with:
+          name: observation-math-primer-pdf
+          path: build/main.pdf
+          if-no-files-found: error
