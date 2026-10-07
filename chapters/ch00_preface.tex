@@ -22,7 +22,7 @@ Area & Chapters & Where the work lives \\
 \midrule
 Observation Theory & \ref{ch01}, \ref{ch02}, \ref{ch03}, \ref{ch04}, \ref{ch05}, \ref{ch06} & \texttt{geometric-observation}, \texttt{observation-theory-campaigns}, the rate and leakage paper (\texttt{paper/tit-rate-leakage}) \\
 The Geometric series and Geometric Evaluation Theory & \ref{ch01}, \ref{ch02}, \ref{ch04}, \ref{ch05}, \ref{ch08} & \texttt{geometric-methods}, \texttt{geometric-evaluation-theory}, \texttt{geometric-economics}, \texttt{geometric-ethics} and the other \texttt{geometric-*} repositories \\
-Vector compression and search & \ref{ch01}, \ref{ch03}, \ref{ch06}, \ref{ch07} & \texttt{turboquant-pro} \\
+Vector compression and search & \ref{ch01}, \ref{ch11}, \ref{ch03}, \ref{ch06}, \ref{ch07} & \texttt{turboquant-pro}, and the hubness chapters of \emph{Data Mining as Observation} \\
 Registration-first method & \ref{ch09}, \ref{ch10} & \texttt{discovery-philosophy-engineering}, the \texttt{PROTOCOL.md} and \texttt{claims/} ledgers in each research repository, and the Lean folders \\
 \bottomrule
 \end{tabular}
@@ -37,18 +37,19 @@ Registration-first method & \ref{ch09}, \ref{ch10} & \texttt{discovery-philosoph
   dep/.style={flow,pgray},
   node distance=9mm and 6mm]
   % foundations
-  \node[ch] (c1) {1\enspace Linear algebra};
-  \node[ch,right=of c1] (c2) {2\enspace Random vectors};
-  \node[ch,right=of c2,fill=pgray!22] (c9) {9\enspace Registration\\statistics};
-  \node[ch,right=of c9,fill=pgray!22] (c10) {10\enspace Logic and\\machine proof};
+  \node[ch] (c1) {\ref{ch01}\enspace Linear algebra};
+  \node[ch,right=of c1] (c2) {\ref{ch02}\enspace Random vectors};
+  \node[ch,right=of c2,fill=pgray!22] (c9) {\ref{ch09}\enspace Registration\\statistics};
+  \node[ch,right=of c9,fill=pgray!22] (c10) {\ref{ch10}\enspace Logic and\\machine proof};
   % middle layer
-  \node[ch,below=of c1] (c5) {5\enspace Geometry};
-  \node[ch,below=of c2] (c3) {3\enspace Information\\theory};
-  \node[ch,right=of c3] (c4) {4\enspace Optimization};
+  \node[ch,below=of c1] (c5) {\ref{ch05}\enspace Geometry};
+  \node[ch,below=of c2] (c3) {\ref{ch03}\enspace Information\\theory};
+  \node[ch,right=of c3] (c4) {\ref{ch04}\enspace Optimization};
+  \node[ch,right=of c4] (c11) {\ref{ch11}\enspace High dimensions\\and hubs};
   % applications
-  \node[ch,below=of c5,fill=porange!18] (c8) {8\enspace Evaluation and\\decisions};
-  \node[ch,below=of c3,fill=pblue!18] (c6) {6\enspace Observation\\Theory};
-  \node[ch,below=of c4,fill=pgreen!18] (c7) {7\enspace Quantization\\and search};
+  \node[ch,below=of c5,fill=porange!18] (c8) {\ref{ch08}\enspace Evaluation and\\decisions};
+  \node[ch,below=of c3,fill=pblue!18] (c6) {\ref{ch06}\enspace Observation\\Theory};
+  \node[ch,below=of c4,fill=pgreen!18] (c7) {\ref{ch07}\enspace Quantization\\and search};
   % dependencies
   \draw[dep] (c1) -- (c5);
   \draw[dep] (c1) -- (c3);
@@ -63,13 +64,15 @@ Registration-first method & \ref{ch09}, \ref{ch10} & \texttt{discovery-philosoph
   \draw[dep] (c3) -- (c7);
   \draw[dep] (c6) -- (c7);
   \draw[dep] (c9) -- (c10);
+  \draw[dep] (c2) -- (c11);
+  \draw[dep] (c11) -- (c7);
   % legend
   \node[lbl,below=6mm of c6,align=center] {\textcolor{pblue!70!black}{\rule{3mm}{3mm}} Observation Theory\quad
     \textcolor{porange}{\rule{3mm}{3mm}} Geometric series and GET\quad
     \textcolor{pgreen}{\rule{3mm}{3mm}} turboquant-pro\quad
-    \textcolor{pgray}{\rule{3mm}{3mm}} method (chapters 9 and 10)};
+    \textcolor{pgray}{\rule{3mm}{3mm}} method (\ref{ch09} and \ref{ch10})};
 \end{tikzpicture}
-\caption{All three research areas rest on the linear algebra of chapter 1. Arrows point from a chapter to the chapters that use it, and the method chapters 9 and 10 serve every area.}
+\caption{All three research areas rest on the linear algebra of \cref{ch01}. Arrows point from a chapter to the chapters that use it, and the two method chapters serve every area.}
 \label{fig:ch00:map}
 \end{figure}
 
